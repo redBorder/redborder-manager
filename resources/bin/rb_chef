@@ -1,0 +1,80 @@
+#!/bin/bash
+#######################################################################    
+# Copyright (c) 2014 ENEO Tecnología S.L.
+# This file is part of redBorder.
+# redBorder is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# redBorder is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License License for more details.
+# You should have received a copy of the GNU Affero General Public License License
+# along with redBorder. If not, see <http://www.gnu.org/licenses/>.
+#######################################################################
+
+source $RBBIN/rb_manager_functions.sh
+
+function f_get_service() {
+  service=$1
+  if [ "x$1" == "xe" -o "x$1" == "xer" -o "x$1" == "xerc" ]; then
+      service="erchef"
+  elif [ "x$1" == "xs" -o "x$1" == "xso" -o "x$1" == "xsol" -o "x$1" == "xsolr" ]; then
+    service="chef-solr"
+  elif [ "x$1" == "xe" -o "x$1" == "xex" -o "x$1" == "xexp" -o "x$1" == "xexpa" ]; then
+    service="chef-expander"
+  elif [ "x$1" == "xw" -o "x$1" == "xwe" -o "x$1" == "xweb" -o "x$1" == "xwebu" ]; then
+    service="chef-server-webui"
+  elif [ "x$1" == "xr" -o "x$1" == "xra" -o "x$1" == "xrab" -o "x$1" == "xrabb" ]; then
+    service="rabbitmq"
+  elif [ "x$1" == "xb" -o "x$1" == "xbo" -o "x$1" == "xboo" -o "x$1" == "xbook" ]; then
+    service="bookshelf"
+  fi
+}
+
+if [ "x$1" != "x" ]; then
+  if [ "x$1" == "xstart" ]; then
+    if [ "x$2" == "x" ]; then
+      rb_service start rabbitmq chef-expander chef-solr bookshelf erchef chef-server-webui
+    else
+      shift
+      rb_service start $*
+    fi 
+  elif [ "x$1" == "xstop" ]; then
+    if [ "x$2" == "x" ]; then
+      rb_service stop chef-server-webui erchef bookshelf chef-solr chef-expander rabbitmq
+    else
+      shift
+      rb_service stop $*
+    fi 
+  elif [ "x$1" == "xstatus" ]; then
+    if [ "x$2" == "x" ]; then
+      rb_service status chef-server-webui erchef bookshelf chef-solr chef-expander rabbitmq
+    else
+      shift
+      rb_service status $*
+    fi 
+  elif [ "x$1" == "xlog" ]; then
+    if [ -f /var/log/chef-server/$2/current ]; then
+      tail -n 50 -f /var/log/chef-server/$2/current
+    fi
+  elif [ "x$1" == "xrestart" ]; then
+    if [ "x$2" == "x" ]; then
+      rb_service restart rabbitmq chef-expander chef-solr bookshelf erchef chef-server-webui
+    else
+      shift
+      rb_service restart $*
+    fi 
+  else
+    f_get_service $1 
+    if [ -f /etc/init.d/$service ]; then 
+      if [ "x$2" == "xlog" ]; then
+        tail -n 50 -f /var/log/chef-server/$1/current
+      else
+        rb_service $2 $1
+      fi
+    fi
+  fi
+fi
+
