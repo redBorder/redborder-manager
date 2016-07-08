@@ -1,0 +1,136 @@
+#!/usr/bin/ruby
+
+#######################################################################
+## Copyright (c) 2014 ENEO Tecnología S.L.
+## This file is part of redBorder.
+## redBorder is free software: you can redistribute it and/or modify
+## it under the terms of the GNU Affero General Public License License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+## redBorder is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU Affero General Public License License for more details.
+## You should have received a copy of the GNU Affero General Public License License
+## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
+########################################################################
+
+require 'rubygems'
+require 'chef'
+require 'json'
+require 'netaddr'
+require "getopt/std"
+
+def usage() 
+  printf "rb_external_s3 [ -h ] [ -d ] [ -f ] -a <Access Key ID> -k <Secret Access Key>\n"
+  printf "    -h: print this help\n"
+  printf "    -d: Disable this external\n"
+  printf "    -f: force creation even if it need to overwrite it\n"
+  printf "    -a <Access Key ID>: Amazon Access Key (mandatory)\n"
+  printf "    -b bucket: Bucket to use for this cluster (mandatory)\n"
+  printf "    -k <Secret Access Key>: Amazon Secret Acces Key (mandatory)\n"
+  printf "    -r <s3_hostname>: Remote S3 host (default: s3.amazonaws.com )\n"
+  printf "    -e <Access Key ID>: Amazon Access Key for chef\n"
+  printf "    -t <Secret Access Key>: Amazon Secret Acces Key for chef\n"
+  printf "    -l <region_name> : Region of the the bucket\n"
+  printf "    -o: Do not overwrite region/hostname unless this is nil on the current configuration\n"
+  exit 1
+end
+
+Chef::Config.from_file("/etc/chef/client.rb")
+Chef::Config[:node_name]  = "admin"
+Chef::Config[:client_key] = "/etc/chef-server/admin.pem"
+Chef::Config[:http_retry_count] = 5
+
+EXTERNAL_NAME="s3"
+
+opt = Getopt::Std.getopts("ha:k:fb:r:de:t:l:o")
+ret=0
+
+if opt["h"]
+  usage
+else
+  if !opt["d"]
+    usage if opt["b"].nil?
+  end
+
+  create=false
+  s3_hostname=opt["r"]
+  s3_hostname="s3.amazonaws.com" if s3_hostname.nil?
+
+  if opt["l"].nil?
+    if s3_hostname=="s3.amazonaws.com"
+      s3_location="us-east-1"
+    elsif s3_hostname=="s3-us-west-2.amazonaws.com"
+      s3_location="us-west-2"
+    elsif s3_hostname=="s3-us-west-1.amazonaws.com"
+      s3_location="us-west-1"
+    elsif s3_hostname=="s3-eu-west-1.amazonaws.com"
+      s3_location="EU"
+    elsif s3_hostname=="s3-ap-southeast-1.amazonaws.com"
+      s3_location="ap-southeast-1"
+    elsif s3_hostname=="s3-ap-southeast-2.amazonaws.com"
+      s3_location="ap-southeast-2"
+    elsif s3_hostname=="s3-ap-northeast-1.amazonaws.com"
+      s3_location="ap-northeast-1"
+    elsif s3_hostname=="s3-sa-east-1.amazonaws.com"
+      s3_location="sa-east-1"
+    else
+      s3_location="US"
+    end
+  else
+    s3_location=opt["l"].to_s
+  end
+
+  begin 
+    role = Chef::Role.load("manager")
+
+    role.override_attributes["redBorder"] = {} if role.override_attributes["redBorder"].nil?
+    role.override_attributes["redBorder"]["manager"] = {} if role.override_attributes["redBorder"]["manager"].nil?
+    role.override_attributes["redBorder"]["manager"]["externals"] = {} if role.override_attributes["redBorder"]["manager"]["externals"].nil?
+    role.override_attributes["redBorder"]["manager"]["externals"][EXTERNAL_NAME] = {} if role.override_attributes["redBorder"]["manager"]["externals"][EXTERNAL_NAME].nil?
+
+    save=false
+
+    if opt["d"]
+      role.override_attributes["redBorder"]["manager"]["externals"][EXTERNAL_NAME]["enabled"] = false
+      save=true
+    else
+      if role.override_attributes["redBorder"]["manager"]["externals"][EXTERNAL_NAME]['key_id'].nil? or role.override_attributes["redBorder"]["manager"]["externals"][EXTERNAL_NAME]["key_secret"].nil? or opt["f"] 
+        create=true
+      else
+        printf "INFO: Access Key ID and Secret Acces Key are already specified. Would you like to overwrite it? (y/N) "
+        var = gets.chomp
+        if (var=="y" or var == "Y")
+          save=true
+          create=true
+        else
+          save=false
+          create=false
+        end
+      end 
+
+      if create
+        save=true
+        {:enabled => true, :location => ((!opt["o"].nil? and !role.override_attributes["redBorder"]["manager"]["externals"][EXTERNAL_NAME]["location"].nil?) ? role.override_attributes["redBorder"]["manager"]["externals"][EXTERNAL_NAME]["location"] : s3_location ), :bucket => opt["b"], :key_id => (opt["a"].nil? ? "" : opt["a"].to_s), :key_secret => (opt["k"].nil? ? "" : opt["k"].to_s), :key_created => true, :hostname => ((!opt["o"].nil? and !role.override_attributes["redBorder"]["manager"]["externals"][EXTERNAL_NAME]["hostname"].nil?) ? role.override_attributes["redBorder"]["manager"]["externals"][EXTERNAL_NAME]["hostname"] : s3_hostname ), :key_id_rbookshelf => ((!opt["e"].nil? and !opt["e"].empty?) ? opt["e"].to_s : (opt["a"].nil? ? "" : opt["a"].to_s) ), :key_secret_rbookshelf => ((!opt["t"].nil? and !opt["t"].empty?) ? opt["t"].to_s : (opt["k"].nil? ? "" : opt["k"].to_s) ) }.each do |k,v|        
+          role.override_attributes["redBorder"]["manager"]["externals"][EXTERNAL_NAME][k] = v
+        end
+      end
+    end
+
+    if save
+      if role.save
+        printf "INFO: Manager saved successfully - #{EXTERNAL_NAME}\n"
+      else
+        printf "ERROR: Role manager can not be saved\n"
+      end
+    end
+  rescue => e
+    printf "ERROR: cannot contact chef-server #{Chef::Config[:chef_server_url]}\n"
+    puts "#{e}\n\t#{e.backtrace.join("\n\t")}"
+    ret=1
+  end
+end
+
+exit ret
+
