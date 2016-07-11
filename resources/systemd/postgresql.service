@@ -1,0 +1,11 @@
+[Unit]
+Description=PostgreSQL unit file
+
+[Service]
+ExecStart=/opt/rb/bin/postgres -D /opt/rb/var/pgdata
+User=opscode-pgsql
+Group=opscode-pgsql
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
