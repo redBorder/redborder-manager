@@ -8,7 +8,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-common
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash dialog rvm s3cmd postgresql-pgpool-II
+Requires: bash ntp dialog rvm s3cmd postgresql-pgpool-II
 
 %description
 %{summary}
@@ -22,20 +22,29 @@ Requires: bash dialog rvm s3cmd postgresql-pgpool-II
 mkdir -p %{buildroot}/usr/lib/redborder/bin
 mkdir -p %{buildroot}/etc/profile.d
 install -D -m 0644 resources/redborder-manager.sh %{buildroot}/etc/profile.d
-cp resources/systemd/* %{buildroot}/usr/lib/systemd/system
-chmod 0644 %{buildroot}/usr/lib/systemd/system/*
+install -D -m 0644 resources/systemd/postgresql.service %{buildroot}/usr/lib/systemd/system/postgresql.service
+install -D -m 0644 resources/systemd/kafka.service %{buildroot}/usr/lib/systemd/system/kafka.service
+install -D -m 0644 resources/systemd/kafka.sysconfig %{buildroot}/etc/sysconfig/kafka.sysconfig
 cp resources/bin/* %{buildroot}/usr/lib/redborder/bin
 chmod 0755 %{buildroot}/usr/lib/redborder/bin/*
 chmod 0644 %{buildroot}/usr/lib/redborder/bin/rb_manager_functions.sh
 chmod 0644 %{buildroot}/usr/lib/redborder/bin/rb_manager_functions.rb
 
 %pre
+getent group opscode-pgsql >/dev/null || groupadd -r opscode.pgsql
+getent passwd opscode-pgsql >/dev/null || \
+    useradd -r -g opscode-pgsql -d /opt/opscode/embedded/postgresql -s /bin/bash \
+    -c "PostgreSQL" opscode-pgsql
+exit 0
+
 
 %files
 %defattr(0755,root,root)
 /usr/lib/redborder/bin
 %defattr(0644,root,root)
-/usr/lib/systemd/system
+/usr/lib/systemd/system/postgresql.service
+/usr/lib/systemd/system/kafka.service
+/etc/sysconfig/kafka.sysconfig
 /etc/profile.d/redborder-manager.sh
 /usr/lib/redborder/bin/rb_manager_functions.sh
 /usr/lib/redborder/bin/rb_manager_functions.rb

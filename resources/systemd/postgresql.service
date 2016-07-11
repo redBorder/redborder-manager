@@ -2,7 +2,7 @@
 Description=PostgreSQL unit file
 
 [Service]
-ExecStart=/opt/rb/bin/postgres -D /opt/rb/var/pgdata
+ExecStart=/opt/opscode/embedded/bin/postgres -D /var/opt/opscode/postgresql/9.2/data
 User=opscode-pgsql
 Group=opscode-pgsql
 Restart=always
