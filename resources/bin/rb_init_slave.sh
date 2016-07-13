@@ -1,7 +1,9 @@
 #!/bin/bash
 # redborder SLAVE initialization
 
-function configure_master(){
+source /etc/profile
+
+function configure_slave(){
    echo "Configure SLAVE node"
 }
 

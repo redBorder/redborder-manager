@@ -8,7 +8,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-common
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash ntp dialog rvm s3cmd postgresql-pgpool-II chef-server-core redborder-chef
+Requires: bash ntp dialog rvm s3cmd postgresql-pgpool-II chef-server-core redborder-common redborder-chef
 
 %description
 %{summary}

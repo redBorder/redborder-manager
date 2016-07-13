@@ -1,6 +1,8 @@
 #!/bin/bash
 # redborder MASTER initialization
 
+source /etc/profile
+
 function configure_master(){
   # Check if master is configuring now
   #if [ -f /var/lock/master.lock ]; then
@@ -38,12 +40,15 @@ _RBEOF_
   # TODO
 
   # Upload chef data (ROLES, DATA BAGS, NODES, ENVIRONMENTS ...
-  /usr/lib/redborder/bin/rb_upload_chef_data.sh -y
+  $RBBIN/rb_upload_chef_data.sh -y
 
-  # Adding role to node
+  # Adding chef role to node
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
 
-  # 
+  # Set manager mode
+  [ -f /etc/chef/initialrole ] && initialrole=$(head /etc/chef/initialrole -n 1)
+  [ "x$initialrole" == "x" ] && initialrole="master"
+  $RBBIN/rb_set_mode.rb $initialrole
 
 }
 
