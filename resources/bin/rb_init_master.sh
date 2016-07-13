@@ -37,15 +37,14 @@ _RBEOF_
   # More data bags ...
   # TODO
 
-  ###############################################################
-  # Upload chef data (ROLES, DATA BAGS, NODES, ENVIRONMENTS ... #
-  ###############################################################
+  # Upload chef data (ROLES, DATA BAGS, NODES, ENVIRONMENTS ...
   /usr/lib/redborder/bin/rb_upload_chef_data.sh -y
 
-  ###########################
-  # Chef Client Registering #
-  ###########################
+  # Adding role to node
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
+
+  # 
+
 }
 
 ########
