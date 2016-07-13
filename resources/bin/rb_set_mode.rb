@@ -15,11 +15,11 @@
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
 
-require 'rubygems'
+#require 'rubygems'
 require 'chef'
 require 'json'
 
-load '/usr/lib/redborder/bin/rb_manager_functions.rb' 
+load '/usr/lib/redborder/bin/rb_manager_functions.rb'
 
 managers=[]
 
@@ -34,8 +34,8 @@ managers=[`hostname -s`.chomp] if managers.size==0
 
 managers.each do |hostname|
   if hostname.split(":").size>1
-    set_mode(hostname.split(":")[0], hostname.split(":")[1]) 
+    set_mode(hostname.split(":")[0], hostname.split(":")[1])
   else
-    set_mode(hostname, mode) 
+    set_mode(hostname, mode)
   end
 end

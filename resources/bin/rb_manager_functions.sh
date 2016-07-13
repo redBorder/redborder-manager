@@ -1,5 +1,5 @@
 #!/bin/bash
-#######################################################################    
+#######################################################################
 # Copyright (c) 2014 ENEO Tecnología S.L.
 # This file is part of redBorder.
 # redBorder is free software: you can redistribute it and/or modify
@@ -93,11 +93,11 @@ function error_title() {
     echo "######################################################################################################"
     set_color norm
 }
- 
 
-# 
+
+#
 # function set_color(), next print will be in color
-# colors: green, red, blue, norm 
+# colors: green, red, blue, norm
 set_color() {
     if [ "x$BOOTUP" != "xnone" ]; then
         green="echo -en \\033[1;32m"
@@ -151,7 +151,7 @@ function upload_pem() {
     NAMECERT="$1"
     LOCATIONCERT="$2"
     local ret=0
-    
+
     if [ -f ${CERT} -a "x${LOCATIONCERT}" != "x" ]; then
         echo -n "Uploading $NAMECERT certificate ... "
         #this key is valid
@@ -197,31 +197,31 @@ function print_result_opposite(){
 
 
 
-f_ticker_start() { 
-    local lock_ticker_file=$1 
-        { 
-        echo -n " " 
-        while : ; do 
-            for i in \\\\ \| / - ; do 
-                echo -e -n "\b$i" 
-                if [ -f /var/lock/${lock_ticker_file} ]; then 
-                    echo -e -n "\b" 
-                    sleep 1 
-                    rm -f /var/lock/${lock_ticker_file} 
-                    exit 0 
-                fi 
-                sleep 1 
-            done 
-        done 
- 
-        } & 
-} 
- 
-f_ticker_stop() { 
-    local lock_ticker_file=$1 
-    touch /var/lock/${lock_ticker_file} 
-    sleep 2 
-} 
+f_ticker_start() {
+    local lock_ticker_file=$1
+        {
+        echo -n " "
+        while : ; do
+            for i in \\\\ \| / - ; do
+                echo -e -n "\b$i"
+                if [ -f /var/lock/${lock_ticker_file} ]; then
+                    echo -e -n "\b"
+                    sleep 1
+                    rm -f /var/lock/${lock_ticker_file}
+                    exit 0
+                fi
+                sleep 1
+            done
+        done
+
+        } &
+}
+
+f_ticker_stop() {
+    local lock_ticker_file=$1
+    touch /var/lock/${lock_ticker_file}
+    sleep 2
+}
 
 function wait_file() {
   local counter=0
@@ -268,6 +268,3 @@ function wait_port(){
     done
   fi
 }
-
-
-
