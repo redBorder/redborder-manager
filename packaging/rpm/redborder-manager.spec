@@ -21,6 +21,10 @@ Requires: bash ntp dialog rvm s3cmd postgresql-pgpool-II
 %install
 mkdir -p %{buildroot}/usr/lib/redborder/bin
 mkdir -p %{buildroot}/etc/profile.d
+mkdir -p %{buildroot}/var/chef/cookbooks
+mkdir -p %{buildroot}/var/chef/data/role
+mkdir -p %{buildroot}/var/chef/data/data_bag/passwords
+mkdir -p %{buildroot}/var/chef/data/data_bag/rBglobal
 install -D -m 0644 resources/redborder-manager.sh %{buildroot}/etc/profile.d
 install -D -m 0644 resources/systemd/postgresql.service %{buildroot}/usr/lib/systemd/system/postgresql.service
 install -D -m 0644 resources/systemd/kafka.service %{buildroot}/usr/lib/systemd/system/kafka.service
@@ -29,6 +33,8 @@ cp resources/bin/* %{buildroot}/usr/lib/redborder/bin
 chmod 0755 %{buildroot}/usr/lib/redborder/bin/*
 chmod 0644 %{buildroot}/usr/lib/redborder/bin/rb_manager_functions.sh
 chmod 0644 %{buildroot}/usr/lib/redborder/bin/rb_manager_functions.rb
+cp -r resources/chef/* %{buildroot}/var/chef/data
+chmod -R 0644 %{buildroot}/var/chef/data
 
 %pre
 getent group opscode-pgsql >/dev/null || groupadd -r opscode.pgsql
@@ -48,6 +54,7 @@ exit 0
 /etc/profile.d/redborder-manager.sh
 /usr/lib/redborder/bin/rb_manager_functions.sh
 /usr/lib/redborder/bin/rb_manager_functions.rb
+/var/chef/data
 
 #/usr/lib/redborder/bin/rb_service
 #/usr/lib/redborder/bin/rb_clean_riak_data.sh

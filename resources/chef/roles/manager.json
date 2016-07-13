@@ -1,0 +1,44 @@
+{
+  "name": "manager",
+  "description": "redborder manager role",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+
+  },
+  "override_attributes": {
+    "redBorder": {
+      "network": {
+        "routes": {
+
+        }
+      },
+      "ntp": {
+        "is_server": true,
+        "servers": [
+          "time-a.nist.gov",
+          "time.nist.gov",
+          "time-b.nist.gov"
+        ]
+      },
+      "snmp": {
+        "full_systemview": true
+      },
+      "rsyslog": {
+        "is_server": true,
+        "servers": [
+
+        ],
+        "protocol": "udp"
+      },
+      "smtp": {
+        "relayhost": ""
+      }
+    }
+  },
+  "chef_type": "role",
+  "run_list": [
+  ],
+  "env_run_lists": {
+
+  }
+}
