@@ -1,10 +1,10 @@
 #!/bin/bash
-# redborder SLAVE initialization
+# redborder CUSTOM node initialization
 
 source /etc/profile
 
-function configure_slave(){
-   echo "Configure SLAVE node"
+function configure_custom(){
+   echo "Configure CUSTOM node"
 }
 
 ########
@@ -14,17 +14,12 @@ function configure_slave(){
 #sys_manager_rsa=$1 # Se obtiene con SERF
 #sys_manager_mode=$2
 
-# Set CDOMAIN
-cdomain="redborder.cluster"
-#[ -f /etc/redborder/cdomain ] && cdomain=$(head /etc/redborder/cdomain -n 1)
-#[ "x$cdomain" == "x" ] && cdomain="redborder.cluster"
+# Get cdomain
+[ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
+[ "x$cdomain" == "x" ] && cdomain="redborder.cluster"
 
 # Set RSA keys for root user
 echo -e  'y\n'|ssh-keygen -q -t rsa -N "" -f ~/.ssh/id_rsa
-
-# Configure hostname with randon name
-CLIENTNAME=`hostname "rb$(< /dev/urandom tr -dc a-z0-9 | head -c10 | sed 's/ //g')"`
-echo -e "127.0.0.1 `hostname` `hostname -s`" | sudo tee -a /etc/hosts
 
 # Get MASTER IP and add to /etc/hosts
 IPMASTER=`serf members -status alive -tag master=yes -format=json | jq -r .members[].addr | cut -d ":" -f 1`
@@ -56,7 +51,7 @@ sed -i "s/\HOSTNAME/$CLIENTNAME/g" /etc/chef/client.rb
 sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/redborder\"|" /etc/chef/client.rb
 
 # Customize knife.rb
-sed -i "s/\HOSTNAME/$CLIENTNAME/g" /root/.chef/knife.rb
+sed -i "s/\HOSTNAME/$CLIENTNAME/g" c
 sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/redborder\"|" /root/.chef/knife.rb
 
 # Create chef node and client from files in /etc/chef
