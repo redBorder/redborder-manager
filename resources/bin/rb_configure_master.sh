@@ -310,6 +310,11 @@ _RBEOF2_
 
 }
 
+function configure_externals(){
+    #TODO
+    echo "Configuring externals"
+}
+
 function configure_master(){
   # Check if master is configuring now
   if [ -f /var/lock/master.lock ]; then
@@ -357,16 +362,16 @@ function configure_master(){
 
   #wait_service erchef #TODO
 
+  # Upload chef data (ROLES, DATA BAGS, NODES, ENVIRONMENTS ...)
+  $RBBIN/rb_upload_chef_data.sh -y
+
   # Upload COOKBOOKS
   mkdir -p /var/chef/cache/cookbooks/
-  for n in zookeeper; do # cookbooks
+  for n in `ls /var/chef/cookbooks`; do # cookbooks
     rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Upload cookbooks
     knife cookbook upload $n
   done
-
-  # Upload chef data (ROLES, DATA BAGS, NODES, ENVIRONMENTS ...)
-  $RBBIN/rb_upload_chef_data.sh -y
 
   # Delete encrypted data BAGS
   rm -rf /var/chef/data/data_bag_encrypted/*
@@ -377,11 +382,43 @@ function configure_master(){
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
 
   # MANAGER ROLES (modes)
-  #[ -f /etc/chef/initialrole ] && initialrole=$(head /etc/chef/initialrole -n 1)
-  #[ "x$initialrole" == "x" ] && initialrole="master"
-  #$RBBIN/rb_set_mode.rb $initialrole
-  # TODO
+  [ -f /etc/chef/initialrole ] && initialrole=$(head /etc/chef/initialrole -n 1)
+  [ "x$initialrole" == "x" ] && initialrole="master"
+  # Set manager role
+  $RBBIN/rb_set_mode.rb $initialrole
+  $RBBIN/rb_update_timestamp.rb &>/dev/null
+  touch /etc/redborder/cluster.lock
 
+  # Copy web certificates (user only chef-server certificate)
+  mkdir -p /root/.chef/trusted_certs/
+  rsync /var/opt/opscode/nginx/ca/*.crt /root/.chef/trusted_certs/
+  mkdir -p /home/redborder/.chef/trusted_certs/
+  rsync /var/opt/opscode/nginx/ca/*.crt /home/redborder/.chef/trusted_certs/
+  chown -R redborder:redborder /home/redborder/.chef
+
+  # Configure externals
+  configure_externals
+
+  # ?¿?¿?¿?¿?¿?¿ CHECK THIS...
+  [ -f /etc/chef/initialdata.json ] && $RBBIN/rb_chef_node /etc/chef/initialdata.json
+  [ -f /etc/chef/initialrole.json ] && $RBBIN/rb_chef_role /etc/chef/initialrole.json
+
+  echo "Configuring chef client (first time). Please wait...  "
+  echo "###########################################################" >>/root/.install-chef-client.log
+  echo "redBorder install 1/3 run $(date)" >>/root/.install-chef-client.log
+  echo "###########################################################" >>/root/.install-chef-client.log
+  chef-client &>/root/.install-chef-client.log
+  echo "" >>/root/.install-chef-client.log
+  echo "###########################################################" >>/root/.install-chef-client.log
+  echo "redBorder install 2/3 run $(date)" >>/root/.install-chef-client.log
+  echo "###########################################################" >>/root/.install-chef-client.log
+  chef-client &>>/root/.install-chef-client.log
+  echo "" >>/root/.install-chef-client.log
+  echo "###########################################################" >>/root/.install-chef-client.log
+  echo "redBorder install 3/3 run $(date)" >>/root/.install-chef-client.log
+  echo "###########################################################" >>/root/.install-chef-client.log
+  chef-client &>>/root/.install-chef-client.log
+  echo "" >>/root/.install-chef-client.log
 
 }
 
@@ -447,3 +484,9 @@ sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgres
 
 # Configure MASTER
 configure_master
+
+# Start services
+# TODO # It needs load cookbooks
+
+rm -f /etc/redborder/master-running.lock
+echo "Finished master"

@@ -18,8 +18,7 @@ if [ ! -f /etc/redborder/cluster-installed.txt -a ! -f /etc/redborder/installed.
     echo "Disk Size: " && df -h
 
     ## CLOUD configuration ##
-    # Se usará Centos7 proporcionada por amazon # TODO
-    # Hasta entonces, inicializamos el archivo de configuración de cloud
+    mkdir -p /etc/redborder
     if [ "x$manufacturer" == "xXen" -o "x$manufacturer" == "xxen" -o "x$manufacturer" == "xOpenStack Foundation" -o "x$manufacturer" == "xOpenStack" -o "x$manufacturer" == "xopenstack" -o "x$productname" == "xOpenStack Compute" ]; then
     [ "x$manufacturer" == "xXen" -o "x$manufacturer" == "xxen" ] && touch /etc/redborder/amazon.flag
         echo "Configuring cloud init"
@@ -117,12 +116,12 @@ _RBEOF2_
         [ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
         [ "x$cdomain" == "x" ] && cdomain="redborder.cluster"
         # Change hostname in role
-        sed -i "s/rbmanager/$(hostname -s)/g" /var/chef/data/role/manager.json #/etc/chef/role-manager*
+        sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/manager.json #/etc/chef/role-manager*
         # Create specific role for this node
         cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
         # And set hostname in another essential files
         sed -i "s/^HOSTNAME=.*/HOSTNAME=$(hostname -s).${cdomain}/" /etc/sysconfig/network
-        sed -i "s/ rbmanager / $(hostname -s) $(hostname -s).${cdomain} /" /etc/hosts
+        sed -i "s/ manager / $(hostname -s) $(hostname -s).${cdomain} /" /etc/hosts
 
         ## Configuring Datastore ##
         # TODO
@@ -138,27 +137,23 @@ _RBEOF2_
         hostnamectl set-hostname $newhostname.$cdomain
         echo -e "127.0.0.1 `hostname` `hostname -s`" | sudo tee -a /etc/hosts &>/dev/null #temporal
 
-        # Change hostname in role
-        sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/manager.json #/etc/chef/role-manager* #¿para que sirve role-manager.json?
         # Create specific role for this node
         cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
+        # Change hostname in role
+        sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json #/etc/chef/role-manager* #¿para que sirve role-manager.json?
         # And set hostname in another essential files
         sed -i "s/ manager |localhost.*/ $(hostname -s) $(hostname -s).${cdomain} /" /etc/hosts
 
-        # NTP configuration
-        ip a |grep inet|grep -v "127.0.0.1" |grep -q eno #...is like eth
-        if [ $? -eq 0 ]; then
-            pdate "Configuring NTP"
-            echo "Trying to adjust time"
-            systemctl stop ntpd &>/dev/null
-            ntpdate -t 5 pool.ntp.org &>/dev/null
-            if [ $? -ne 0 ]; then
-                router=$(ip r |grep "default via"|awk '{print $3}')
-                [ "x$router" != "x" ] && ntpdate -t 5 $router &>/dev/null
-            fi
-            hwclock --systohc
-            systemctl start ntpd
-        fi
+        # NTP configuration # Check
+        echo "Trying to adjust time"
+        #systemctl stop ntpd &>/dev/null
+        #ntpdate -t 5 pool.ntp.org &>/dev/null
+        #if [ $? -ne 0 ]; then
+        #    router=$(ip r |grep "default via"|awk '{print $3}')
+        #    [ "x$router" != "x" ] && ntpdate -t 5 $router &>/dev/null
+        #fi
+        hwclock --systohc
+        systemctl start ntpd
     fi
     # end initial configuration
 

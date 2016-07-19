@@ -1,0 +1,28 @@
+#!/usr/bin/ruby
+
+require 'chef'
+require 'json'
+
+Chef::Config.from_file("/etc/chef/client.rb")
+Chef::Config[:node_name]  = "admin"
+Chef::Config[:client_key] = "/etc/opscode/admin.pem"
+Chef::Config[:http_retry_count] = 5
+
+hostname = `hostname -s`.strip
+node = Chef::Node.load(hostname)
+
+if !node.nil?
+  ARGV.each do|f|
+    #printf("Reading #{f}\n")
+    if File.exist?(f)
+      file = File.read(f)
+      hash = JSON.parse(file)
+      node.normal=node.normal.merge(hash)
+    end
+  end
+  if node.save
+    printf("Node #{node.name} saved successfully\n")
+  else
+    printf("Node #{node.name} has not been saved!!!!\n")
+  end
+end
