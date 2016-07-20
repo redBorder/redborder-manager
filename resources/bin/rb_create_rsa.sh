@@ -1,5 +1,5 @@
 #!/bin/bash
-#######################################################################    
+#######################################################################
 # Copyright (c) 2014 ENEO Tecnología S.L.
 # This file is part of redBorder.
 # redBorder is free software: you can redistribute it and/or modify
@@ -59,20 +59,20 @@ if [ "x$OVR" == "xy" -o "x$OVR" == "xY" ]; then
   mkdir -p /var/chef/data/data_bag_encrypted/passwords/
   echo "{
  \"id\": \"ssh\",
- \"username\": \"redBorder\",
+ \"username\": \"redborder\",
  \"public_rsa\": \"`cat /var/www/rb-rails/config/rsa.pub`\"
 }" > $JSON
-  #$KNIFE data bag -c $KNIFECFG from file passwords $JSON --secret-file /etc/chef/encrypted_data_bag_secret --key ${CERT} -u ${CERTUSER} 
+  #$KNIFE data bag -c $KNIFECFG from file passwords $JSON --secret-file /etc/chef/encrypted_data_bag_secret --key ${CERT} -u ${CERTUSER}
   $KNIFE data bag -c $KNIFECFG from file passwords $JSON --secret-file /etc/chef/encrypted_data_bag_secret
   rm -f $JSON
   echo "Checking NEW ssh rsa databag: "
   #$KNIFE data bag show passwords ssh -c $KNIFECFG --key ${CERT} -u ${CERTUSER}
-  $KNIFE data bag show passwords ssh -c $KNIFECFG 
-  if [ $? -eq 0 ]; then 
+  $KNIFE data bag show passwords ssh -c $KNIFECFG
+  if [ $? -eq 0 ]; then
     UPLOAD=1
   fi
 fi
 
 if [ $UPLOAD -eq 1 -a -f /var/www/rb-rails/config/rsa ]; then
-  upload_pem "rsa" "/var/www/rb-rails/config/rsa"    
+  upload_pem "rsa" "/var/www/rb-rails/config/rsa"
 fi

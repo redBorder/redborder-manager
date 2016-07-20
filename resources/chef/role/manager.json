@@ -37,7 +37,7 @@
   },
   "chef_type": "role",
   "run_list": [
-    "recipe[zookeper]"
+    "recipe[zookeeper]"
   ],
   "env_run_lists": {
 

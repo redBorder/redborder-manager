@@ -293,10 +293,10 @@ function configure_dataBags(){
     if [ "x$NMSPMAC" == "x" ]; then
       NMSPMAC="$(< /dev/urandom tr -dc a-f0-9 | head -c2 | sed 's/ //g'):$(< /dev/urandom tr -dc a-f0-9 | head -c2 | sed 's/ //g'):$(< /dev/urandom tr -dc a-f0-9 | head -c2 | sed 's/ //g'):$(< /dev/urandom tr -dc a-f0-9 | head -c2 | sed 's/ //g'):$(< /dev/urandom tr -dc a-f0-9 | head -c2 | sed 's/ //g'):$(< /dev/urandom tr -dc a-f0-9 | head -c2 | sed 's/ //g'):"
     fi
-    rm -f /var/chef/cookbooks/redBorder-manager/files/default/aes.keystore
+    rm -f /var/chef/cookbooks/redborder-manager/files/default/aes.keystore
     rm -f /var/chef/data/data_bag_encrypted/passwords/nmspd-key-hashes.json
-    mkdir -p /var/chef/data/data_bag_encrypted/passwords /var/chef/cookbooks/redBorder-manager/files/default
-    java -cp /usr/lib/nmspd/app/deps/*:/usr/lib/nmspd/app/nmsp.jar net.redborder.nmsp.NmspConsumer config-gen /var/chef/cookbooks/redBorder-manager/files/default/ /var/chef/data/data_bag_encrypted/passwords/ $NMSPMAC
+    mkdir -p /var/chef/data/data_bag_encrypted/passwords /var/chef/cookbooks/redborder-manager/files/default
+    java -cp /usr/lib/nmspd/app/deps/*:/usr/lib/nmspd/app/nmsp.jar net.redborder.nmsp.NmspConsumer config-gen /var/chef/cookbooks/redborder-manager/files/default/ /var/chef/data/data_bag_encrypted/passwords/ $NMSPMAC
   fi
 
   #generating cluster uuid
@@ -317,11 +317,11 @@ function configure_externals(){
 
 function configure_master(){
   # Check if master is configuring now
-  if [ -f /var/lock/master.lock ]; then
+  if [ -f /var/lock/master-configuring.lock ]; then
     echo "INFO: this manager has already been initialized"
     exit 0
   fi
-  touch /var/lock/master.lock
+  touch /var/lock/master-configuring.lock
 
   # Configure AWS
   configure_aws
@@ -342,14 +342,14 @@ function configure_master(){
     sed -i "s|s3_url,.*|s3_url, \"https://${S3HOST}\"},|" $ERCHEFCFG
     sed -i "s|s3_platform_bucket_name,.*|s3_platform_bucket_name, \"${S3BUCKET}\"},|" $ERCHEFCFG
     sed -i "s|s3_external_url,.*|s3_external_url, \"https://${S3HOST}\"},|" $ERCHEFCFG
-    sed -i  's/"redBorder": {/"redBorder": {\n      "uploaded_s3": true,/' /var/chef/data/role/manager.json
+    sed -i  's/"redborder": {/"redborder": {\n      "uploaded_s3": true,/' /var/chef/data/role/manager.json
     rm -rf /var/opt/opscode/bookshelf/data/bookshelf
   else
     # Configuring erchef to use local cookbooks
     sed -i 's|s3_external_url.*$|s3_external_url, "https://localhost"},|' $ERCHEFCFG |grep s3_external_url
   fi
 
-  # Starting erchef and associated services # TODO using chef-server-ctl
+  # Starting erchef and associated services # TODO using chef-server-ctl?
   #service erchef status &>/dev/null
   #[ $? -ne 3 ] && service erchef reload
   #rb_chef start
@@ -377,7 +377,6 @@ function configure_master(){
   rm -rf /var/chef/data/data_bag_encrypted/*
 
   echo "Registering chef-client ..."
-  yum clean all
   /usr/bin/chef-client
   # Adding chef role to node
   knife node -c /root/.chef/knife.rb run_list add `hostname -s` "role[manager]"
@@ -388,7 +387,7 @@ function configure_master(){
   # Set manager role
   $RBBIN/rb_set_mode.rb $initialrole
   $RBBIN/rb_update_timestamp.rb &>/dev/null
-  touch /etc/redborder/cluster.lock
+  #touch /etc/redborder/cluster.lock
 
   # Copy web certificates (user only chef-server certificate)
   mkdir -p /root/.chef/trusted_certs/
@@ -404,22 +403,24 @@ function configure_master(){
   [ -f /etc/chef/initialdata.json ] && $RBBIN/rb_chef_node /etc/chef/initialdata.json
   [ -f /etc/chef/initialrole.json ] && $RBBIN/rb_chef_role /etc/chef/initialrole.json
 
+  # Clean yum data
+  yum clean all
   echo "Configuring chef client (first time). Please wait...  "
-  echo "###########################################################" >>/root/.install-chef-client.log
-  echo "redBorder install 1/3 run $(date)" >>/root/.install-chef-client.log
-  echo "###########################################################" >>/root/.install-chef-client.log
-  chef-client &>/root/.install-chef-client.log
-  echo "" >>/root/.install-chef-client.log
-  echo "###########################################################" >>/root/.install-chef-client.log
-  echo "redBorder install 2/3 run $(date)" >>/root/.install-chef-client.log
-  echo "###########################################################" >>/root/.install-chef-client.log
-  chef-client &>>/root/.install-chef-client.log
-  echo "" >>/root/.install-chef-client.log
-  echo "###########################################################" >>/root/.install-chef-client.log
-  echo "redBorder install 3/3 run $(date)" >>/root/.install-chef-client.log
-  echo "###########################################################" >>/root/.install-chef-client.log
-  chef-client &>>/root/.install-chef-client.log
-  echo "" >>/root/.install-chef-client.log
+  echo "###########################################################" #>>/root/.install-chef-client.log
+  echo "redborder install 1/3 run $(date)" #>>/root/.install-chef-client.log
+  echo "###########################################################" #>>/root/.install-chef-client.log
+  chef-client #&>/root/.install-chef-client.log
+  echo "" #>>/root/.install-chef-client.log
+  echo "###########################################################" #>>/root/.install-chef-client.log
+  echo "redborder install 2/3 run $(date)" #>>/root/.install-chef-client.log
+  echo "###########################################################" #>>/root/.install-chef-client.log
+  chef-client #&>>/root/.install-chef-client.log
+  echo "" #>>/root/.install-chef-client.log
+  echo "###########################################################" #>>/root/.install-chef-client.log
+  echo "redborder install 3/3 run $(date)" #>>/root/.install-chef-client.log
+  echo "###########################################################" #>>/root/.install-chef-client.log
+  chef-client #&>>/root/.install-chef-client.log
+  echo "" #>>/root/.install-chef-client.log
 
 }
 
@@ -459,7 +460,7 @@ sed -i "s/\HOSTNAME/`hostname -s`/g" /etc/chef/client.rb
 sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/redborder\"|" /etc/chef/client.rb
 
 # Customize knife.rb
-sed -i "s/\HOSTNAME/`admin`/g" /root/.chef/knife.rb
+sed -i "s/\HOSTNAME/admin/g" /root/.chef/knife.rb
 sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/redborder\"|" /root/.chef/knife.rb
 sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
 
@@ -488,5 +489,5 @@ configure_master
 # Start services
 # TODO # It needs load cookbooks
 
-rm -f /etc/redborder/master-running.lock
-echo "Finished master"
+rm -f /etc/redborder/master-configuring.lock
+echo "Master configured!"

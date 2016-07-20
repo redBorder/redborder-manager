@@ -157,6 +157,9 @@ _RBEOF2_
     fi
     # end initial configuration
 
+    #SSH generate RSA keys
+    mkdir -p /root/.ssh && echo -e  'y\n'|ssh-keygen -q -t rsa -N "" -f ~/.ssh/id_rsa
+    cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
     #SSH enable auth login
     sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config
     sed -i "s/\#PermitRootLogin/PermitRootLogin/" /etc/ssh/sshd_config

@@ -20,20 +20,19 @@ require 'chef'
 require 'json'
 
 MASTER_MODE="master"
-SLAVE_MODE="slave"
+CUSTOM_MODE="custom"
 
-# For master
 Chef::Config.from_file("/etc/chef/client.rb")
 Chef::Config[:node_name]  = "admin"
-Chef::Config[:client_key] = "/etc/opscode/admin.pem"
+Chef::Config[:client_key] = "/etc/chef/admin.pem"
 Chef::Config[:http_retry_count] = 5
 
 def is_valid_mode(mode)
-  return (mode==MASTER_MODE or mode==SLAVE_MODE)
+  return (mode==MASTER_MODE or mode==CUSTOM_MODE)
 end
 
 def set_mode( hostname, mode, services=[] )
-  if is_valid_mode(mode) or mode.nil?
+  if is_valid_mode(mode) or mode.nil?i
 
     # Load role and node
     node = Chef::Node.load(hostname)
@@ -87,6 +86,6 @@ def set_mode( hostname, mode, services=[] )
       printf "ERROR: #{hostname} cannot pass from #{last_mode} to #{mode} mode\n"
     end
   else
-    printf "Usage: rb_set_mode.rb #{MASTER_MODE}|#{SLAVE_MODE} [manager1] [manager2] [....]\n"
+    printf "Usage: rb_set_mode.rb #{MASTER_MODE}|#{CUSTOM_MODE} [manager1] [manager2] [....]\n"
   end
 end
