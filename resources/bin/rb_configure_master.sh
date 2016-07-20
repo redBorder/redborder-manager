@@ -377,9 +377,10 @@ function configure_master(){
   rm -rf /var/chef/data/data_bag_encrypted/*
 
   echo "Registering chef-client ..."
+  yum clean all
   /usr/bin/chef-client
   # Adding chef role to node
-  knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
+  knife node -c /root/.chef/knife.rb run_list add `hostname -s` "role[manager]"
 
   # MANAGER ROLES (modes)
   [ -f /etc/chef/initialrole ] && initialrole=$(head /etc/chef/initialrole -n 1)
@@ -454,12 +455,11 @@ mkdir -p /root/.chef
 [ ! -f /etc/chef/client.rb ] && cp /etc/chef/client.rb.default /etc/chef/client.rb
 
 # Customize client.rb
-sed -i "s/\HOSTNAME/admin/g" /etc/chef/client.rb
+sed -i "s/\HOSTNAME/`hostname -s`/g" /etc/chef/client.rb
 sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/redborder\"|" /etc/chef/client.rb
-sed -i "s/client\.pem/admin\.pem/g" /etc/chef/client.rb
 
 # Customize knife.rb
-sed -i "s/\HOSTNAME/admin/g" /root/.chef/knife.rb
+sed -i "s/\HOSTNAME/`admin`/g" /root/.chef/knife.rb
 sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/redborder\"|" /root/.chef/knife.rb
 sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
 

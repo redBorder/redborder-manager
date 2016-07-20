@@ -34,36 +34,59 @@ end
 
 def set_mode( hostname, mode, services=[] )
   if is_valid_mode(mode) or mode.nil?
+
+    # Load role and node
     node = Chef::Node.load(hostname)
-    role = Chef::Role.load(manager)
+    role = Chef::Role.load(hostname)
 
-    last_mode = "new"
+    # Attribute SERVICES in ROLE
     role.override_attributes["redborder"] = {} if role.override_attributes["redborder"].nil?
-    role.override_attributes["redborder"]["manager"] = {} if role.override_attributes["redborder"]["manager"].nil?
-    role.override_attributes["redborder"]["manager"]["services"] = {} if role.override_attributes["redborder"]["manager"]["services"].nil?
-    role.override_attributes["redborder"]["manager"]["services"]["overwrite"] = {} if role.override_attributes["redborder"]["manager"]["services"]["overwrite"].nil?
+    role.override_attributes["redborder"]["services"] = {} if role.override_attributes["redborder"]["services"].nil?
+    role.override_attributes["redborder"]["services"]["overwrite"] = {} if role.override_attributes["redborder"]["services"]["overwrite"].nil?
 
+    # Creating attributes template for NODE
+    # Override attributes
     node.override!["redborder"] = {} if node["redborder"].nil?
-    node.override!["redborder"]["manager"] = {} if node["redborder"]["manager"].nil?
+    # Normal attributes
     node.set["redborder"] = {} if node["redborder"].nil?
-    node.set["redborder"]["manager"] = {} if node["redborder"]["manager"].nil?
 
-    last_mode = role.override_attributes["redborder"]["manager"]["mode"]
-    last_mode = node["redborder"]["manager"]["mode"] if (last_mode.nil? or last_mode=="")
+    # Before set the new mode, check if there was a previous mode
+    last_mode = role.override_attributes["redborder"]["mode"]
+    last_mode = node["redborder"]["mode"] if (last_mode.nil? or last_mode=="")
     last_mode = "new" if (last_mode.nil? or last_mode=="")
 
+    # Set mode in role
     unless mode.nil?
-      role.override_attributes["redborder"]["manager"]["mode"] = mode
-      role.override_attributes["redborder"]["manager"]["services"]["overwrite"]={}
+      role.override_attributes["redborder"]["mode"] = mode
+      role.override_attributes["redborder"]["services"]["overwrite"]={}
 
-      node.override!["redborder"]["manager"]["mode"] = mode
-      node.override!["redborder"]["manager"]["services"] = {} if node["redborder"]["manager"]["services"].nil?
-      node.override!["redborder"]["manager"]["services"]["overwrite"]={}
-      node.override!["redborder"]["manager"]["services"]["current"]  ={} if node["redborder"]["manager"]["services"]["current"].nil?
+      node.override!["redborder"]["mode"] = mode
+      node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
+      node.override!["redborder"]["services"]["overwrite"]={}
+      node.override!["redborder"]["services"]["current"]  ={} if node["redborder"]["services"]["current"].nil?
 
-      node.set["redborder"]["manager"]["mode"] = mode
-      node.set["redborder"]["manager"]["services"]["overwrite"]={} if !node["redborder"]["manager"]["services"].nil?
+      node.set["redborder"]["mode"] = mode
+      node.set["redborder"]["services"]["overwrite"]={} if !node["redborder"]["services"].nil?
     end
 
-    #TODO: Configure services
+    #Configuring services if it is specified
+    # TODO
+
+    # Save changes y role and node
+    if role.save and node.save
+      if mode.nil?
+        if !services.nil? and services.size>0
+          printf("INFO: %-50s %s\n", "#{hostname} conserve mode #{last_mode}", ( !services.nil? and services.size>0 ) ? "    (#{services.join(",")})" : "")
+        else
+          printf("INFO: Nothing to do on #{hostname}\n")
+        end
+      else
+        printf("INFO: %-50s %s\n", "#{hostname} passed from #{last_mode} to #{mode}", ( !services.nil? and services.size>0 ) ? "    (#{services.join(",")})" : "")
+      end
+    else
+      printf "ERROR: #{hostname} cannot pass from #{last_mode} to #{mode} mode\n"
+    end
+  else
+    printf "Usage: rb_set_mode.rb #{MASTER_MODE}|#{SLAVE_MODE} [manager1] [manager2] [....]\n"
+  end
 end
