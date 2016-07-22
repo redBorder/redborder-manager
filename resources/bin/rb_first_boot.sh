@@ -8,7 +8,7 @@ source $RBBIN/rb_manager_functions.sh
 source /etc/profile
 
 # Check if cluster is installed
-if [ ! -f /etc/redborder/cluster-installed.txt -a ! -f /etc/redborder/installed.txt ]; then
+if [ ! -f /etc/redborder/cluster-installed.txt -a ! -f /etc/redborder/installed.txt ]; then # Check lock files
 
     manufacturer=$(dmidecode -t 1| grep "Manufacturer:" | sed 's/.*Manufacturer: //')
     productname=$(dmidecode -t 1| grep "Product Name:" | sed 's/.*Product Name: //')
@@ -20,7 +20,7 @@ if [ ! -f /etc/redborder/cluster-installed.txt -a ! -f /etc/redborder/installed.
     ## CLOUD configuration ##
     mkdir -p /etc/redborder
     if [ "x$manufacturer" == "xXen" -o "x$manufacturer" == "xxen" -o "x$manufacturer" == "xOpenStack Foundation" -o "x$manufacturer" == "xOpenStack" -o "x$manufacturer" == "xopenstack" -o "x$productname" == "xOpenStack Compute" ]; then
-    [ "x$manufacturer" == "xXen" -o "x$manufacturer" == "xxen" ] && touch /etc/redborder/amazon.flag
+    [ "x$manufacturer" == "xXen" -o "x$manufacturer" == "xxen" ] && touch /etc/redborder/cloud.flag
         echo "Configuring cloud init"
 
         # Modify default cloud.cfg file
@@ -40,7 +40,7 @@ syslog_fix_perms: ~
 final_message: "Welcome to redborder Cloud"
 
 runcmd:
-- $RBBIN/rb_cloud_init.sh
+- /var/lib/redborder/bin/rb_cloud_init.sh
 
 cloud_init_modules:
 - migrator
@@ -132,19 +132,20 @@ _RBEOF2_
         [ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
         [ "x$cdomain" == "x" ] && cdomain="redborder.cluster"
 
-        # Configure hostname with randon name
+        # Configure hostname with randon name if not set #JOTA
         newhostname="rb$(< /dev/urandom tr -dc a-z0-9 | head -c10 | sed 's/ //g')"
         hostnamectl set-hostname $newhostname.$cdomain
-        echo -e "127.0.0.1 `hostname` `hostname -s`" | sudo tee -a /etc/hosts &>/dev/null #temporal
+        echo -e "127.0.0.1 `hostname` `hostname -s`" | sudo tee -a /etc/hosts &>/dev/null #check if don't use loopback IP
 
         # Create specific role for this node
         cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
         # Change hostname in role
         sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json #/etc/chef/role-manager* #¿para que sirve role-manager.json?
         # And set hostname in another essential files
-        sed -i "s/ manager |localhost.*/ $(hostname -s) $(hostname -s).${cdomain} /" /etc/hosts
+        sed -i "s/ manager |localhost.*/ $(hostname -s) $(hostname -s).${cdomain} /" /etc/hosts #Check this one...
 
-        # NTP configuration # Check
+        # NTP configuration # JOTA
+        # Check Internet connectivity
         echo "Trying to adjust time"
         #systemctl stop ntpd &>/dev/null
         #ntpdate -t 5 pool.ntp.org &>/dev/null
@@ -157,7 +158,10 @@ _RBEOF2_
     fi
     # end initial configuration
 
-    #SSH generate RSA keys
+    # Set cdomain file
+    echo $cdomain > /etc/redborder/cdomain
+
+    #SSH generate RSA keys # JOTA
     mkdir -p /root/.ssh && echo -e  'y\n'|ssh-keygen -q -t rsa -N "" -f ~/.ssh/id_rsa
     cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
     #SSH enable auth login
@@ -165,7 +169,7 @@ _RBEOF2_
     sed -i "s/\#PermitRootLogin/PermitRootLogin/" /etc/ssh/sshd_config
     systemctl restart sshd.service
 
-    ## Initial role node configuration ##
+    ## Initial manager mode(role) node configuration ##
     [ -f /etc/chef/initialrole ] && initialrole=$(head /etc/chef/initialrole -n 10) || initialrole=""
 
     # Enable and start SERF
@@ -174,6 +178,6 @@ _RBEOF2_
     systemctl start serf
     systemctl start serf-join
 
-    # Serf calls configure nodes script (master or slave).
+    # Serf calls configure nodes script (master or custom).
 
 fi

@@ -335,21 +335,21 @@ function configure_master(){
   # Let's start
   ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config" # Before app.config
 
-  # External S3 user data
+  # External S3 with user data
   if [ "x$S3HOST" != "x" -a "x$S3TYPE" == "xaws" -a "x$AWS_ACCESS_KEY" != "x" -a "x$AWS_SECRET_KEY" != "x" -a "x${S3BUCKET}" != "x" ]; then
-    sed -i "s|s3_access_key_id,.*|s3_access_key_id, \"${AWS_ACCESS_KEY}\"},|" $
+    sed -i "s|s3_access_key_id,.*|s3_access_key_id, \"${AWS_ACCESS_KEY}\"},|" $ERCHEFCFG
     sed -i "s|s3_secret_key_id,.*|s3_secret_key_id, \"${AWS_SECRET_KEY}\"},|" $ERCHEFCFG
     sed -i "s|s3_url,.*|s3_url, \"https://${S3HOST}\"},|" $ERCHEFCFG
     sed -i "s|s3_platform_bucket_name,.*|s3_platform_bucket_name, \"${S3BUCKET}\"},|" $ERCHEFCFG
     sed -i "s|s3_external_url,.*|s3_external_url, \"https://${S3HOST}\"},|" $ERCHEFCFG
     sed -i  's/"redborder": {/"redborder": {\n      "uploaded_s3": true,/' /var/chef/data/role/manager.json
-    rm -rf /var/opt/opscode/bookshelf/data/bookshelf
+    #rm -rf /var/opt/opscode/bookshelf/data/bookshelf
   else
     # Configuring erchef to use local cookbooks
     sed -i 's|s3_external_url.*$|s3_external_url, "https://localhost"},|' $ERCHEFCFG |grep s3_external_url
   fi
 
-  # Starting erchef and associated services # TODO using chef-server-ctl?
+  # Starting erchef and associated services # TODO when systemd scripts already
   #service erchef status &>/dev/null
   #[ $? -ne 3 ] && service erchef reload
   #rb_chef start
@@ -362,7 +362,7 @@ function configure_master(){
 
   #wait_service erchef #TODO
 
-  # Upload chef data (ROLES, DATA BAGS, NODES, ENVIRONMENTS ...)
+  # Upload chef data (ROLES, DATA BAGS, ENVIRONMENTS ...)
   $RBBIN/rb_upload_chef_data.sh -y
 
   # Upload COOKBOOKS
@@ -379,9 +379,9 @@ function configure_master(){
   echo "Registering chef-client ..."
   /usr/bin/chef-client
   # Adding chef role to node
-  knife node -c /root/.chef/knife.rb run_list add `hostname -s` "role[manager]"
+  knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[$CLIENTNAME]"
 
-  # MANAGER ROLES (modes)
+  # MANAGER MODES (roles)
   [ -f /etc/chef/initialrole ] && initialrole=$(head /etc/chef/initialrole -n 1)
   [ "x$initialrole" == "x" ] && initialrole="master"
   # Set manager role
@@ -389,7 +389,7 @@ function configure_master(){
   $RBBIN/rb_update_timestamp.rb &>/dev/null
   #touch /etc/redborder/cluster.lock
 
-  # Copy web certificates (user only chef-server certificate)
+  # Copy web certificates (user only chef-server certificate) #CHECK
   mkdir -p /root/.chef/trusted_certs/
   rsync /var/opt/opscode/nginx/ca/*.crt /root/.chef/trusted_certs/
   mkdir -p /home/redborder/.chef/trusted_certs/
@@ -400,8 +400,8 @@ function configure_master(){
   configure_externals
 
   # ?¿?¿?¿?¿?¿?¿ CHECK THIS...
-  [ -f /etc/chef/initialdata.json ] && $RBBIN/rb_chef_node /etc/chef/initialdata.json
-  [ -f /etc/chef/initialrole.json ] && $RBBIN/rb_chef_role /etc/chef/initialrole.json
+  #[ -f /etc/chef/initialdata.json ] && $RBBIN/rb_chef_node /etc/chef/initialdata.json
+  #[ -f /etc/chef/initialrole.json ] && $RBBIN/rb_chef_role /etc/chef/initialrole.json
 
   # Clean yum data
   yum clean all
@@ -428,11 +428,14 @@ function configure_master(){
 # MAIN #
 ########
 
-CLIENTNAME="admin" #for master node
+CHEFUSER="admin" # Chef server admin user
+CHEFORG="redborder" # Chef org
+CHEFPASS="redborder" # Chef pass
+
+CLIENTNAME=`hostname -s`
 
 # Get cdomain
-[ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
-[ "x$cdomain" == "x" ] && cdomain="redborder.cluster"
+cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
 
 #############################
 # CHEF SERVER Configuration #
@@ -441,13 +444,16 @@ CLIENTNAME="admin" #for master node
 # Chef server initial configuration
 HOME=/root /usr/bin/chef-server-ctl reconfigure #&>>/root/.install-chef-server.log
 # Chef user creation
-/usr/bin/chef-server-ctl user-create $CLIENTNAME $CLIENTNAME $CLIENTNAME $CLIENTNAME@redborder.com 'redborder' --filename /etc/opscode/$CLIENTNAME.pem
-# Chef organization ceration
-/usr/bin/chef-server-ctl org-create redborder 'redborder' --association_user $CLIENTNAME --filename /etc/opscode/redborder-validator.pem
+# $ chef-server-ctl user-create USER_NAME FIRST_NAME LAST_NAME EMAIL 'PASSWORD' --filename FILE_NAME
+/usr/bin/chef-server-ctl user-create $CHEFUSER $CHEFUSER $CHEFUSER $CHEFUSER@$cdomain \'$CHEFPASS\' --filename /etc/opscode/$CHEFUSER.pem
+# Chef organization creation
+# $ chef-server-ctl org-create short_name 'full_organization_name' --association_user user_name --filename ORGANIZATION-validator.pem
+/usr/bin/chef-server-ctl org-create $CHEFORG \'$CHEFORG\' --association_user $CHEFUSER --filename /etc/opscode/$CHEFORG-validator.pem
 
 # Copy and create certs
-[ ! -f /etc/chef/$CLIENTNAME.pem ] && cp /etc/opscode/$CLIENTNAME.pem /etc/chef
-[ ! -f /etc/chef/redborder-validator.pem ] && cp /etc/opscode/redborder-validator.pem /etc/chef/redborder-validator.pem
+[ ! -f /etc/chef/$CHEFUSER.pem ] && cp /etc/opscode/$CHEFUSER.pem /etc/chef
+[ ! -f /etc/chef/$CHEFORG-validator.pem ] && cp /etc/opscode/$CHEFORG-validator.pem /etc/chef/$CHEFORG-validator.pem
+
 # Knife configuration
 mkdir -p /root/.chef
 [ ! -f /root/.chef/knife.rb ] && cp /etc/chef/knife.rb.default /root/.chef/knife.rb
@@ -456,31 +462,26 @@ mkdir -p /root/.chef
 [ ! -f /etc/chef/client.rb ] && cp /etc/chef/client.rb.default /etc/chef/client.rb
 
 # Customize client.rb
-sed -i "s/\HOSTNAME/`hostname -s`/g" /etc/chef/client.rb
-sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/redborder\"|" /etc/chef/client.rb
+sed -i "s/\HOSTNAME/$CLIENTNAME/g" /etc/chef/client.rb
+sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/$CHEFORG\"|" /etc/chef/client.rb
 
 # Customize knife.rb
 sed -i "s/\HOSTNAME/admin/g" /root/.chef/knife.rb
-sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/redborder\"|" /root/.chef/knife.rb
+sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/$CHEFORG\"|" /root/.chef/knife.rb
 sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
-
-# And in /etc/hosts
-#sed -i "s/\.redborder\.cluster/.${cdomain}/g" /etc/hosts
 
 # Add erchef domain /etc/hosts
 grep -q erchef.${cdomain} /etc/hosts
-[ $? -ne 0 ] && echo "127.0.0.1   erchef.${cdomain}" >> /etc/hosts # Change it. Must not use loopback IP
+[ $? -ne 0 ] && echo "127.0.0.1   erchef.${cdomain}" >> /etc/hosts # Change it. Must not use loopback IP ??
 
-# Modifying some default chef parameters (rabbitmq, postgresql)
-# Rabbitmq
-sed -i "s/rabbit@localhost/rabbit@$(hostname -s 2>/dev/null)/" /opt/opscode/embedded/cookbooks/private-chef/attributes/default.rb
+# Modifying some default chef parameters (rabbitmq, postgresql) ## Check
+# Rabbitmq # Check
+sed -i "s/rabbit@localhost/rabbit@$CLIENTNAME/" /opt/opscode/embedded/cookbooks/private-chef/attributes/default.rb
 mkdir -p /var/opt/opscode/rabbitmq/db
 rm -f /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
-ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$(hostname -s 2>/dev/null).pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid #No existe
-# Postgresql # Really, must be changed?
-#sed -i 's|opt/chef-server/postgresql/data|/opt/rb/var/pgdata|' /opt/chef-server/embedded/cookbooks/chef-server/attributes/default.rb
-#rm -rf /var/opt/chef-server/postgresql/data /opt/rb/var/pgdata
-# Open ports in postgresql
+ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid # Not exists
+
+# Permit all IP address source in postgresql
 sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgresql/*/data/postgresql.conf
 
 # Configure MASTER
@@ -489,5 +490,5 @@ configure_master
 # Start services
 # TODO # It needs load cookbooks
 
-rm -f /etc/redborder/master-configuring.lock
+rm -f /var/lock/master-configuring.lock
 echo "Master configured!"

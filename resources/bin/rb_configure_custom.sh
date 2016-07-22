@@ -11,12 +11,11 @@ function configure_custom(){
 # MAIN #
 ########
 
-sys_manager_rsa=$1 # Se deberá obtener con el cookbook del master
 CLIENTNAME=`hostname -s`
+CHEFORG="redborder" # Chef org
 
 # Get cdomain
 [ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
-[ "x$cdomain" == "x" ] && cdomain="redborder.cluster"
 
 # Get MASTER IP and add to /etc/hosts
 # Proteger por si aun no esta ready el master #TODO
@@ -24,17 +23,9 @@ IPMASTER=`serf members -status alive -tag master=ready -format=json | jq -r .mem
 grep -q erchef.${cdomain} /etc/hosts
 [ $? -ne 0 ] && echo "$IPMASTER   erchef.${cdomain}" >> /etc/hosts
 
-# Files to download from master node # Deberá ser obtenido con el cookbook del manager (cuando esté)
-files_scp="/etc/chef/redborder-validator.pem /etc/chef/admin.pem"
-#$RBBIN/serf-query-certificate.sh > /etc/chef/redborder-validator.pem
-
-# Downloading CERTs from master
-if [ "x$IPMASTER" != "x" -a -f $sys_manager_rsa ]; then
-  scp -i $sys_manager_rsa -o StrictHostKeyChecking=no -q root@${IPMASTER}:"$files_scp" /etc/chef;
-else
-  echo -n "INFO: You are going to connect via ssh to root@${IPMASTER}"
-  scp -o StrictHostKeyChecking=no -q root@${IPMASTER}:"$files_scp" /etc/chef;
-fi
+# Get chef validator and admin pem (TEMP) --> Must be set by serf-join
+$RBBIN/serf-query-validator.rb > /etc/chef/redborder-validator.pem
+$RBBIN/serf-query-admin.rb > /etc/chef/admin.pem
 
 #############################
 # CHEF CLIENT Configuration #
@@ -48,11 +39,11 @@ mkdir -p /root/.chef
 
 # Customize client.rb
 sed -i "s/\HOSTNAME/$CLIENTNAME/g" /etc/chef/client.rb
-sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/redborder\"|" /etc/chef/client.rb
+sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/$CHEFORG\"|" /etc/chef/client.rb
 
 # Customize knife.rb
 sed -i "s/\HOSTNAME/admin/g" /root/.chef/knife.rb
-sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/redborder\"|" /root/.chef/knife.rb
+sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/$CHEFORG\"|" /root/.chef/knife.rb
 sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
 
 # Upload role

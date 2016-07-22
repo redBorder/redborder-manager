@@ -15,7 +15,6 @@
 ## along with redborder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
 
-#require 'rubygems'
 require 'chef'
 require 'json'
 
