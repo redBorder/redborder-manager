@@ -27,8 +27,6 @@ mkdir -p %{buildroot}/var/chef/data/data_bag/passwords
 mkdir -p %{buildroot}/var/chef/data/data_bag/rBglobal
 install -D -m 0644 resources/redborder-manager.sh %{buildroot}/etc/profile.d
 install -D -m 0644 resources/systemd/postgresql.service %{buildroot}/usr/lib/systemd/system/postgresql.service
-install -D -m 0644 resources/systemd/kafka.service %{buildroot}/usr/lib/systemd/system/kafka.service
-install -D -m 0644 resources/systemd/kafka.sysconfig %{buildroot}/etc/sysconfig/kafka.sysconfig
 cp resources/bin/* %{buildroot}/usr/lib/redborder/bin
 chmod 0755 %{buildroot}/usr/lib/redborder/bin/*
 chmod 0644 %{buildroot}/usr/lib/redborder/bin/rb_manager_functions.sh
@@ -49,8 +47,6 @@ exit 0
 /usr/lib/redborder/bin
 %defattr(0644,root,root)
 /usr/lib/systemd/system/postgresql.service
-/usr/lib/systemd/system/kafka.service
-/etc/sysconfig/kafka.sysconfig
 /etc/profile.d/redborder-manager.sh
 /usr/lib/redborder/bin/rb_manager_functions.sh
 /usr/lib/redborder/bin/rb_manager_functions.rb
