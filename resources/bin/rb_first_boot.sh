@@ -13,9 +13,9 @@ if [ ! -f /etc/redborder/cluster-installed.txt -a ! -f /etc/redborder/installed.
     manufacturer=$(dmidecode -t 1| grep "Manufacturer:" | sed 's/.*Manufacturer: //')
     productname=$(dmidecode -t 1| grep "Product Name:" | sed 's/.*Product Name: //')
 
-    echo "Manufacturer: $manufacturer"
-    echo "Productname: $productname"
-    echo "Disk Size: " && df -h
+    #echo "Manufacturer: $manufacturer"
+    #echo "Productname: $productname"
+    #echo "Disk Size: " && df -h
 
     ## CLOUD configuration ##
     mkdir -p /etc/redborder

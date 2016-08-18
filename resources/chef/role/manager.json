@@ -37,7 +37,9 @@
   },
   "chef_type": "role",
   "run_list": [
-    "recipe[zookeeper]"
+    "recipe[zookeeper]",
+    "recipe[kafka]",
+    "recipe[druid]"
   ],
   "env_run_lists": {
 

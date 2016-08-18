@@ -365,13 +365,15 @@ function configure_master(){
   # Upload chef data (ROLES, DATA BAGS, ENVIRONMENTS ...)
   $RBBIN/rb_upload_chef_data.sh -y
 
-  # Upload COOKBOOKS
+  # COOKBOOKS
+  # Save into cache directory
   mkdir -p /var/chef/cache/cookbooks/
   for n in `ls /var/chef/cookbooks`; do # cookbooks
     rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
-    # Upload cookbooks
-    knife cookbook upload $n
   done
+  # Uploadind cookbooks. The order matters!
+  knife cookbook upload zookeeper
+  knife cookbook upload kafka  
 
   # Delete encrypted data BAGS
   rm -rf /var/chef/data/data_bag_encrypted/*
