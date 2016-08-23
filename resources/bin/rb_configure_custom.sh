@@ -23,9 +23,9 @@ IPMASTER=`serf members -status alive -tag master=ready -format=json | jq -r .mem
 grep -q erchef.${cdomain} /etc/hosts
 [ $? -ne 0 ] && echo "$IPMASTER   erchef.${cdomain}" >> /etc/hosts
 
-# Get chef validator and admin pem (TEMP) --> Must be set by serf-join
-$RBBIN/serf-query-validator.rb > /etc/chef/redborder-validator.pem
-$RBBIN/serf-query-admin.rb > /etc/chef/admin.pem
+# Get chef validator and admin certificates 
+$RBBIN/serf-query-certificate.sh -q certificate-validator > /etc/chef/redborder-validator.pem
+$RBBIN/serf-query-certificate.sh -q certificate-admin > /etc/chef/admin.pem
 
 #############################
 # CHEF CLIENT Configuration #
