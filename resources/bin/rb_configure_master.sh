@@ -7,6 +7,18 @@ function configure_aws(){
     # AMAZON Installation (user-data)
     [ -f /etc/redborder/externals.conf ] && source /etc/redborder/externals.conf
 
+    # Chef server configuration
+    ERCHEFCFG=$1
+
+    # External S3 with user data
+    sed -i "s|s3_access_key_id,.*|s3_access_key_id, \"${AWS_ACCESS_KEY}\"},|" $ERCHEFCFG
+    sed -i "s|s3_secret_key_id,.*|s3_secret_key_id, \"${AWS_SECRET_KEY}\"},|" $ERCHEFCFG
+    sed -i "s|s3_url,.*|s3_url, \"https://${S3HOST}\"},|" $ERCHEFCFG
+    sed -i "s|s3_platform_bucket_name,.*|s3_platform_bucket_name, \"${S3BUCKET}\"},|" $ERCHEFCFG
+    sed -i "s|s3_external_url,.*|s3_external_url, \"https://${S3HOST}\"},|" $ERCHEFCFG
+    sed -i  's/"redborder": {/"redborder": {\n      "uploaded_s3": true,/' /var/chef/data/role/manager.json
+    #rm -rf /var/opt/opscode/bookshelf/data/bookshelf
+
     if [ "x$CDOMAIN" != "x" -a "x$S3HOST" != "x" -a "x$AWS_ACCESS_KEY" != "x" -a "x$AWS_SECRET_KEY" != "x" -a -f /root/.aws/credentials ]; then
     #bash $RBBIN/rb_route53.sh -d "$CDOMAIN" -r "${REGION}" -v "$VPCID" -a "$PUBLIC_HOSTEDZONE_ID" -b "$PRIVATE_HOSTEDZONE_ID" -x "master"
 
@@ -82,6 +94,7 @@ website_index = index.html
 _RBEOF2_
 
     fi
+
 }
 
 function configure_db(){
@@ -318,41 +331,21 @@ function configure_externals(){
 function configure_master(){
   # Check if master is configuring now
   if [ -f /var/lock/master-configuring.lock ]; then
-    echo "INFO: this manager has already been initialized"
+    echo "INFO: this manager is being configuring just now!"
     exit 0
   fi
   touch /var/lock/master-configuring.lock
 
-  # Configure AWS
-  configure_aws
+  # Chef server configuration
+  ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config" # old app.config
 
-  # Backup
-  if [ "x$CRESTORE" == "x1" -a "x$S3BUCKET" != "x" -a -f /root/.s3cfg ]; then
-    # TODO
-    echo "Do backup!"
-  fi
-
-  # Let's start
-  ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config" # Before app.config
-
-  # External S3 with user data
+  # Configure AWS (if is a cloud deployment)
   if [ "x$S3HOST" != "x" -a "x$S3TYPE" == "xaws" -a "x$AWS_ACCESS_KEY" != "x" -a "x$AWS_SECRET_KEY" != "x" -a "x${S3BUCKET}" != "x" ]; then
-    sed -i "s|s3_access_key_id,.*|s3_access_key_id, \"${AWS_ACCESS_KEY}\"},|" $ERCHEFCFG
-    sed -i "s|s3_secret_key_id,.*|s3_secret_key_id, \"${AWS_SECRET_KEY}\"},|" $ERCHEFCFG
-    sed -i "s|s3_url,.*|s3_url, \"https://${S3HOST}\"},|" $ERCHEFCFG
-    sed -i "s|s3_platform_bucket_name,.*|s3_platform_bucket_name, \"${S3BUCKET}\"},|" $ERCHEFCFG
-    sed -i "s|s3_external_url,.*|s3_external_url, \"https://${S3HOST}\"},|" $ERCHEFCFG
-    sed -i  's/"redborder": {/"redborder": {\n      "uploaded_s3": true,/' /var/chef/data/role/manager.json
-    #rm -rf /var/opt/opscode/bookshelf/data/bookshelf
+    configure_aws $ERCHEFCFG
   else
     # Configuring erchef to use local cookbooks
     sed -i 's|s3_external_url.*$|s3_external_url, "https://localhost"},|' $ERCHEFCFG |grep s3_external_url
   fi
-
-  # Starting erchef and associated services # TODO when systemd scripts already
-  #service erchef status &>/dev/null
-  #[ $? -ne 3 ] && service erchef reload
-  #rb_chef start
 
   # Configure database
   configure_db
@@ -360,23 +353,21 @@ function configure_master(){
   # Configure DataBags
   configure_dataBags
 
-  #wait_service erchef #TODO
-
   # Upload chef data (ROLES, DATA BAGS, ENVIRONMENTS ...)
   $RBBIN/rb_upload_chef_data.sh -y
+
+  # Delete encrypted data BAGS
+  rm -rf /var/chef/data/data_bag_encrypted/*
 
   # COOKBOOKS
   # Save into cache directory
   mkdir -p /var/chef/cache/cookbooks/
-  for n in `ls /var/chef/cookbooks`; do # cookbooks
+  listCookbooks="zookeeper kafka druid" #http2k rb-manager
+  for n in $listCookbooks; do # cookbooks
     rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
+    # Uploadind cookbooks. The order matters!
+    knife cookbook upload $n
   done
-  # Uploadind cookbooks. The order matters!
-  knife cookbook upload zookeeper
-  knife cookbook upload kafka  
-
-  # Delete encrypted data BAGS
-  rm -rf /var/chef/data/data_bag_encrypted/*
 
   echo "Registering chef-client ..."
   /usr/bin/chef-client
@@ -391,7 +382,7 @@ function configure_master(){
   $RBBIN/rb_update_timestamp.rb &>/dev/null
   #touch /etc/redborder/cluster.lock
 
-  # Copy web certificates (user only chef-server certificate) #CHECK
+  # Copy web certificates (use only chef-server certificate) #CHECK
   mkdir -p /root/.chef/trusted_certs/
   rsync /var/opt/opscode/nginx/ca/*.crt /root/.chef/trusted_certs/
   mkdir -p /home/redborder/.chef/trusted_certs/
@@ -401,12 +392,10 @@ function configure_master(){
   # Configure externals
   configure_externals
 
-  # ?¿?¿?¿?¿?¿?¿ CHECK THIS...
-  #[ -f /etc/chef/initialdata.json ] && $RBBIN/rb_chef_node /etc/chef/initialdata.json
-  #[ -f /etc/chef/initialrole.json ] && $RBBIN/rb_chef_role /etc/chef/initialrole.json
-
-  # Clean yum data
+  # Clean yum data (to install packages from chef)
   yum clean all
+
+  # Multiple runs of chef-client
   echo "Configuring chef client (first time). Please wait...  "
   echo "###########################################################" #>>/root/.install-chef-client.log
   echo "redborder install 1/3 run $(date)" #>>/root/.install-chef-client.log
@@ -481,7 +470,7 @@ grep -q erchef.${cdomain} /etc/hosts
 sed -i "s/rabbit@localhost/rabbit@$CLIENTNAME/" /opt/opscode/embedded/cookbooks/private-chef/attributes/default.rb
 mkdir -p /var/opt/opscode/rabbitmq/db
 rm -f /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
-ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid # Not exists
+ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
 
 # Permit all IP address source in postgresql
 sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgresql/*/data/postgresql.conf

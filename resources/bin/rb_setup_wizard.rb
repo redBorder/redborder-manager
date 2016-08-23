@@ -14,7 +14,6 @@ general_conf = {}
 
 # Conf for network
 
-
 text = <<EOF
 Do you want to configure network in your system?
 
@@ -36,7 +35,7 @@ end
 # Conf for hostname
 
 text = <<EOF
-Do you want to configure hostname and domainname in your system?
+Do you want to configure hostname and domain name in your system?
 
 EOF
 

@@ -132,15 +132,15 @@ _RBEOF2_
         [ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
         [ "x$cdomain" == "x" ] && cdomain="redborder.cluster"
 
-        # Configure hostname with randon name if not set #JOTA
+        # Configure hostname with randon name if not set #JOTA #Get from wizard
         newhostname="rb$(< /dev/urandom tr -dc a-z0-9 | head -c10 | sed 's/ //g')"
         hostnamectl set-hostname $newhostname.$cdomain
         echo -e "127.0.0.1 `hostname` `hostname -s`" | sudo tee -a /etc/hosts &>/dev/null #check if don't use loopback IP
 
         # Create specific role for this node
         cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
-        # Change hostname in role
-        sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json #/etc/chef/role-manager* #¿para que sirve role-manager.json?
+        # Change hostname in new role
+        sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
         # And set hostname in another essential files
         sed -i "s/ manager |localhost.*/ $(hostname -s) $(hostname -s).${cdomain} /" /etc/hosts #Check this one...
 

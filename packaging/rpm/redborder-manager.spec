@@ -43,6 +43,10 @@ getent passwd opscode-pgsql >/dev/null || \
     -c "PostgreSQL" opscode-pgsql
 exit 0
 
+%post
+firewall-cmd --zone=public --add-port=7946/tcp --permanent
+firewall-cmd --zone=public --add-port=7373/tcp --permanent
+
 %files
 %defattr(0755,root,root)
 /usr/lib/redborder/bin
