@@ -3,9 +3,9 @@
 instancefile="/var/lib/cloud/data/instance-id"
 ret=0
 
-# If instacefile exists and node is not configured yet...
-if [ -f $instancefile -a ! -f /etc/chef/client.pem ]; then #check
-    instancename=$(cat $instancefile)
+# If instacefile exists and chef node is not configured yet
+if [ -f $instancefile -a ! -f /etc/chef/client.pem ]; then
+  instancename=$(cat $instancefile)
 
   # Take and load user-data
   if [ -f /var/lib/cloud/data/cfn-userdata ]; then
@@ -16,8 +16,8 @@ if [ -f $instancefile -a ! -f /etc/chef/client.pem ]; then #check
 
   # Hostname configuration
   if [ "x$NODENAME" != "x" ]; then # Node name is defined in user-data
-    newhostname=$(echo ${NODENAME} | sed 's/_//g' )
-  elif [ "x$instancename" == "xiid-datasource-none"  ]; then # If instance name is not defined a random name is set (rb....)
+    newhostname=$(echo ${NODENAME} | sed 's/_//g' ) # underscores are removed to avoid domain name conflicts
+  elif [ "x$instancename" == "xiid-datasource-none"  ]; then # If instance name is not defined, a random name is set (rb....)
     newhostname="rb$(< /dev/urandom tr -dc a-z0-9 | head -c10 | sed 's/ //g')"
   else # Instance name is defined but not Node name. We use instance name for node name
     newhostname=$(echo ${instancename} | sed 's/_//') # underscores are removed to avoid domain name conflicts
@@ -27,22 +27,19 @@ if [ -f $instancefile -a ! -f /etc/chef/client.pem ]; then #check
   [ "x$CDOMAIN" == "x" ] && CDOMAIN="redborder.cluster"
   echo "$CDOMAIN" > /etc/redborder/cdomain
 
-  # Change hostname
-  hostnamectl set-hostname $newhostname.$cdomain
+  # Change hostname with cdomain
+  hostnamectl set-hostname $newhostname.$CDOMAIN
 
   # PUBLICDOMAIN configuration
   [ "x$PUBLICCDOMAIN" == "x" ] && PUBLICCDOMAIN="$CDOMAIN"
 
-  # Set new hostname in network sysconfig file #Check in CentOS 7
+  # Set new hostname in network sysconfig file # Check if it needed
   #grep -q "HOSTNAME=" /etc/sysconfig/network
   #if [ $? -eq 0 ]; then
   #  sed -i "s/^HOSTNAME=.*/HOSTNAME=${newhostname}.${CDOMAIN}/" /etc/sysconfig/network
   #else
   #  echo "HOSTNAME=${newhostname}.${CDOMAIN}" >> /etc/sysconfig/network
   #fi
-
-  # To check...
-  sed -i "s/ rbmanager / $newhostname /" /etc/hosts
 
   # Node ROLE/MODE configuration
   [ "x$NODEROLE" != "x" ] && echo "$NODEROLE" > /etc/chef/initialrole
@@ -138,12 +135,9 @@ CMDFINISH: ${CMDFINISH}
 CMDFINISH_MASTER: ${CMDFINISH_MASTER}
 rBEOF
 
-  #mkdir -p /var/chef/data/data_bag_encrypted/passwords/ # Created by RPM
-
   # Logwatchg password data bag
   if [ "x$LOGWATCHG" != "x" -a "x$AWS_ACCESS_KEY" != "x" -a "x$AWS_SECRET_KEY" != "x" ]; then
-    mkdir -p /var/chef/data/data_bag_encrypted/passwords
-    cat >/var/chef/data/data_bag_encrypted/passwords/cloudwatch.json <<rBEOF
+    cat >/var/chef/data/data_bag/passwords/cloudwatch.json <<rBEOF
 {
 "id": "cloudwatch",
 "REGION": "${REGION}",
@@ -173,6 +167,9 @@ region = ${REGION}
 aws_access_key_id = ${AWS_ACCESS_KEY}
 aws_secret_access_key = ${AWS_SECRET_KEY}
 rBEOF
+
+  #End cloud-init initialization
+  ret=0
 
 else
   msg="Cloud instance file ($instancefile) has not been found"

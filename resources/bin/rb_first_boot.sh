@@ -8,7 +8,7 @@ source $RBBIN/rb_manager_functions.sh
 source /etc/profile
 
 # Check if cluster is installed
-if [ ! -f /etc/redborder/cluster-installed.txt -a ! -f /etc/redborder/installed.txt ]; then # Check lock files
+if [ ! -f /etc/redborder/cluster-installed.txt -a ! -f /etc/redborder/installed.txt ]; then
 
     manufacturer=$(dmidecode -t 1| grep "Manufacturer:" | sed 's/.*Manufacturer: //')
     productname=$(dmidecode -t 1| grep "Product Name:" | sed 's/.*Product Name: //')
@@ -112,32 +112,28 @@ _RBEOF2_
         systemctl start cloud-config
         systemctl start cloud-final
 
-        # Configure cdomain if cloud_init has not configured it
-        [ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
-        [ "x$cdomain" == "x" ] && cdomain="redborder.cluster"
-
         ## Configuring Datastore ##
         # TODO
 
     else # ON-PREMISE configuration #
 
-        # Configure cdomain if cloud_init has not configured it
+        # Configure cdomain if cloud_init has not configured it yet
         [ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
         [ "x$cdomain" == "x" ] && cdomain="redborder.cluster"
 
-        # Configure hostname with randon name if not set #JOTA #Get from wizard
+        # Configure hostname with randon name if not set previously by WIZARD #TODO
         newhostname="rb$(< /dev/urandom tr -dc a-z0-9 | head -c10 | sed 's/ //g')"
         hostnamectl set-hostname $newhostname.$cdomain
 
-        # NTP configuration # JOTA
-        # Check Internet connectivity
+        # NTP configuration
         echo "Trying to adjust time"
-        #systemctl stop ntpd &>/dev/null
-        #ntpdate -t 5 pool.ntp.org &>/dev/null
-        #if [ $? -ne 0 ]; then
-        #    router=$(ip r |grep "default via"|awk '{print $3}')
-        #    [ "x$router" != "x" ] && ntpdate -t 5 $router &>/dev/null
-        #fi
+        systemctl stop ntpd &>/dev/null
+        ntpdate -t 5 pool.ntp.org &>/dev/null
+        if [ $? -ne 0 ]; then
+             # Aletrnative configuration using default via
+            router=$(ip r |grep "default via"|awk '{print $3}')
+            [ "x$router" != "x" ] && ntpdate -t 5 $router &>/dev/null
+        fi
         hwclock --systohc
         systemctl start ntpd
     fi

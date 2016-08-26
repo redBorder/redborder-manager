@@ -362,7 +362,7 @@ function configure_master(){
   # COOKBOOKS
   # Save into cache directory
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid" #http2k rb-manager
+  listCookbooks="zookeeper kafka druid nomad" #http2k rb-manager
   for n in $listCookbooks; do # cookbooks
     rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks. The order matters!
@@ -483,3 +483,4 @@ configure_master
 
 rm -f /var/lock/master-configuring.lock
 echo "Master configured!"
+touch /etc/redborder/cluster-installed.txt

@@ -39,7 +39,8 @@
   "run_list": [
     "recipe[zookeeper]",
     "recipe[kafka]",
-    "recipe[druid]"
+    "recipe[druid]",
+    "recipe[nomad]"
   ],
   "env_run_lists": {
 
