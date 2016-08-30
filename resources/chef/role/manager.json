@@ -40,7 +40,8 @@
     "recipe[zookeeper]",
     "recipe[kafka]",
     "recipe[druid]",
-    "recipe[nomad]"
+    "recipe[nomad]",
+    "recipe[http2k]"
   ],
   "env_run_lists": {
 
