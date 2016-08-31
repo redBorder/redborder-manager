@@ -8,14 +8,14 @@ source $RBBIN/rb_manager_functions.sh
 source /etc/profile
 
 # Check if cluster is installed
-if [ ! -f /etc/redborder/cluster-installed.txt -a ! -f /etc/redborder/installed.txt ]; then # Check lock files
+if [ ! -f /etc/redborder/cluster-installed.txt -a ! -f /etc/redborder/installed.txt ]; then
 
     manufacturer=$(dmidecode -t 1| grep "Manufacturer:" | sed 's/.*Manufacturer: //')
     productname=$(dmidecode -t 1| grep "Product Name:" | sed 's/.*Product Name: //')
 
-    echo "Manufacturer: $manufacturer"
-    echo "Productname: $productname"
-    echo "Disk Size: " && df -h
+    #echo "Manufacturer: $manufacturer"
+    #echo "Productname: $productname"
+    #echo "Disk Size: " && df -h
 
     ## CLOUD configuration ##
     mkdir -p /etc/redborder
@@ -112,51 +112,41 @@ _RBEOF2_
         systemctl start cloud-config
         systemctl start cloud-final
 
-        # Configure hostname if cloud_init has not configured it
-        [ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
-        [ "x$cdomain" == "x" ] && cdomain="redborder.cluster"
-        # Change hostname in role
-        sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/manager.json #/etc/chef/role-manager*
-        # Create specific role for this node
-        cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
-        # And set hostname in another essential files
-        sed -i "s/^HOSTNAME=.*/HOSTNAME=$(hostname -s).${cdomain}/" /etc/sysconfig/network
-        sed -i "s/ manager / $(hostname -s) $(hostname -s).${cdomain} /" /etc/hosts
-
         ## Configuring Datastore ##
         # TODO
 
     else # ON-PREMISE configuration #
 
-        # Configure hostname if cloud_init has not configured it
+        # Configure cdomain if cloud_init has not configured it yet
         [ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
         [ "x$cdomain" == "x" ] && cdomain="redborder.cluster"
 
-        # Configure hostname with randon name if not set #JOTA
+        # Configure hostname with randon name if not set previously by WIZARD #TODO
         newhostname="rb$(< /dev/urandom tr -dc a-z0-9 | head -c10 | sed 's/ //g')"
         hostnamectl set-hostname $newhostname.$cdomain
-        echo -e "127.0.0.1 `hostname` `hostname -s`" | sudo tee -a /etc/hosts &>/dev/null #check if don't use loopback IP
 
-        # Create specific role for this node
-        cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
-        # Change hostname in role
-        sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json #/etc/chef/role-manager* #¿para que sirve role-manager.json?
-        # And set hostname in another essential files
-        sed -i "s/ manager |localhost.*/ $(hostname -s) $(hostname -s).${cdomain} /" /etc/hosts #Check this one...
-
-        # NTP configuration # JOTA
-        # Check Internet connectivity
+        # NTP configuration
         echo "Trying to adjust time"
-        #systemctl stop ntpd &>/dev/null
-        #ntpdate -t 5 pool.ntp.org &>/dev/null
-        #if [ $? -ne 0 ]; then
-        #    router=$(ip r |grep "default via"|awk '{print $3}')
-        #    [ "x$router" != "x" ] && ntpdate -t 5 $router &>/dev/null
-        #fi
+        systemctl stop ntpd &>/dev/null
+        ntpdate -t 5 pool.ntp.org &>/dev/null
+        if [ $? -ne 0 ]; then
+             # Aletrnative configuration using default via
+            router=$(ip r |grep "default via"|awk '{print $3}')
+            [ "x$router" != "x" ] && ntpdate -t 5 $router &>/dev/null
+        fi
         hwclock --systohc
         systemctl start ntpd
     fi
-    # end initial configuration
+
+    # Set hostname in /etc/hosts
+    echo -e "127.0.0.1 `hostname` `hostname -s`" | sudo tee -a /etc/hosts &>/dev/null #check if don't use loopback IP
+
+    # Create specific role for this node
+    cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
+    # Change hostname in new role
+    sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
+    # And set hostname in another essential files
+    sed -i "s/ manager |localhost.*/ $(hostname -s) $(hostname -s).${cdomain} /" /etc/hosts #Check this one...
 
     # Set cdomain file
     echo $cdomain > /etc/redborder/cdomain
