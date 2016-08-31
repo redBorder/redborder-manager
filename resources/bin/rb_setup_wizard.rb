@@ -46,11 +46,12 @@ dialog.title = "CONFIGURE Hostname"
 yesno = dialog.yesno(text,0, 0)
 
 if yesno
-    # configure dns and hostname
+    # configure hostname and domain name
     hostconf = HostConf.new
     hostconf.doit # launch wizard for hostname configuration
-    general_conf[:hostname] = hostconf.conf
-    p "configuring hostname"
+    general_conf[:hostname] = hostconf.conf[:hostname]
+    general_conf[:domainname] = hostconf.conf[:domainname]
+    p general_conf # it contains configuration parameters for network
 end
 
 # Conf for DNS

@@ -4,6 +4,7 @@ require 'mrdialog'
 require 'net/ip'
 require 'system/getifaddrs'
 require 'netaddr'
+require 'uri'
 
 class NetDev
     
@@ -67,7 +68,28 @@ class NetDev
         end
         hsh
     end
-   
+
+    def check_domain(domain)
+        # Based on rfc1123 and sethostname()
+        # Suggest rfc1178
+        # Max of 253 characters with hostname
+        ret = false
+        unless (domain =~ /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/).nil?
+            ret = true
+        end
+        ret
+    end
+
+    def check_hostname(name)
+        # Based on rfc1123 and sethostname()
+        # Max of 63 characters
+        ret = false
+        unless (name =~ /^([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/).nil?
+            ret = true
+        end
+        ret
+    end
+  
 end
 
 # Class to create a Network configuration box
@@ -155,26 +177,6 @@ class DevConf < NetDev
         @conf = {}
     end
 
-    #def show_warning
-    #    msg = ''
-    #    label = 'IP:'
-    #    if @conf[label].length == 0
-    #        msg << "#{label} field is empty"
-    #    end
-    #    label = 'Netmask:'
-    #    if @conf[label].length == 0 or !checkip(@conf[label])
-    #        msg << "\n"
-    #        msg << "#{label} field is empty"
-    #    elsif !checkip(@conf[label])
-    #        msg << "\n"
-    #        msg << "#{label} incorrect value"
-    #    end
-    #    dialog = MRDialog.new
-    #    dialog.title = "ERROR"
-    #    dialog.clear = true
-    #    dialog.msgbox(msg, 10, 41)
-    #end        
-    
     def doit
         # first, set mode dynamic or static
         dialog = MRDialog.new
@@ -350,7 +352,7 @@ EOF
 
 end
 
-class HostConf
+class HostConf < NetDev
 
     attr_accessor :conf
 
@@ -360,12 +362,94 @@ class HostConf
 
     def doit
 
+        host = {}
 
+        loop do
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.insecure = true
+            text = <<EOF
+Please, set hostname and domain name.
+ 
+The hostname may only contain ASCII letters 'a'
+through 'z' (in a case-insensitive manner), the
+digits '0' through '9' and the hyphen ('-').
+ 
+The RFC1123 permits hostname labels to start with digits
+or letters but not to start or end with hyphen.
+Also, the hostname and each label of the domain name
+must be between 1 and 63 characters, and the entire
+hostname has a maximum of 253 ASCII characters.
+
+Please, consult RFC1178 to choose an appropiate hostname.
+ 
+EOF
+            items = []
+            form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen, :attr)
+
+            items = []
+            label = "Hostname:"
+            data = form_data.new
+            data.label = label
+            data.ly = 1
+            data.lx = 1
+            data.item = @conf[label]
+            data.iy = 1
+            data.ix = 14
+            data.flen = 63
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+        
+            label = "Domain name:"
+            data = form_data.new
+            data.label = label
+            data.ly = 2
+            data.lx = 1
+            data.item = @conf[label]
+            data.iy = 2
+            data.ix = 14
+            data.flen = 253
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+
+            dialog.title = "Hostname and domain name configuration"
+            host = dialog.mixedform(text, items, 24, 60, 0)
+            
+            if host.empty?
+                # Break button pushed
+                break
+            else
+                if check_hostname(host["Hostname:"]) and check_domain(host["Domain name:"])
+                    # need to confirm lenght
+                    if host["Hostname:"].length < 64 and (host["Hostname:"].length + host["Domain name:"].length) < 254
+                        break
+                    end
+                end
+            end
+
+            # error, do another loop
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.title = "ERROR in name configuration"
+            text = <<EOF
+We have detected an error in hostname or domain name configuration.
+
+Please, review character set and length for name configuration.
+EOF
+            dialog.msgbox(text, 10, 41)
+
+        end
+
+        @conf[:hostname] = host["Hostname:"]
+        @conf[:domainname] = host["Domain name:"]
+ 
     end
 
 end
 
-class DNSConf
+class DNSConf < NetDev
 
     attr_accessor :conf
 
@@ -375,6 +459,116 @@ class DNSConf
 
     def doit
 
+        dns = {}
+
+        loop do
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.insecure = true
+            text = <<EOF
+Please, set DNS servers.
+ 
+You can set up to 3 DNS servers, but only one is mandatory. Set DNS values in order, first, second (optional) and then third (optional).
+ 
+Please, insert each value fo IPv4 address in dot notation.
+
+EOF
+            items = []
+            form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen, :attr)
+
+            items = []
+            label = "DNS1:"
+            data = form_data.new
+            data.label = label
+            data.ly = 1
+            data.lx = 1
+            data.item = @conf[label]
+            data.iy = 1
+            data.ix = 8
+            data.flen = 16
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+        
+            label = "DNS2:"
+            data = form_data.new
+            data.label = label
+            data.ly = 2
+            data.lx = 1
+            data.item = @conf[label]
+            data.iy = 2
+            data.ix = 8
+            data.flen = 16
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+
+            label = "DNS3:"
+            data = form_data.new
+            data.label = label
+            data.ly = 3
+            data.lx = 1
+            data.item = @conf[label]
+            data.iy = 3
+            data.ix = 8
+            data.flen = 16
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+
+            dialog.title = "DNS configuration"
+            dns = dialog.mixedform(text, items, 20, 42, 0)
+            
+            if dns.empty?
+                # Break button pushed
+                break
+            else
+                p "cp 0"
+                p dns
+                if check_ipv4({:ip=>dns["DNS1:"]})
+                    p "cp 1"
+                    unless dns["DNS2:"].empty?
+                        p "cp 2"
+                        if check_ipv4({:ip=>dns["DNS2:"]})
+                            p "cp 3"
+                            unless dns["DNS3:"].empty?
+                                p "cp 4"
+                                if check_ipv4({:ip=>dns["DNS3:"]})
+                                    p "cp 5"
+                                    break
+                                end
+                            else
+                                break
+                            end
+                        end
+                    else
+                        break
+                    end
+                end
+            end
+
+            # error, do another loop
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.title = "ERROR in DNS or search configuration"
+            text = <<EOF
+We have detected an error in DNS configuration.
+
+Please, review content for DNS configuration. Remember, you
+must introduce only IPv4 address in dot notation.
+EOF
+            dialog.msgbox(text, 12, 41)
+
+        end
+
+        @conf[:dns] = { :dns1 => dns["DNS1:"] }
+        unless dns["DNS2:"].empty?
+            @conf[:dns].merge!( :dns2 => dns["DNS2:"] )
+            unless dns["DNS3:"].empty?
+                @conf[:dns].merge!( :dns3 => dns["DNS3:"] )
+            end
+        end
+        p @conf
 
     end
 
