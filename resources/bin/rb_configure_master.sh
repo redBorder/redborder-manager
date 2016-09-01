@@ -162,32 +162,15 @@ function configure_db(){
 
 function configure_dataBags(){
 
-  cat > /var/chef/data/data_bag/rBglobal/domain.json <<- _RBEOF2_
-  {
-  "id": "domain",
-  "name": "${cdomain}"
-  }
-  _RBEOF2_
-
-  [ "x$PUBLICCDOMAIN" == "x" ] && PUBLICCDOMAIN="$cdomain"
-  cat > /var/chef/data/data_bag/rBglobal/publicdomain.json <<- _RBEOF2_
-  {
-  "id": "publicdomain",
-  "name": "${PUBLICCDOMAIN}"
-  }
-  _RBEOF2_
-
-  sed -i "s/admin@.*\"/admin@$cdomain/" /var/chef/data/data_bag/passwords/s3_secrets.json
-  sed -i "s/s3.redborder.cluster/s3.$cdomain/" /var/chef/data/data_bag/passwords/s3_secrets.json
-  sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain\"|" /etc/chef/client.rb*
-  sed -i "s/\.redborder\.cluster/.${cdomain}/g" /etc/hosts
-
-  grep -q erchef.${cdomain} /etc/hosts
-  [ $? -ne 0 ] && echo "127.0.0.1   erchef.${cdomain}" >> /etc/hosts
-
+  ## Data bags for passwords ##
   mkdir -p /var/chef/data/data_bag_encrypted/passwords/
-  cat > /var/chef/data/data_bag_encrypted/passwords/db_opscode_chef.json <<- _RBEOF2_
-  {
+
+  ## S3 passwords
+  sed -i "s/s3.redborder.cluster/s3.$cdomain/" /var/chef/data/data_bag/passwords/s3_secrets.json
+
+  ## DB opscode (chef) passwords
+  cat > /var/chef/data/data_bag/passwords/db_opscode_chef.json <<-_RBEOF_
+{
   "id": "db_opscode_chef",
   "username": "opscode_chef",
   "database": "opscode_chef",
@@ -195,53 +178,12 @@ function configure_dataBags(){
   "port": 5432,
   "pass": "$OPSCODE_CHEFPASS",
   "md5_pass": "$OPSCODE_CHEFPASSMD5"
-  }
-  _RBEOF2_
+}
+_RBEOF_
 
-  rm -f /var/chef/data/data_bag/passwords/db_opscode_chef.json
-
-  # Create pgpool data bag item
-  if [ "x$PGPOOLPASS" != "x" ]; then
-    cat > /var/chef/data/data_bag_encrypted/passwords/pgp_pgpool.json <<- _RBEOF2_
-  {
-  "id": "pgp_pgpool",
-  "username": "pgpool",
-  "pass": "$PGPOOLPASS",
-  "md5_pass": "$PGPOOLPASSMD5"
-  }
-  _RBEOF2_
-  else
-    rm -f /var/chef/data/data_bag_encrypted/passwords/pgp_pgpool.json
-  fi
-
-  rm -f /var/chef/data/data_bag/passwords/pgp_pgpool.json
-
-  # Create rabbitmq data bag item
-  cat > /var/chef/data/data_bag_encrypted/passwords/rabbitmq.json <<- _RBEOF2_
-  {
-  "id": "rabbitmq",
-  "username": "chef",
-  "pass": "$RABBITMQPASS"
-  }
-  _RBEOF2_
-  rm -f /var/chef/data/data_bag/passwords/rabbitmq.json
-
-  if [ "x$VRRPPASS" != "x" ]; then
-    cat > /var/chef/data/data_bag_encrypted/passwords/vrrp.json <<- _RBEOF2_
-  {
-  "id": "vrrp",
-  "username": "vrrp",
-  "start_id": "$[ ( $RANDOM % ( $[ 200 - 10 ] + 1 ) ) + 10 ]",
-  "pass": "$VRRPPASS"
-  }
-  _RBEOF2_
-  else
-    rm -f /var/chef/data/data_bag_encrypted/passwords/vrrp.json
-  fi
-  rm -f /var/chef/data/data_bag/passwords/vrrp.json
-
-  cat > /var/chef/data/data_bag_encrypted/passwords/db_redborder.json <<- _RBEOF2_
-  {
+  # DB redborder passwords
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_redborder.json <<-_RBEOF_
+{
   "id": "db_redborder",
   "username": "redborder",
   "database": "redborder",
@@ -249,12 +191,12 @@ function configure_dataBags(){
   "port": 5432,
   "pass": "$REDBORDERDBPASS",
   "md5_pass": "$REDBORDERDBPASSMD5"
-  }
-  _RBEOF2_
-  rm -f /var/chef/data/data_bag/passwords/db_redborder.json
+}
+_RBEOF_
 
-  cat > /var/chef/data/data_bag_encrypted/passwords/db_druid.json <<- _RBEOF2_
-  {
+  # DB druid passwords
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_druid.json <<-_RBEOF_
+{
   "id": "db_druid",
   "username": "druid",
   "database": "druid",
@@ -262,12 +204,12 @@ function configure_dataBags(){
   "port": 5432,
   "pass": "$DRUIDDBPASS",
   "md5_pass": "$DRUIDDBPASSMD5"
-  }
-  _RBEOF2_
-  rm -f /var/chef/data/data_bag/passwords/db_druid.json
+}
+_RBEOF_
 
-  cat > /var/chef/data/data_bag_encrypted/passwords/db_oozie.json <<- _RBEOF2_
-  {
+  # DB oozie passwords
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_oozie.json <<-_RBEOF_
+{
   "id": "db_oozie",
   "username": "oozie",
   "database": "oozie",
@@ -275,51 +217,84 @@ function configure_dataBags(){
   "port": 5432,
   "pass": "$OOZIEPASS",
   "md5_pass": "$OOZIEPASSMD5"
-  }
-  _RBEOF2_
-  rm -f /var/chef/data/data_bag/passwords/db_druid.json
+}
+_RBEOF_
 
-  cat > /var/chef/data/data_bag_encrypted/passwords/opscode-bookshelf-admin.json <<- _RBEOF2_
-  {
+  # pgpool passwords
+  if [ "x$PGPOOLPASS" != "x" ]; then
+    cat > /var/chef/data/data_bag_encrypted/passwords/pgp_pgpool.json <<-_RBEOF_
+{
+  "id": "pgp_pgpool",
+  "username": "pgpool",
+  "pass": "$PGPOOLPASS",
+  "md5_pass": "$PGPOOLPASSMD5"
+}
+_RBEOF_
+  fi
+
+  # rabbitmq passwords
+  cat > /var/chef/data/data_bag_encrypted/passwords/rabbitmq.json <<-_RBEOF_
+{
+  "id": "rabbitmq",
+  "username": "chef",
+  "pass": "$RABBITMQPASS"
+}
+_RBEOF_
+
+  # vrrp passwords
+  if [ "x$VRRPPASS" != "x" ]; then
+  cat > /var/chef/data/data_bag_encrypted/passwords/vrrp.json <<-_RBEOF_
+{
+  "id": "vrrp",
+  "username": "vrrp",
+  "start_id": "$[ ( $RANDOM % ( $[ 200 - 10 ] + 1 ) ) + 10 ]",
+  "pass": "$VRRPPASS"
+}
+_RBEOF_
+
+  # booksheld passwords
+  cat > /var/chef/data/data_bag_encrypted/passwords/opscode-bookshelf-admin.json <<-_RBEOF_
+{
   "id": "opscode-bookshelf-admin",
   "key_id": "$BOOKSHELFKEY",
   "key_secret": "$BOOKSHELFSECRET"
-  }
-  _RBEOF2_
-  rm -f /var/chef/data/data_bag/passwords/opscode-bookshelf-admin.json
-
-  mkdir -p /etc/rabbitmq/
-  echo -n "$RABBITMQPASS" > /etc/rabbitmq/rabbitmq-pass.conf
+}
+_RBEOF_
 
   #rb-webui secret key
   RBWEBISECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-  cat > /var/chef/data/data_bag_encrypted/passwords/rb-webui_secret_token.json <<- _RBEOF2_
-  {
+  cat > /var/chef/data/data_bag_encrypted/passwords/rb-webui_secret_token.json <<-_RBEOF_
+{
   "id": "rb-webui_secret_token",
   "secret": "$RBWEBISECRET"
-  }
-  _RBEOF2_
-  rm -f /var/chef/data/data_bag/passwords/rb-webui_secret_token.json
-
-  if [ -f /usr/lib/nmspd/app/nmsp.jar ]; then
-    NMSPMAC=$(ip a | grep link/ether | tail -n 1 | awk '{print $2}')
-    if [ "x$NMSPMAC" == "x" ]; then
-      NMSPMAC="$(< /dev/urandom tr -dc a-f0-9 | head -c2 | sed 's/ //g'):$(< /dev/urandom tr -dc a-f0-9 | head -c2 | sed 's/ //g'):$(< /dev/urandom tr -dc a-f0-9 | head -c2 | sed 's/ //g'):$(< /dev/urandom tr -dc a-f0-9 | head -c2 | sed 's/ //g'):$(< /dev/urandom tr -dc a-f0-9 | head -c2 | sed 's/ //g'):$(< /dev/urandom tr -dc a-f0-9 | head -c2 | sed 's/ //g'):"
-    fi
-    rm -f /var/chef/cookbooks/redborder-manager/files/default/aes.keystore
-    rm -f /var/chef/data/data_bag_encrypted/passwords/nmspd-key-hashes.json
-    mkdir -p /var/chef/data/data_bag_encrypted/passwords /var/chef/cookbooks/redborder-manager/files/default
-    java -cp /usr/lib/nmspd/app/deps/*:/usr/lib/nmspd/app/nmsp.jar net.redborder.nmsp.NmspConsumer config-gen /var/chef/cookbooks/redborder-manager/files/default/ /var/chef/data/data_bag_encrypted/passwords/ $NMSPMAC
-  fi
-
-  #generating cluster uuid
-  mkdir -p /var/chef/data/data_bag_encrypted/rBglobal
-  cat > /var/chef/data/data_bag_encrypted/rBglobal/cluster.json <<_RBEOF2_
-{
-"id": "cluster",
-"uuid": "$(cat /proc/sys/kernel/random/uuid)"
 }
-_RBEOF2_
+_RBEOF_
+
+  ## Domain
+  cat > /var/chef/data/data_bag/rBglobal/domain.json <<-_RBEOF_
+{
+  "id": "domain",
+  "name": "${cdomain}"
+}
+_RBEOF_
+
+  ## Public domain
+  [ "x$PUBLICCDOMAIN" == "x" ] && PUBLICCDOMAIN="$cdomain"
+  cat > /var/chef/data/data_bag/rBglobal/publicdomain.json <<-_RBEOF_
+{
+  "id": "publicdomain",
+  "name": "${PUBLICCDOMAIN}"
+}
+_RBEOF_
+
+  ## Generating cluster uuid
+  mkdir -p /var/chef/data/data_bag_encrypted/rBglobal
+  cat > /var/chef/data/data_bag_encrypted/rBglobal/cluster.json <<_RBEOF_
+{
+  "id": "cluster",
+  "uuid": "$(cat /proc/sys/kernel/random/uuid)"
+}
+_RBEOF_
 
 }
 
@@ -385,7 +360,6 @@ function configure_master(){
   # Set manager role
   $RBBIN/rb_set_mode.rb $initialrole
   $RBBIN/rb_update_timestamp.rb &>/dev/null
-  #touch /etc/redborder/cluster.lock
 
   # Copy web certificates (use only chef-server certificate) #CHECK
   mkdir -p /root/.chef/trusted_certs/
@@ -482,9 +456,6 @@ sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgres
 
 # Configure MASTER
 configure_master
-
-# Start services
-# TODO # It needs load cookbooks
 
 rm -f /var/lock/master-configuring.lock
 echo "Master configured!"
