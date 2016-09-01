@@ -23,7 +23,7 @@ IPMASTER=`serf members -status alive -tag master=ready -format=json | jq -r .mem
 grep -q erchef.${cdomain} /etc/hosts
 [ $? -ne 0 ] && echo "$IPMASTER   erchef.${cdomain}" >> /etc/hosts
 
-# Get chef validator and admin certificates 
+# Get chef validator and admin certificates
 $RBBIN/serf-query-certificate.sh -q certificate-validator > /etc/chef/redborder-validator.pem
 $RBBIN/serf-query-certificate.sh -q certificate-admin > /etc/chef/admin.pem
 
@@ -45,6 +45,11 @@ sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organiz
 sed -i "s/\HOSTNAME/admin/g" /root/.chef/knife.rb
 sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/$CHEFORG\"|" /root/.chef/knife.rb
 sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
+
+# Create specific role for this node
+cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
+# Change hostname in new role
+sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
 
 # Upload role
 knife role -c /root/.chef/knife.rb from file /var/chef/data/role/$CLIENTNAME.json

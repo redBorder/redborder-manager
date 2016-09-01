@@ -141,13 +141,6 @@ _RBEOF2_
     # Set hostname in /etc/hosts
     echo -e "127.0.0.1 `hostname` `hostname -s`" | sudo tee -a /etc/hosts &>/dev/null #check if don't use loopback IP
 
-    # Create specific role for this node
-    cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
-    # Change hostname in new role
-    sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
-    # And set hostname in another essential files
-    sed -i "s/ manager |localhost.*/ $(hostname -s) $(hostname -s).${cdomain} /" /etc/hosts #Check this one...
-
     # Set cdomain file
     echo $cdomain > /etc/redborder/cdomain
 

@@ -350,6 +350,11 @@ function configure_master(){
   # Configure database
   configure_db
 
+  # Create specific role for this node
+  cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
+  # Change hostname in new role
+  sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
+
   # Configure DataBags
   configure_dataBags
 
@@ -433,7 +438,7 @@ cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
 #############################
 
 # Chef server initial configuration
-HOME=/root /usr/bin/chef-server-ctl reconfigure #&>>/root/.install-chef-server.log
+HOME=/root /usr/bin/chef-server-ctl reconfigure &>>/root/.install-chef-server.log
 # Chef user creation
 # $ chef-server-ctl user-create USER_NAME FIRST_NAME LAST_NAME EMAIL 'PASSWORD' --filename FILE_NAME
 /usr/bin/chef-server-ctl user-create $CHEFUSER $CHEFUSER $CHEFUSER $CHEFUSER@$cdomain \'$CHEFPASS\' --filename /etc/opscode/$CHEFUSER.pem
