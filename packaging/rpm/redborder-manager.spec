@@ -2,10 +2,10 @@ Name: redborder-manager
 Version: %{__version}
 Release: %{__release}%{?dist}
 BuildArch: noarch
-Summary: Package for redborder containing common functions and scripts.
+Summary: Main package for redborder manager
 
 License: AGPL 3.0
-URL: https://github.com/redBorder/redborder-common
+URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
 Requires: bash ntp dialog rvm s3cmd dmidecode cloud-init postgresql-pgpool-II chef-server-core redborder-serf redborder-common chef redborder-chef-client
@@ -61,11 +61,11 @@ firewall-cmd --reload
 %doc
 
 %changelog
-* Thu Aug 30 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-3
+* Thu Aug 30 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
 - Change chef packages
 
-* Thu Jul 07 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-2
-- Added various rb scripts
+* Thu Jul 07 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
+- Added various rb scripts and chef data
 
 * Thu Jun 23 2016 Juan J. Prieto <jjprieto@redborder.com> - 1.0.0-1
 - first spec version
