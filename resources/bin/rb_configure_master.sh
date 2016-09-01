@@ -362,7 +362,7 @@ function configure_master(){
   # COOKBOOKS
   # Save into cache directory
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid nomad" #http2k rb-manager
+  listCookbooks="zookeeper kafka druid nomad http2k cron logrotate compat_resource chef-client" # rb-manager
   for n in $listCookbooks; do # cookbooks
     rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks. The order matters!

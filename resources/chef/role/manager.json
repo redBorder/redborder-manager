@@ -41,7 +41,8 @@
     "recipe[kafka]",
     "recipe[druid]",
     "recipe[nomad]",
-    "recipe[http2k]"
+    "recipe[http2k]",
+    "recipe[chef-client]"
   ],
   "env_run_lists": {
 
