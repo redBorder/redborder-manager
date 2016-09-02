@@ -97,5 +97,4 @@ if !Config_utils.check_mode(config["mode"])
     config["mode"] = default_mode
 end
 
-config["network"] = "dhcp"
 File.write(@initconf_path, config.to_yaml)
