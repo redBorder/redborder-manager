@@ -13,6 +13,7 @@ require 'ipaddr'
 require 'netaddr'
 require 'system/getifaddrs'
 require 'json'
+require '/usr/lib/redborder/bin/rb_config_utils.rb'
 
 RBETC = ENV['RBETC'].nil? ? '/etc/redborder' : ENV['RBETC']
 INITCONF="#{RBETC}/rb_init_conf.yml"
@@ -25,8 +26,19 @@ network = init_conf['network']
 sync_net = init_conf['sync_net']
 
 # Configure HOSTNAME and CDOMAIN
-## Verify correct hostname before configure it ## TODO
-system("hostnamectl set-hostname \"#{hostname}.#{cdomain}\"")
+if Config_utils.check_hostname(hostname)
+  if Config_utils.check_domain(cdomain)
+    system("hostnamectl set-hostname \"#{hostname}.#{cdomain}\"")
+  else 
+    p err_msg = "Invalid cdomain. Please review #{INITCONF} file"
+    system("logger -t rb_init_conf #{err_msg}")
+    exit 1
+  end
+else
+  p err_msg = "Invalid hostname. Please review #{INITCONF} file"
+  system("logger -t rb_init_conf #{err_msg}")
+  exit 1
+end
 
 if !network.nil? # network will not be defined in cloud deployments
 
@@ -35,36 +47,46 @@ if !network.nil? # network will not be defined in cloud deployments
   system('systemctl stop NetworkManager')
 
   # Configure DNS
-  ### Verify correct DNS parameters in YML before configure it ## TODO
   dns = network['dns']
   open("/etc/sysconfig/network", "w") { |f|
     dns.each_with_index do |dns_ip, i|
-      f.puts "DNS#{i+1}=#{dns_ip}"
+      if Config_utils.check_ipv4({:ip => dns_ip})
+        f.puts "DNS#{i+1}=#{dns_ip}"
+      else
+        p err_msg = "Invalid DNS Address. Please review #{INITCONF} file"
+        system("logger -t rb_init_conf #{err_msg}")
+        exit 1
+      end
     end
     f.puts "SEARCH=#{cdomain}"
   }
 
   # Configure NETWORK
-  ### Verify correct network parameters in YML before configure it ## TODO
   network['interfaces'].each do |iface|
     dev = iface['device']
     mode = iface['mode']
     open("/etc/sysconfig/network-scripts/ifcfg-#{dev}", 'w') { |f|
+      if mode != 'dhcp'
+        if Config_utils.check_ipv4({:ip => iface['ipaddr'], :netmask => iface['netmask']})  and Config_utils.check_ipv4(iface['gateway'])
+          f.puts "IPADDR=#{iface['ipaddr']}"
+          f.puts "NETMASK=#{iface['netmask']}"
+          f.puts "GATEWAY=#{iface['gateway']}" if !iface['gateway'].nil?
+        else
+          p err_msg = "Invalid network configuration for device #{dev}. Please review #{INITCONF} file"
+          system("logger -t rb_init_conf #{err_msg}")
+          exit 1
+        end
+      end
       dev_uuid = File.read("/proc/sys/kernel/random/uuid").chomp
       f.puts "BOOTPROTO=#{mode}"
       f.puts "DEVICE=#{dev}"
       f.puts "ONBOOT=yes"
       f.puts "UUID=#{dev_uuid}"
-      if mode != 'dhcp'
-        f.puts "IPADDR=#{iface['ipaddr']}"
-        f.puts "NETMASK=#{iface['netmask']}"
-        f.puts "GATEWAY=#{iface['gateway']}" if !iface['gateway'].nil?
-      end
     }
   end
 
   # Restart NetworkManager
-  system('service network restart')
+  system('service network restart &> /dev/null')
 end
 
 ######################
