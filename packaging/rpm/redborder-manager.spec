@@ -19,6 +19,7 @@ Requires: bash ntp dialog rvm s3cmd dmidecode cloud-init postgresql-pgpool-II ch
 %build
 
 %install
+mkdir -p %{buildroot}/etc/redborder
 mkdir -p %{buildroot}/usr/lib/redborder/bin
 mkdir -p %{buildroot}/usr/lib/redborder/lib
 mkdir -p %{buildroot}/etc/profile.d
@@ -34,6 +35,9 @@ chmod 0644 %{buildroot}/usr/lib/redborder/bin/rb_manager_functions.rb
 install -D -m 0755 resources/lib/rb_wiz_lib.rb %{buildroot}/usr/lib/redborder/lib
 cp -r resources/chef/* %{buildroot}/var/chef/data
 chmod -R 0644 %{buildroot}/var/chef/data
+install -D -m 0644 resources/etc/mode-list.yml %{buildroot}/etc/redborder
+install -D -m 0644 resources/etc/parameter-list.yml %{buildroot}/etc/redborder
+
 
 %pre
 getent group opscode-pgsql >/dev/null || groupadd -r opscode.pgsql
@@ -57,10 +61,16 @@ firewall-cmd --reload
 /usr/lib/redborder/bin/rb_manager_functions.sh
 /usr/lib/redborder/bin/rb_manager_functions.rb
 /var/chef/data
+%defattr(0644,root,root)
+/etc/redborder/mode-list.yml
+/etc/redborder/parameter-list.yml
 
 %doc
 
 %changelog
+* Fri Sep 02 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
+- Add YML config files
+
 * Thu Aug 30 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
 - Change chef packages
 
