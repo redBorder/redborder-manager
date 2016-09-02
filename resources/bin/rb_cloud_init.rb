@@ -1,12 +1,12 @@
 #!/usr/bin/env ruby
 
 require 'yaml'
-require './rb_config_utils.rb'
+require '/usr/lib/redborder/bin/rb_config_utils.rb'
 
 @userdata_path="/var/lib/cloud/instance/user-data.txt"
 @userdataconfig_path="/var/lib/cloud/instance/user-data-config.yml"
 @instanceid_path="/var/lib/cloud/data/instance-id"
-@parameterlist_path="/var/lib/redborder/parameter-list.yml"
+@parameterlist_path="/etc/redborder/parameter-list.yml"
 @initconf_path="/etc/redborder/init-conf.yml"
 
 # Function to obtain instance-id from cloud-init files
