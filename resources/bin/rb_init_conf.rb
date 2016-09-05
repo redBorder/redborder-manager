@@ -119,7 +119,7 @@ else
   exit 1
 end
 
-if multicast == "yes" # Multicast configuration
+if multicast # Multicast configuration
   serf_conf["discover"] = cdomain
 end
 
