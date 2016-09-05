@@ -23,7 +23,7 @@ init_conf = YAML.load_file(INITCONF)
 hostname = init_conf['hostname']
 cdomain = init_conf['cdomain']
 network = init_conf['network']
-sync_net = init_conf['sync_net']
+serf = init_conf['serf']
 mode = init_conf['mode']
 
 # Configure HOSTNAME and CDOMAIN
@@ -98,6 +98,9 @@ TAGSJSON="/etc/serf/tags"
 
 serf_conf = {}
 serf_tags = {}
+sync_net = serf['sync_net']
+encrypt_key = serf['encrypt_key']
+multicast = serf['multicast']
 
 # local IP to bind to
 if !sync_net.nil?
@@ -109,11 +112,19 @@ if !sync_net.nil?
     end
     if serf_conf["bind"].nil?
         p "Error: no IP address to bind"
-        exit(1)
+        exit 1
     end
 else
   p "Error: unknown sync network"
-  exit (1)
+  exit 1
+end
+
+if multicast == "yes" # Multicast configuration
+  serf_conf["discover"] = cdomain
+end
+
+if !encrypt_key.nil?
+  serf_conf["encrypt_key"] = encrypt_key
 end
 
 serf_conf["tags_file"] = TAGSJSON
