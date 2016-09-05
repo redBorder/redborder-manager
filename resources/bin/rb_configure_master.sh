@@ -251,6 +251,7 @@ _RBEOF_
   "pass": "$VRRPPASS"
 }
 _RBEOF_
+  fi
 
   # booksheld passwords
   cat > /var/chef/data/data_bag_encrypted/passwords/opscode-bookshelf-admin.json <<-_RBEOF_
@@ -289,7 +290,7 @@ _RBEOF_
 
   ## Generating cluster uuid
   mkdir -p /var/chef/data/data_bag_encrypted/rBglobal
-  cat > /var/chef/data/data_bag_encrypted/rBglobal/cluster.json <<_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/rBglobal/cluster.json <<-_RBEOF_
 {
   "id": "cluster",
   "uuid": "$(cat /proc/sys/kernel/random/uuid)"
