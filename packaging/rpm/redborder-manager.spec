@@ -37,7 +37,7 @@ cp -r resources/chef/* %{buildroot}/var/chef/data
 chmod -R 0644 %{buildroot}/var/chef/data
 install -D -m 0644 resources/mode-list.yml %{buildroot}/usr/lib/redborder
 install -D -m 0644 resources/parameter-list.yml %{buildroot}/usr/lib/redborder
-
+install -D -m 0644 resources/rb-init-conf.service %{buildroot}/usr/lib/systemd/system/rb-init-conf.service
 
 %pre
 getent group opscode-pgsql >/dev/null || groupadd -r opscode.pgsql
@@ -64,6 +64,7 @@ firewall-cmd --reload
 %defattr(0644,root,root)
 /usr/lib/redborder/mode-list.yml
 /usr/lib/redborder/parameter-list.yml
+/usr/lib/systemd/system/rb-init-conf.service
 
 %doc
 

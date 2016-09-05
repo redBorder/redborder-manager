@@ -1,0 +1,10 @@
+[Unit]
+Description=initial configuration for redborder-manager
+
+[Service]
+ExecStart=/usr/bin/redborder/rb_init_conf.rb
+RemainAfterExit=yes
+User=root
+
+[Install]
+WantedBy=multi-user.target

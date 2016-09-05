@@ -98,4 +98,4 @@ if !Config_utils.check_mode(config["mode"])
 end
 
 File.write(@initconf_path, config.to_yaml)
-exec
+System("systemctl start rb-init-conf")
