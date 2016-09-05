@@ -62,6 +62,7 @@ firewall-cmd --reload
 /usr/lib/redborder/bin/rb_manager_functions.rb
 /var/chef/data
 %defattr(0644,root,root)
+/etc/redborder
 /usr/lib/redborder/mode-list.yml
 /usr/lib/redborder/parameter-list.yml
 /usr/lib/systemd/system/rb-init-conf.service
