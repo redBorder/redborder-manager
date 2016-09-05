@@ -35,8 +35,8 @@ chmod 0644 %{buildroot}/usr/lib/redborder/bin/rb_manager_functions.rb
 install -D -m 0755 resources/lib/rb_wiz_lib.rb %{buildroot}/usr/lib/redborder/lib
 cp -r resources/chef/* %{buildroot}/var/chef/data
 chmod -R 0644 %{buildroot}/var/chef/data
-install -D -m 0644 resources/etc/mode-list.yml %{buildroot}/etc/redborder
-install -D -m 0644 resources/etc/parameter-list.yml %{buildroot}/etc/redborder
+install -D -m 0644 resources/mode-list.yml %{buildroot}/usr/lib/redborder
+install -D -m 0644 resources/parameter-list.yml %{buildroot}/usr/lib/redborder
 
 
 %pre

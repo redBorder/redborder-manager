@@ -5,12 +5,14 @@ require 'net/ip'
 require 'system/getifaddrs'
 require 'netaddr'
 
+@modelist_path="/usr/lib/redborder/mode-list.yml"
+
 module Config_utils
     #Function to check if mode is valid (if defined in mode-list.yml)
     #Returns true if it's valid and false if not
     #TODO: protect from exception like file not found
     def Config_utils.check_mode(mode)
-        mode_list = YAML.load_file("/etc/redborder/mode-list.yml")
+        mode_list = YAML.load_file(@modelist_path)
         return mode_list.include?(mode)
     end
 
@@ -27,9 +29,9 @@ module Config_utils
         ret = false
       end
       ret
-    end 
+    end
 
-   # Functon to chefk a valid domain. Based on rfc1123 and sethostname(). 
+   # Functon to chefk a valid domain. Based on rfc1123 and sethostname().
    # Suggest rfc1178
    # Max of 253 characters with hostname
    def Config_utils.check_domain(domain)
@@ -48,6 +50,6 @@ module Config_utils
        ret = true
      end
      ret
-   end 
+   end
 
 end
