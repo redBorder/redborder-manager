@@ -2,7 +2,7 @@
 Description=initial configuration for redborder-manager
 
 [Service]
-ExecStart=/usr/bin/redborder/rb_init_conf.rb
+ExecStart=/usr/bin/redborder/rb_init_conf.sh
 RemainAfterExit=yes
 User=root
 
