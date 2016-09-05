@@ -67,7 +67,7 @@ if !network.nil? # network will not be defined in cloud deployments
     mode = iface['mode']
     open("/etc/sysconfig/network-scripts/ifcfg-#{dev}", 'w') { |f|
       if mode != 'dhcp'
-        if Config_utils.check_ipv4({:ip => iface['ipaddr'], :netmask => iface['netmask']})  and Config_utils.check_ipv4(iface['gateway'])
+        if Config_utils.check_ipv4({:ip => iface['ipaddr'], :netmask => iface['netmask']})  and Config_utils.check_ipv4(:ip => iface['gateway'])
           f.puts "IPADDR=#{iface['ipaddr']}"
           f.puts "NETMASK=#{iface['netmask']}"
           f.puts "GATEWAY=#{iface['gateway']}" if !iface['gateway'].nil?
