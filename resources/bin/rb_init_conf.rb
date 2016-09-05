@@ -30,6 +30,8 @@ mode = init_conf['mode']
 if Config_utils.check_hostname(hostname)
   if Config_utils.check_domain(cdomain)
     system("hostnamectl set-hostname \"#{hostname}.#{cdomain}\"")
+    # Set cdomain file
+    File.open("/etc/redborder/cdomain", 'w') { |f| f.puts "#{cdomain}" }
   else 
     p err_msg = "Invalid cdomain. Please review #{INITCONF} file"
     system("logger -t rb_init_conf #{err_msg}")
@@ -44,8 +46,8 @@ end
 if !network.nil? # network will not be defined in cloud deployments
 
   # Disable and stop NetworkManager
-  system('systemctl disable NetworkManager')
-  system('systemctl stop NetworkManager')
+  system('systemctl disable NetworkManager &> /dev/null')
+  system('systemctl stop NetworkManager &> /dev/null')
 
   # Configure DNS
   dns = network['dns']
@@ -65,13 +67,15 @@ if !network.nil? # network will not be defined in cloud deployments
   # Configure NETWORK
   network['interfaces'].each do |iface|
     dev = iface['device']
-    mode = iface['mode']
+    iface_mode = iface['mode']
     open("/etc/sysconfig/network-scripts/ifcfg-#{dev}", 'w') { |f|
-      if mode != 'dhcp'
+      if iface_mode != 'dhcp'
         if Config_utils.check_ipv4({:ip => iface['ipaddr'], :netmask => iface['netmask']})  and Config_utils.check_ipv4(:ip => iface['gateway'])
           f.puts "IPADDR=#{iface['ipaddr']}"
           f.puts "NETMASK=#{iface['netmask']}"
           f.puts "GATEWAY=#{iface['gateway']}" if !iface['gateway'].nil?
+          # Also set hostname with this IP in /etc/hosts
+          File.open("/etc/hosts", 'a') { |f| f.puts "#{iface['ipaddr']}  #{hostname} #{hostname}.#{cdomain}" }
         else
           p err_msg = "Invalid network configuration for device #{dev}. Please review #{INITCONF} file"
           system("logger -t rb_init_conf #{err_msg}")
@@ -79,7 +83,7 @@ if !network.nil? # network will not be defined in cloud deployments
         end
       end
       dev_uuid = File.read("/proc/sys/kernel/random/uuid").chomp
-      f.puts "BOOTPROTO=#{mode}"
+      f.puts "BOOTPROTO=#{iface_mode}"
       f.puts "DEVICE=#{dev}"
       f.puts "ONBOOT=yes"
       f.puts "UUID=#{dev_uuid}"
@@ -144,7 +148,7 @@ file_serf_tags.write(serf_tags.to_json)
 file_serf_tags.close
 
 # Enable and start SERF
-system('systemctl enable serf')
-system('systemctl enable serf-join')
-system('systemctl start serf')
-system('systemctl start serf-join')
+system('systemctl enable serf &> /dev/null')
+system('systemctl enable serf-join &> /dev/null')
+system('systemctl start serf &> /dev/null')
+system('systemctl start serf-join &> /dev/null')
