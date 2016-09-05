@@ -24,6 +24,7 @@ hostname = init_conf['hostname']
 cdomain = init_conf['cdomain']
 network = init_conf['network']
 sync_net = init_conf['sync_net']
+mode = init_conf['mode']
 
 # Configure HOSTNAME and CDOMAIN
 if Config_utils.check_hostname(hostname)
@@ -97,7 +98,6 @@ TAGSJSON="/etc/serf/tags"
 
 serf_conf = {}
 serf_tags = {}
-node_role = "undef" # Check
 
 # local IP to bind to
 if !sync_net.nil?
@@ -120,7 +120,7 @@ serf_conf["tags_file"] = TAGSJSON
 serf_conf["node_name"] = hostname
 
 # defined role in tags
-serf_tags["role"] = node_role
+serf_tags["mode"] = mode
 
 # Create json file configuration
 file_serf_conf = File.open(SERFJSON,"w")
@@ -131,3 +131,9 @@ file_serf_conf.close
 file_serf_tags = File.open(TAGSJSON,"w")
 file_serf_tags.write(serf_tags.to_json)
 file_serf_tags.close
+
+# Enable and start SERF
+system('systemctl enable serf')
+system('systemctl enable serf-join')
+system('systemctl start serf')
+system('systemctl start serf-join')
