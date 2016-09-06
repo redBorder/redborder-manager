@@ -8,7 +8,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash ntp dialog rvm s3cmd dmidecode rsync postgresql-pgpool-II chef-server-core redborder-serf redborder-common redborder-chef-client
+Requires: bash ntp dialog rvm s3cmd dmidecode rsync postgresql-pgpool-II redborder-serf redborder-common redborder-chef-client
 
 %description
 %{summary}
