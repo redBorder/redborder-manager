@@ -8,7 +8,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash ntp dialog rvm s3cmd dmidecode cloud-init postgresql-pgpool-II chef-server-core redborder-serf redborder-common chef redborder-chef-client
+Requires: bash ntp dialog rvm s3cmd dmidecode postgresql-pgpool-II chef-server-core redborder-serf redborder-common redborder-chef-client
 
 %description
 %{summary}
@@ -70,6 +70,9 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Thu Sep 06 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
+- Add rb-init-conf service and remove chef package installation
+
 * Fri Sep 02 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
 - Add YML config files
 
