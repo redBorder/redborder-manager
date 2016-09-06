@@ -1,5 +1,6 @@
 #!/bin/bash
-# redborder MASTER node initialization
+# redborder LEADER node initialization
+# This node is the first of the cluster. It install and configure chef-server
 
 source /etc/profile
 source /usr/lib/redborder/bin/rb_manager_functions.sh
@@ -305,13 +306,13 @@ function configure_externals(){
     echo "Configuring externals"
 }
 
-function configure_master(){
-  # Check if master is configuring now
-  if [ -f /var/lock/master-configuring.lock ]; then
+function configure_leader(){
+  # Check if leader is configuring now
+  if [ -f /var/lock/leader-configuring.lock ]; then
     echo "INFO: this manager is being configuring just now!"
     exit 0
   fi
-  touch /var/lock/master-configuring.lock
+  touch /var/lock/leader-configuring.lock
 
   # Chef server configuration
   ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config" # old app.config
@@ -330,9 +331,9 @@ function configure_master(){
 
   # Create specific role for this node
   e_title "Creating custom chef role"
-  cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
+  cp /var/chef/data/role/manager_node.json /var/chef/data/role/$(hostname -s).json
   # Change hostname in new role
-  sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
+  sed -i "s/manager_node/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
 
   # Configure DataBags
   e_title "Configuring Data bags"
@@ -359,12 +360,13 @@ function configure_master(){
   e_title "Registering chef-client ..."
   /usr/bin/chef-client
   # Adding chef role to node
+  knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[$CLIENTNAME]"
 
   # MANAGER MODES
   e_title "Configuring manager mode"
   # Set manager role
-  [ "x$MANAGERMODE" == "x" ] && MANAGERMODE="master"
+  [ "x$MANAGERMODE" == "x" ] && MANAGERMODE="custom"
   $RBBIN/rb_set_mode.rb $MANAGERMODE
 
   # Update timestamp #??#
@@ -404,7 +406,7 @@ CHEFORG="redborder" # Chef org
 CHEFPASS="redborder" # Chef pass
 
 CLIENTNAME=`hostname -s`
-IPMASTER=`serf members -status alive -name=$CLIENTNAME -format=json | jq -r .members[].addr | cut -d ":" -f 1`
+IPLEADER=`serf members -status alive -name=$CLIENTNAME -format=json | jq -r .members[].addr | cut -d ":" -f 1`
 MANAGERMODE=`serf members -status alive -name=$CLIENTNAME -format=json | jq -r .members[].tags.mode`
 
 # Get cdomain
@@ -450,7 +452,7 @@ sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
 
 # Add erchef domain /etc/hosts
 grep -q erchef.${cdomain} /etc/hosts
-[ $? -ne 0 ] && echo "$IPMASTER   erchef.${cdomain}" >> /etc/hosts
+[ $? -ne 0 ] && echo "$IPLEADER   erchef.${cdomain}" >> /etc/hosts
 
 # Modifying some default chef parameters (rabbitmq, postgresql) ## Check
 # Rabbitmq # Check
@@ -462,9 +464,9 @@ ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabb
 # Permit all IP address source in postgresql
 sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgresql/*/data/postgresql.conf
 
-# Configure MASTER
-configure_master
+# Configure LEADER
+configure_leader
 
-rm -f /var/lock/master-configuring.lock
-echo "Master configured!"
+rm -f /var/lock/leader-configuring.lock
+echo "Leader Node configured!"
 touch /etc/redborder/cluster-installed.txt
