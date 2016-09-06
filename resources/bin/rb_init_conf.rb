@@ -32,7 +32,9 @@ if Config_utils.check_hostname(hostname)
     system("hostnamectl set-hostname \"#{hostname}.#{cdomain}\"")
     # Set cdomain file
     File.open("/etc/redborder/cdomain", 'w') { |f| f.puts "#{cdomain}" }
-  else 
+    # Also set hostname with this IP in /etc/hosts
+    File.open("/etc/hosts", 'a') { |f| f.puts "127.0.0.1  #{hostname} #{hostname}.#{cdomain}" }
+  else
     p err_msg = "Invalid cdomain. Please review #{INITCONF} file"
     system("logger -t rb_init_conf #{err_msg}")
     exit 1
@@ -74,8 +76,6 @@ if !network.nil? # network will not be defined in cloud deployments
           f.puts "IPADDR=#{iface['ipaddr']}"
           f.puts "NETMASK=#{iface['netmask']}"
           f.puts "GATEWAY=#{iface['gateway']}" if !iface['gateway'].nil?
-          # Also set hostname with this IP in /etc/hosts
-          File.open("/etc/hosts", 'a') { |f| f.puts "#{iface['ipaddr']}  #{hostname} #{hostname}.#{cdomain}" }
         else
           p err_msg = "Invalid network configuration for device #{dev}. Please review #{INITCONF} file"
           system("logger -t rb_init_conf #{err_msg}")
