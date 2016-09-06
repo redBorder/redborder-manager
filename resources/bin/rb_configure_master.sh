@@ -2,6 +2,7 @@
 # redborder MASTER node initialization
 
 source /etc/profile
+source /usr/lib/redborder/bin/rb_manager_functions.sh
 
 function configure_aws(){
     # AMAZON Installation (user-data)
@@ -324,17 +325,21 @@ function configure_master(){
   fi
 
   # Configure database
+  e_title "Configuring Database"
   configure_db
 
   # Create specific role for this node
+  e_title "Creating custom chef role"
   cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
   # Change hostname in new role
   sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
 
   # Configure DataBags
+  e_title "Configuring Data bags"
   configure_dataBags
 
   # Upload chef data (ROLES, DATA BAGS, ENVIRONMENTS ...)
+  e_title "Uploading chef data (ROLES, DATA BAGS, ENVIRONMENTS ...)"
   $RBBIN/rb_upload_chef_data.sh -y
 
   # Delete encrypted data BAGS
@@ -342,27 +347,30 @@ function configure_master(){
 
   # COOKBOOKS
   # Save into cache directory
+  e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid nomad http2k cron logrotate compat_resource chef-client" # rb-manager
+  listCookbooks="zookeeper kafka druid nomad http2k cron logrotate compat_resource chef-client" # The order matters!
   for n in $listCookbooks; do # cookbooks
     rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
-    # Uploadind cookbooks. The order matters!
+    # Uploadind cookbooks
     knife cookbook upload $n
   done
 
-  echo "Registering chef-client ..."
+  e_title "Registering chef-client ..."
   /usr/bin/chef-client
   # Adding chef role to node
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[$CLIENTNAME]"
 
-  # MANAGER MODES (roles)
-  [ -f /etc/chef/initialrole ] && initialrole=$(head /etc/chef/initialrole -n 1)
-  [ "x$initialrole" == "x" ] && initialrole="master"
+  # MANAGER MODES
+  e_title "Configuring manager mode"
   # Set manager role
-  $RBBIN/rb_set_mode.rb $initialrole
+  [ "x$MANAGERMODE" == "x" ] && MANAGERMODE="master"
+  $RBBIN/rb_set_mode.rb $MANAGERMODE
+
+  # Update timestamp #??#
   $RBBIN/rb_update_timestamp.rb &>/dev/null
 
-  # Copy web certificates (use only chef-server certificate) #CHECK
+  # Copy web certificates (use only chef-server certificate) #CHECK #??#
   mkdir -p /root/.chef/trusted_certs/
   rsync /var/opt/opscode/nginx/ca/*.crt /root/.chef/trusted_certs/
   mkdir -p /home/redborder/.chef/trusted_certs/
@@ -370,28 +378,20 @@ function configure_master(){
   chown -R redborder:redborder /home/redborder/.chef
 
   # Configure externals
+  e_title "Configuring externals"
   configure_externals
 
   # Clean yum data (to install packages from chef)
   yum clean all
 
   # Multiple runs of chef-client
-  echo "Configuring chef client (first time). Please wait...  "
-  echo "###########################################################" #>>/root/.install-chef-client.log
-  echo "redborder install 1/3 run $(date)" #>>/root/.install-chef-client.log
-  echo "###########################################################" #>>/root/.install-chef-client.log
+  e_title "Configuring Chef-Client (first time). Please wait...  "
+  e_title "redborder install 1/3 run $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
-  echo "" #>>/root/.install-chef-client.log
-  echo "###########################################################" #>>/root/.install-chef-client.log
-  echo "redborder install 2/3 run $(date)" #>>/root/.install-chef-client.log
-  echo "###########################################################" #>>/root/.install-chef-client.log
+  e_title "redborder install 2/3 run $(date)" #>>/root/.install-chef-client.log
   chef-client #&>>/root/.install-chef-client.log
-  echo "" #>>/root/.install-chef-client.log
-  echo "###########################################################" #>>/root/.install-chef-client.log
-  echo "redborder install 3/3 run $(date)" #>>/root/.install-chef-client.log
-  echo "###########################################################" #>>/root/.install-chef-client.log
+  e_title "redborder install 3/3 run $(date)" #>>/root/.install-chef-client.log
   chef-client #&>>/root/.install-chef-client.log
-  echo "" #>>/root/.install-chef-client.log
 
 }
 
@@ -404,16 +404,23 @@ CHEFORG="redborder" # Chef org
 CHEFPASS="redborder" # Chef pass
 
 CLIENTNAME=`hostname -s`
+IPMASTER=`serf members -status alive -name=$CLIENTNAME -format=json | jq -r .members[].addr | cut -d ":" -f 1`
+MANAGERMODE=`serf members -status alive -name=$CLIENTNAME -format=json | jq -r .members[].tags.mode`
 
 # Get cdomain
 cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
 
-#############################
-# CHEF SERVER Configuration #
-#############################
+############################################
+# CHEF SERVER Installation & Configuration #
+############################################
+
+# Chef server Installation
+e_title "Installing Chef-Server from repository"
+yum install -y chef #&> /dev/null
 
 # Chef server initial configuration
-HOME=/root /usr/bin/chef-server-ctl reconfigure &>>/root/.install-chef-server.log
+e_title "Configuring Chef-Server (first time)"
+/usr/bin/chef-server-ctl reconfigure #&>> /root/.install-chef-server.log
 # Chef user creation
 # $ chef-server-ctl user-create USER_NAME FIRST_NAME LAST_NAME EMAIL 'PASSWORD' --filename FILE_NAME
 /usr/bin/chef-server-ctl user-create $CHEFUSER $CHEFUSER $CHEFUSER $CHEFUSER@$cdomain \'$CHEFPASS\' --filename /etc/opscode/$CHEFUSER.pem
@@ -443,7 +450,7 @@ sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
 
 # Add erchef domain /etc/hosts
 grep -q erchef.${cdomain} /etc/hosts
-[ $? -ne 0 ] && echo "127.0.0.1   erchef.${cdomain}" >> /etc/hosts # Change it. Must not use loopback IP ??
+[ $? -ne 0 ] && echo "$IPMASTER   erchef.${cdomain}" >> /etc/hosts
 
 # Modifying some default chef parameters (rabbitmq, postgresql) ## Check
 # Rabbitmq # Check
