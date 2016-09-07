@@ -331,7 +331,7 @@ function configure_leader(){
 
   # Create specific role for this node
   e_title "Creating custom chef role"
-  cp /var/chef/data/role/manager_node.json /var/chef/data/role/$(hostname -s).json
+  mv /var/chef/data/role/manager_node.json /var/chef/data/role/$(hostname -s).json
   # Change hostname in new role
   sed -i "s/manager_node/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
 
@@ -350,7 +350,7 @@ function configure_leader(){
   # Save into cache directory
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid nomad http2k cron compat_resource logrotate chef-client" # The order matters!
+  listCookbooks="zookeeper kafka druid nomad http2k cron compat_resource logrotate chef-client rb-manager" # The order matters!
   for n in $listCookbooks; do # cookbooks
     rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
