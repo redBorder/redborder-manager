@@ -1,20 +1,5 @@
 #!/usr/bin/env ruby
 
-#######################################################################
-## Copyright (c) 2014 ENEO Tecnología S.L.
-## This file is part of redBorder.
-## redBorder is free software: you can redistribute it and/or modify
-## it under the terms of the GNU Affero General Public License License as published by
-## the Free Software Foundation, either version 3 of the License, or
-## (at your option) any later version.
-## redBorder is distributed in the hope that it will be useful,
-## but WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-## GNU Affero General Public License License for more details.
-## You should have received a copy of the GNU Affero General Public License License
-## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
-########################################################################
-
 require 'chef'
 require 'json'
 require '/usr/lib/redborder/bin/rb_config_utils.rb'
@@ -41,12 +26,12 @@ def set_mode(hostname, mode)
 
     # Save changes in role
     if role.save
-      printf("INFO: %-50s %s\n", "#{hostname} passed to mode: #{mode}")
+      printf "INFO: Node #{hostname} passed to mode #{mode}\n"
     else
       printf "Usage: rb_set_mode.rb master|custom [manager1] [manager2] [....]\n"
     end
   end
-  
+
 end
 
 ##################
