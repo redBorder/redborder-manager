@@ -5,6 +5,7 @@ require 'net/ip'
 require 'system/getifaddrs'
 require 'netaddr'
 require 'uri'
+require File.join(ENV['RBDIR'].nil? ? '/usr/lib/redborder' : ENV['RBDIR'],'lib/rb_config_utils.rb')
 
 class WizConf
     
@@ -30,28 +31,6 @@ class WizConf
         netdev
     end
 
-    def check_ipv4(ipv4)
-        ret = true
-        begin
-            # convert ipv4 from string format "192.168.1.0/255.255.255.0" into hash {:ip => "192.168.1.0", :netmask => "255.255.255.0"}
-            if ipv4.class == String
-                unless ipv4.match(/^(?<ip>\d+\.\d+\.\d+\.\d+)\/(?<netmask>(?:\d+\.\d+\.\d+\.\d+)|\d+)$/).nil?
-                    ipv4 = ipv4.match(/^(?<ip>\d+\.\d+\.\d+\.\d+)\/(?<netmask>(?:\d+\.\d+\.\d+\.\d+)|\d+)$/)
-                else
-                    ret = false
-                end
-            end
-            x = NetAddr::CIDRv4.create("#{ipv4[:ip].nil? ? "0.0.0.0" : ipv4[:ip]}/#{ipv4[:netmask].nil? ? "255.255.255.255" : ipv4[:netmask]}")
-        rescue NetAddr::ValidationError => e
-            # error: netmask incorrect
-            ret = false
-        rescue => e
-            # general error
-            ret = false
-        end
-        ret
-    end
-
     # TODO ipv6 support
     def get_ipv4_network(devname)
         hsh = {}
@@ -75,27 +54,6 @@ class WizConf
             end
         end
         hsh
-    end
-
-    def check_domain(domain)
-        # Based on rfc1123 and sethostname()
-        # Suggest rfc1178
-        # Max of 253 characters with hostname
-        ret = false
-        unless (domain =~ /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/).nil?
-            ret = true
-        end
-        ret
-    end
-
-    def check_hostname(name)
-        # Based on rfc1123 and sethostname()
-        # Max of 63 characters
-        ret = false
-        unless (name =~ /^([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/).nil?
-            ret = true
-        end
-        ret
     end
   
 end
@@ -325,10 +283,10 @@ EOF
                     else
                         # ok pressed
                         @conf['Mode:'] = "Static"
-                        if check_ipv4({:ip => @conf['IP:']}) and check_ipv4({:netmask => @conf['Netmask:']})
+                        if Config_utils.check_ipv4({:ip => @conf['IP:']}) and Config_utils.check_ipv4({:netmask => @conf['Netmask:']})
                             # seems to be ok
                             unless @conf['Gateway:'].nil?
-                                if check_ipv4({:ip => @conf['Gateway:']})
+                                if Config_utils.check_ipv4({:ip => @conf['Gateway:']})
                                     # seems to be ok
                                     ret = false
                                 end
@@ -458,7 +416,7 @@ EOF
                 @cancel = true
                 break
             else
-                if check_hostname(host["Hostname:"]) and check_domain(host["Domain name:"])
+                if Config_utils.check_hostname(host["Hostname:"]) and Config_utils.check_domain(host["Domain name:"])
                     # need to confirm lenght
                     if host["Hostname:"].length < 64 and (host["Hostname:"].length + host["Domain name:"].length) < 254
                         break
@@ -569,11 +527,11 @@ EOF
                 @cancel = true
                 break
             else
-                if check_ipv4({:ip=>dns["DNS1:"]})
+                if Config_utils.check_ipv4({:ip=>dns["DNS1:"]})
                     unless dns["DNS2:"].empty?
-                        if check_ipv4({:ip=>dns["DNS2:"]})
+                        if Config_utils.check_ipv4({:ip=>dns["DNS2:"]})
                             unless dns["DNS3:"].empty?
-                                if check_ipv4({:ip=>dns["DNS3:"]})
+                                if Config_utils.check_ipv4({:ip=>dns["DNS3:"]})
                                     break
                                 end
                             else
@@ -671,22 +629,12 @@ EOF
                 @cancel = true
                 break
             else
-                if check_ipv4(sync["Sync Network:"])
+                if Config_utils.check_ipv4(sync["Sync Network:"])
                     # it is ok
                     break
                 else
                     # error
                 end
-                #unless sync["Sync Network:"].match(/^(?<ip>\d+\.\d+\.\d+\.\d+)\/(?<netmask>(?:\d+\.\d+\.\d+\.\d+)|\d+)$/).nil?
-                #    if check_ipv4(sync["Sync Network:"].match(/^(?<ip>\d+\.\d+\.\d+\.\d+)\/(?<netmask>(?:\d+\.\d+\.\d+\.\d+)|\d+)$/))
-                #        # it is ok
-                #        break
-                #    else
-                #        # something is broken in the sync network definition
-                #    end
-                #else
-                #    # error
-                #end
             end
 
             # error, do another loop
@@ -706,8 +654,9 @@ EOF
 
         end
 
+        # normalizing
         sync_netaddr = NetAddr::CIDRv4.create(sync["Sync Network:"])
-        @conf = "#{sync_netaddr.ip}#{sync_netaddr.netmask}"
+        @conf = "#{sync_netaddr.network}/#{sync_netaddr.netmask_ext}"
  
     end
 
