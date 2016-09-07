@@ -23,14 +23,18 @@ init_conf = YAML.load_file(INITCONF)
 hostname = init_conf['hostname']
 cdomain = init_conf['cdomain']
 network = init_conf['network']
-sync_net = init_conf['sync_net']
+serf = init_conf['serf']
 mode = init_conf['mode']
 
 # Configure HOSTNAME and CDOMAIN
 if Config_utils.check_hostname(hostname)
   if Config_utils.check_domain(cdomain)
     system("hostnamectl set-hostname \"#{hostname}.#{cdomain}\"")
-  else 
+    # Set cdomain file
+    File.open("/etc/redborder/cdomain", 'w') { |f| f.puts "#{cdomain}" }
+    # Also set hostname with this IP in /etc/hosts
+    File.open("/etc/hosts", 'a') { |f| f.puts "127.0.0.1  #{hostname} #{hostname}.#{cdomain}" }
+  else
     p err_msg = "Invalid cdomain. Please review #{INITCONF} file"
     system("logger -t rb_init_conf #{err_msg}")
     exit 1
@@ -44,8 +48,8 @@ end
 if !network.nil? # network will not be defined in cloud deployments
 
   # Disable and stop NetworkManager
-  system('systemctl disable NetworkManager')
-  system('systemctl stop NetworkManager')
+  system('systemctl disable NetworkManager &> /dev/null')
+  system('systemctl stop NetworkManager &> /dev/null')
 
   # Configure DNS
   dns = network['dns']
@@ -65,9 +69,9 @@ if !network.nil? # network will not be defined in cloud deployments
   # Configure NETWORK
   network['interfaces'].each do |iface|
     dev = iface['device']
-    mode = iface['mode']
+    iface_mode = iface['mode']
     open("/etc/sysconfig/network-scripts/ifcfg-#{dev}", 'w') { |f|
-      if mode != 'dhcp'
+      if iface_mode != 'dhcp'
         if Config_utils.check_ipv4({:ip => iface['ipaddr'], :netmask => iface['netmask']})  and Config_utils.check_ipv4(:ip => iface['gateway'])
           f.puts "IPADDR=#{iface['ipaddr']}"
           f.puts "NETMASK=#{iface['netmask']}"
@@ -79,7 +83,7 @@ if !network.nil? # network will not be defined in cloud deployments
         end
       end
       dev_uuid = File.read("/proc/sys/kernel/random/uuid").chomp
-      f.puts "BOOTPROTO=#{mode}"
+      f.puts "BOOTPROTO=#{iface_mode}"
       f.puts "DEVICE=#{dev}"
       f.puts "ONBOOT=yes"
       f.puts "UUID=#{dev_uuid}"
@@ -98,6 +102,9 @@ TAGSJSON="/etc/serf/tags"
 
 serf_conf = {}
 serf_tags = {}
+sync_net = serf['sync_net']
+encrypt_key = serf['encrypt_key']
+multicast = serf['multicast']
 
 # local IP to bind to
 if !sync_net.nil?
@@ -109,11 +116,19 @@ if !sync_net.nil?
     end
     if serf_conf["bind"].nil?
         p "Error: no IP address to bind"
-        exit(1)
+        exit 1
     end
 else
   p "Error: unknown sync network"
-  exit (1)
+  exit 1
+end
+
+if multicast # Multicast configuration
+  serf_conf["discover"] = cdomain
+end
+
+if !encrypt_key.nil?
+  serf_conf["encrypt_key"] = encrypt_key
 end
 
 serf_conf["tags_file"] = TAGSJSON
@@ -133,7 +148,7 @@ file_serf_tags.write(serf_tags.to_json)
 file_serf_tags.close
 
 # Enable and start SERF
-system('systemctl enable serf')
-system('systemctl enable serf-join')
-system('systemctl start serf')
-system('systemctl start serf-join')
+system('systemctl enable serf &> /dev/null')
+system('systemctl enable serf-join &> /dev/null')
+system('systemctl start serf &> /dev/null')
+system('systemctl start serf-join &> /dev/null')

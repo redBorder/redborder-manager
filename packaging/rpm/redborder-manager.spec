@@ -8,7 +8,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash ntp dialog rvm s3cmd dmidecode cloud-init postgresql-pgpool-II chef-server-core redborder-serf redborder-common chef redborder-chef-client
+Requires: bash ntp dialog rvm s3cmd dmidecode rsync postgresql-pgpool-II redborder-serf redborder-common redborder-chef-client
 
 %description
 %{summary}
@@ -31,13 +31,12 @@ install -D -m 0644 resources/redborder-manager.sh %{buildroot}/etc/profile.d
 cp resources/bin/* %{buildroot}/usr/lib/redborder/bin
 chmod 0755 %{buildroot}/usr/lib/redborder/bin/*
 chmod 0644 %{buildroot}/usr/lib/redborder/bin/rb_manager_functions.sh
-chmod 0644 %{buildroot}/usr/lib/redborder/bin/rb_manager_functions.rb
 install -D -m 0755 resources/lib/rb_wiz_lib.rb %{buildroot}/usr/lib/redborder/lib
 cp -r resources/chef/* %{buildroot}/var/chef/data
 chmod -R 0644 %{buildroot}/var/chef/data
 install -D -m 0644 resources/mode-list.yml %{buildroot}/usr/lib/redborder
 install -D -m 0644 resources/parameter-list.yml %{buildroot}/usr/lib/redborder
-install -D -m 0644 resources/rb-init-conf.service %{buildroot}/usr/lib/systemd/system/rb-init-conf.service
+install -D -m 0644 resources/systemd/rb-init-conf.service %{buildroot}/usr/lib/systemd/system/rb-init-conf.service
 
 %pre
 getent group opscode-pgsql >/dev/null || groupadd -r opscode.pgsql
@@ -59,9 +58,9 @@ firewall-cmd --reload
 /usr/lib/redborder/lib/rb_wiz_lib.rb
 /etc/profile.d/redborder-manager.sh
 /usr/lib/redborder/bin/rb_manager_functions.sh
-/usr/lib/redborder/bin/rb_manager_functions.rb
 /var/chef/data
 %defattr(0644,root,root)
+/etc/redborder
 /usr/lib/redborder/mode-list.yml
 /usr/lib/redborder/parameter-list.yml
 /usr/lib/systemd/system/rb-init-conf.service
@@ -69,6 +68,10 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Thu Sep 06 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
+- Add rb-init-conf service and remove chef package installation
+- Remove rb_manager_functions.rb from spec
+
 * Fri Sep 02 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
 - Add YML config files
 
