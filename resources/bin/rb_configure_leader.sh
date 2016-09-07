@@ -3,7 +3,7 @@
 # This node is the first of the cluster. It install and configure chef-server
 
 source /etc/profile
-source /usr/lib/redborder/bin/rb_manager_functions.sh
+source $RBLIB/rb_manager_functions.sh
 
 function configure_aws(){
     # AMAZON Installation (user-data)

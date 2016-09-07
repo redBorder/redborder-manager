@@ -13,7 +13,7 @@ require 'ipaddr'
 require 'netaddr'
 require 'system/getifaddrs'
 require 'json'
-require '/usr/lib/redborder/bin/rb_config_utils.rb'
+require File.join(ENV['RBLIB'].nil? ? '/usr/lib/redborder/lib' : ENV['RBLIB'],'rb_config_utils.rb')
 
 RBETC = ENV['RBETC'].nil? ? '/etc/redborder' : ENV['RBETC']
 INITCONF="#{RBETC}/rb_init_conf.yml"

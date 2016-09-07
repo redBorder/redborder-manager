@@ -1,5 +1,5 @@
 # Author: Pablo Nebrera Herrera
-# Script sube el directorio data al chef server 
+# Script sube el directorio data al chef server
 
 #######################################################################
 # Copyright (c) 2014 ENEO Tecnología S.L.
@@ -20,7 +20,7 @@
 DATADIR="/var/chef/data"
 ANSWERYES=0
 
-source /usr/lib/redborder/bin/rb_manager_functions.sh
+source $RBLIB/rb_manager_functions.sh
 
 function upload_data_bag(){
 	X="data bag"
@@ -38,9 +38,9 @@ function upload_data_bag(){
 		[ "x$key" != "x" ] && echo -n " encrypted"
 		echo "\":"
 
-   
+
                 if [ "x$files" != "x" ]; then
-			for n2 in `ls $files 2>/dev/null`; do 
+			for n2 in `ls $files 2>/dev/null`; do
                         	n1=$(dirname $n2|sed 's|.*/||')
 				if [ $ANSWERYES -eq 0 ]; then
 					echo -n "    Would you like to upload $n1/`basename $n2` $X? (y/N) "
@@ -64,7 +64,7 @@ function upload_data_bag(){
 				fi
 			done
 		else
-			[ "x$(ls $DATADIR/$DIRDB 2>/dev/null)" == "x" ] && echo -n "    - no databags to upload" && print_result 0 
+			[ "x$(ls $DATADIR/$DIRDB 2>/dev/null)" == "x" ] && echo -n "    - no databags to upload" && print_result 0
 
 			for n1 in `ls $DATADIR/$DIRDB 2>/dev/null`; do
 				if [ -d $DATADIR/$DIRDB/$n1 ]; then
@@ -81,7 +81,7 @@ function upload_data_bag(){
 					fi
 					print_result $?
 
-					for n2 in `ls $DATADIR/$DIRDB/$n1/*.json 2>/dev/null`; do 
+					for n2 in `ls $DATADIR/$DIRDB/$n1/*.json 2>/dev/null`; do
 						VAR="y"
 						if [ $ANSWERYES -eq 0 ]; then
 							echo -n "    Would you like to upload `basename $n1`/`basename $n2` $X? (y/N) "
@@ -116,9 +116,9 @@ function upload_x(){
 
 	if [ "x$X" != "x" ]; then
 		echo -e "* Uploading \"$X\":"
-		[ "x$(ls $DATADIR/$X 2>/dev/null)" == "x" ] && echo -n "    - nothing to upload" && print_result 0 
+		[ "x$(ls $DATADIR/$X 2>/dev/null)" == "x" ] && echo -n "    - nothing to upload" && print_result 0
 		if [ -d $DATADIR/$X ]; then
-			for n in `ls $files 2>/dev/null`; do 
+			for n in `ls $files 2>/dev/null`; do
 				if [ "x$X" == "xenvironment" -a "x`basename $n`" == "x_default.json" ]; then
 					echo "    - INFO: Enviroment _default cannot be uploaded";
 					continue
@@ -159,19 +159,19 @@ do
                 y) ANSWERYES=1;;
 		f) FILE=$OPTARG;;
 		h) usage;;
-			
+
         esac
 done
 
 if [ "x$DIRCANDIDATE" != "x" ]; then
 	if [ -d $DIRCANDIDATE ]; then
-		if [ -d $DIRCANDIDATE/role -o -d $DIRCANDIDATE/client -o -d $DIRCANDIDATE/environment -o -d $DIRCANDIDATE/node ]; then 
+		if [ -d $DIRCANDIDATE/role -o -d $DIRCANDIDATE/client -o -d $DIRCANDIDATE/environment -o -d $DIRCANDIDATE/node ]; then
 			DATADIR=$DIRCANDIDATE
 		else
 			echo "ERROR: $DIRCANDIDATE contains no valid data!!"
 			exit 1
 		fi
-	else 
+	else
 		echo "ERROR: $DIRCANDIDATE not found!!"
 		exit 1
 	fi
@@ -198,13 +198,13 @@ if [ "x$FILE" != "x" ]; then
 else
 	echo "Uploading chef information from $DATADIR: "
 	#upload_x "client"
-	echo 
+	echo
 	upload_x "environment"
-	echo 
+	echo
 	upload_x "node"
-	echo 
+	echo
 	upload_x "role"
-	echo 
+	echo
 	upload_data_bag
 	[ -f /etc/chef/encrypted_data_bag_secret ] && echo && upload_data_bag /etc/chef/encrypted_data_bag_secret
 fi

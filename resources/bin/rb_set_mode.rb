@@ -2,7 +2,7 @@
 
 require 'chef'
 require 'json'
-require '/usr/lib/redborder/bin/rb_config_utils.rb'
+require File.join(ENV['RBLIB'].nil? ? '/usr/lib/redborder/lib' : ENV['RBLIB'],'rb_config_utils.rb')
 
 def set_mode(hostname, mode)
 
