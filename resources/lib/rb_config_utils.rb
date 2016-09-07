@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'digest'
+require 'base64'
 require 'yaml'
 require 'net/ip'
 require 'system/getifaddrs'
@@ -9,9 +11,21 @@ MODELIST_PATH="/usr/lib/redborder/mode-list.yml"
 
 module Config_utils
 
-    #Function to check if mode is valid (if defined in mode-list.yml)
-    #Returns true if it's valid and false if not
-    #TODO: protect from exception like file not found
+    # Function that return an encript key from a provided string
+    # compliance with serf encrypt_key (password of 16 bytes in base64 format)
+    def Config_utils.get_encrypt(password)
+        ret = nil
+        unless password.nil?
+            if password.class == String
+                ret = Base64.encode64(Digest::MD5.hexdigest(password)[0..15]).chomp
+            end
+        end
+        ret
+    end
+
+    # Function to check if mode is valid (if defined in mode-list.yml)
+    # Returns true if it's valid and false if not
+    # TODO: protect from exception like file not found
     def Config_utils.check_mode(mode)
         mode_list = YAML.load_file(MODELIST_PATH)
         return mode_list.include?(mode)
@@ -66,3 +80,5 @@ module Config_utils
    end
 
 end
+
+## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
