@@ -32,6 +32,7 @@ cp resources/bin/* %{buildroot}/usr/lib/redborder/bin
 chmod 0755 %{buildroot}/usr/lib/redborder/bin/*
 chmod 0644 %{buildroot}/usr/lib/redborder/bin/rb_manager_functions.sh
 install -D -m 0755 resources/lib/rb_wiz_lib.rb %{buildroot}/usr/lib/redborder/lib
+install -D -m 0755 resources/lib/rb_config_utils.rb %{buildroot}/usr/lib/redborder/lib
 cp -r resources/chef/* %{buildroot}/var/chef/data
 chmod -R 0644 %{buildroot}/var/chef/data
 install -D -m 0644 resources/mode-list.yml %{buildroot}/usr/lib/redborder
@@ -55,7 +56,6 @@ firewall-cmd --reload
 %defattr(0755,root,root)
 /usr/lib/redborder/bin
 %defattr(0755,root,root)
-/usr/lib/redborder/lib/rb_wiz_lib.rb
 /etc/profile.d/redborder-manager.sh
 /usr/lib/redborder/bin/rb_manager_functions.sh
 /var/chef/data
@@ -64,6 +64,8 @@ firewall-cmd --reload
 /usr/lib/redborder/mode-list.yml
 /usr/lib/redborder/parameter-list.yml
 /usr/lib/systemd/system/rb-init-conf.service
+/usr/lib/redborder/lib/rb_wiz_lib.rb
+/usr/lib/redborder/lib/rb_config_utils.rb
 
 %doc
 
