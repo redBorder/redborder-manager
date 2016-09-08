@@ -15,7 +15,7 @@ module Config_utils
     #Function to check if mode is valid (if defined in mode-list.yml)
     #Returns true if it's valid and false if not
     #TODO: protect from exception like file not found
-    def Config_utils.check_mode(mode)
+    def self.check_mode(mode)
         mode_list = YAML.load_file(@modelist_path)
         return mode_list.include?(mode)
     end
@@ -30,14 +30,6 @@ module Config_utils
             end
         end
         ret
-    end
-
-    # Function to check if mode is valid (if defined in mode-list.yml)
-    # Returns true if it's valid and false if not
-    # TODO: protect from exception like file not found
-    def self.check_mode(mode)
-        mode_list = YAML.load_file(MODELIST_PATH)
-        return mode_list.include?(mode)
     end
 
     # Function to check a valid IPv4 IP address
@@ -89,11 +81,9 @@ module Config_utils
    end
 
    #TODO: Function to check encrypt key format
-   def Config_utils.check_encryptkey(encrypt_key)
+   def self.check_encryptkey(encrypt_key)
        return true
    end
-   
-
 
 end
 
