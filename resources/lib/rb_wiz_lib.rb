@@ -704,7 +704,7 @@ EOF
         data.select = false # default
         items.push(data.to_a)
 
-        dialog.title = "Communication Cluster mode"
+        dialog.title = "Communication cluster mode"
         selected_item = dialog.radiolist(text, items)
 
         if dialog.dialog_ok
@@ -725,7 +725,88 @@ class SerfCryptConf < WizConf
     end
 
     def doit
+
+        result = {}
+
+        loop do
+
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.insecure = true
+            dialog.title = "Serf encryption key"
+            text = <<EOF
+
+Please, provide a password for encryption of serf network traffic.
+
+This password will avoid not allowed connection from nodes not belonging to the cluster. Any printable character is allowed, and you can use from 6 to 20 characters.
+  
+EOF
+
+            flen = 20
+            form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen)
  
+
+            items = []
+            label = "Password:"
+            data = form_data.new
+            data.label = label
+            data.ly = 1
+            data.lx = 1
+            data.item = ""
+            data.iy = 1
+            data.ix = 15
+            data.flen = flen
+            data.ilen = 0
+            items.push(data.to_a)
+    
+            label = "Enter again:"
+            data = form_data.new
+            data.label = label
+            data.ly = 2
+            data.lx = 1
+            data.item = ""
+            data.iy = 2
+            data.ix = 15
+            data.flen = flen
+            data.ilen = 0
+            items.push(data.to_a)
+ 
+
+            result = dialog.passwordform(text, items, 20, 60, 0)
+
+            if dialog.dialog_ok
+                if result["Password:"] == result["Enter again:"]
+                    if result["Password:"].length < 6 or result["Password:"].length > 20
+                        # error, incorrect length
+                    else
+                        # it is ok
+                        break
+                    end
+                else
+                    # error, password does not match
+                end
+            else
+                @cancel = true
+                break
+            end
+
+            # error, do another loop
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.title = "ERROR in the Serf encryption key"
+            text = <<EOF
+
+We have detected an error in Serf encryption key.
+
+Please, remember that the minimum length is 6 and maximum is 20 characters. Also, both fields must match.
+ 
+EOF
+            dialog.msgbox(text, 15, 41)
+            
+        end
+
+        @conf = Config_utils.get_encrypt_key(result["Password:"])
+
     end
 end
 
