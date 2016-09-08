@@ -28,6 +28,7 @@ mkdir -p %{buildroot}/var/chef/data/role
 mkdir -p %{buildroot}/var/chef/data/data_bag/passwords
 mkdir -p %{buildroot}/var/chef/data/data_bag/rBglobal
 install -D -m 0644 resources/redborder-manager.sh %{buildroot}/etc/profile.d
+install -D -m 0644 resources/dialogrc %{buildroot}/etc/redborder
 cp resources/bin/* %{buildroot}/usr/lib/redborder/bin
 chmod 0755 %{buildroot}/usr/lib/redborder/bin/*
 install -D -m 0644 resources/lib/rb_wiz_lib.rb %{buildroot}/usr/lib/redborder/lib
