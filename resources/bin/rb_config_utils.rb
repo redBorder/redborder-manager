@@ -4,15 +4,16 @@ require 'yaml'
 require 'net/ip'
 require 'system/getifaddrs'
 require 'netaddr'
-
-MODELIST_PATH="/usr/lib/redborder/mode-list.yml"
+require 'base64'
 
 module Config_utils
+
+    @modelist_path="/usr/lib/redborder/mode-list.yml"
     #Function to check if mode is valid (if defined in mode-list.yml)
     #Returns true if it's valid and false if not
     #TODO: protect from exception like file not found
     def Config_utils.check_mode(mode)
-        mode_list = YAML.load_file(MODELIST_PATH)
+        mode_list = YAML.load_file(@modelist_path)
         return mode_list.include?(mode)
     end
 
@@ -68,5 +69,16 @@ module Config_utils
      end
      ret
    end
+
+   #TODO: Function to check encrypt key format
+   def Config_utils.check_encryptkey(encrypt_key)
+       return true
+   end
+
+   #Function to generate a serf encrypt key based on cdomain
+   def Config_utils.generate_serf_key(cdomain)
+       return Base64.encode64(Digest::MD5.hexdigest(cdomain.to_s)[0..15]).chomp
+   end
+
 
 end
