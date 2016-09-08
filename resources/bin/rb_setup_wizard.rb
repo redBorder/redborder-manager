@@ -29,7 +29,7 @@ general_conf = {
         "sync_net" => "",
         "encrypt_key" => ""
         },
-    "mode" => ""
+    "mode" => "full" # default mode
     }
 
 # general_conf will dump its contents as yaml conf into rb_init_conf.yml
