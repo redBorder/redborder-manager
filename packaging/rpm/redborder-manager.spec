@@ -63,7 +63,7 @@ firewall-cmd --reload
 /usr/lib/systemd/system/rb-init-conf.service
 /usr/lib/redborder/lib/rb_wiz_lib.rb
 /usr/lib/redborder/lib/rb_config_utils.rb
-/usr/lib/redborder/bin/rb_manager_functions.sh
+/usr/lib/redborder/lib/rb_manager_functions.sh
 
 %doc
 
