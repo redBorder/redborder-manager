@@ -60,7 +60,7 @@ def config_serf(config, userdata_config)
         config["serf"]["encrypt_key"] = userdata_config.key("serf_encryptkey")
     else
         #encrypt key must be generated from cdomain
-        config["serf"]["encrypt_key"] = Config_utils.generate_serf_key(config["cdomain"])
+        config["serf"]["encrypt_key"] = Config_utils.get_encrypt_key(config["cdomain"])
     end
 
     #Sync_net configuration

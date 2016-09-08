@@ -5,6 +5,7 @@ require 'net/ip'
 require 'system/getifaddrs'
 require 'netaddr'
 require 'uri'
+require File.join(ENV['RBDIR'].nil? ? '/usr/lib/redborder' : ENV['RBDIR'],'lib/rb_config_utils.rb')
 
 class WizConf
     
@@ -30,28 +31,6 @@ class WizConf
         netdev
     end
 
-    def check_ipv4(ipv4)
-        ret = true
-        begin
-            # convert ipv4 from string format "192.168.1.0/255.255.255.0" into hash {:ip => "192.168.1.0", :netmask => "255.255.255.0"}
-            if ipv4.class == String
-                unless ipv4.match(/^(?<ip>\d+\.\d+\.\d+\.\d+)\/(?<netmask>(?:\d+\.\d+\.\d+\.\d+)|\d+)$/).nil?
-                    ipv4 = ipv4.match(/^(?<ip>\d+\.\d+\.\d+\.\d+)\/(?<netmask>(?:\d+\.\d+\.\d+\.\d+)|\d+)$/)
-                else
-                    ret = false
-                end
-            end
-            x = NetAddr::CIDRv4.create("#{ipv4[:ip].nil? ? "0.0.0.0" : ipv4[:ip]}/#{ipv4[:netmask].nil? ? "255.255.255.255" : ipv4[:netmask]}")
-        rescue NetAddr::ValidationError => e
-            # error: netmask incorrect
-            ret = false
-        rescue => e
-            # general error
-            ret = false
-        end
-        ret
-    end
-
     # TODO ipv6 support
     def get_ipv4_network(devname)
         hsh = {}
@@ -75,27 +54,6 @@ class WizConf
             end
         end
         hsh
-    end
-
-    def check_domain(domain)
-        # Based on rfc1123 and sethostname()
-        # Suggest rfc1178
-        # Max of 253 characters with hostname
-        ret = false
-        unless (domain =~ /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/).nil?
-            ret = true
-        end
-        ret
-    end
-
-    def check_hostname(name)
-        # Based on rfc1123 and sethostname()
-        # Max of 63 characters
-        ret = false
-        unless (name =~ /^([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/).nil?
-            ret = true
-        end
-        ret
     end
   
 end
@@ -325,10 +283,10 @@ EOF
                     else
                         # ok pressed
                         @conf['Mode:'] = "Static"
-                        if check_ipv4({:ip => @conf['IP:']}) and check_ipv4({:netmask => @conf['Netmask:']})
+                        if Config_utils.check_ipv4({:ip => @conf['IP:']}) and Config_utils.check_ipv4({:netmask => @conf['Netmask:']})
                             # seems to be ok
                             unless @conf['Gateway:'].nil?
-                                if check_ipv4({:ip => @conf['Gateway:']})
+                                if Config_utils.check_ipv4({:ip => @conf['Gateway:']})
                                     # seems to be ok
                                     ret = false
                                 end
@@ -458,7 +416,7 @@ EOF
                 @cancel = true
                 break
             else
-                if check_hostname(host["Hostname:"]) and check_domain(host["Domain name:"])
+                if Config_utils.check_hostname(host["Hostname:"]) and Config_utils.check_domain(host["Domain name:"])
                     # need to confirm lenght
                     if host["Hostname:"].length < 64 and (host["Hostname:"].length + host["Domain name:"].length) < 254
                         break
@@ -569,11 +527,11 @@ EOF
                 @cancel = true
                 break
             else
-                if check_ipv4({:ip=>dns["DNS1:"]})
+                if Config_utils.check_ipv4({:ip=>dns["DNS1:"]})
                     unless dns["DNS2:"].empty?
-                        if check_ipv4({:ip=>dns["DNS2:"]})
+                        if Config_utils.check_ipv4({:ip=>dns["DNS2:"]})
                             unless dns["DNS3:"].empty?
-                                if check_ipv4({:ip=>dns["DNS3:"]})
+                                if Config_utils.check_ipv4({:ip=>dns["DNS3:"]})
                                     break
                                 end
                             else
@@ -671,22 +629,12 @@ EOF
                 @cancel = true
                 break
             else
-                if check_ipv4(sync["Sync Network:"])
+                if Config_utils.check_ipv4(sync["Sync Network:"])
                     # it is ok
                     break
                 else
                     # error
                 end
-                #unless sync["Sync Network:"].match(/^(?<ip>\d+\.\d+\.\d+\.\d+)\/(?<netmask>(?:\d+\.\d+\.\d+\.\d+)|\d+)$/).nil?
-                #    if check_ipv4(sync["Sync Network:"].match(/^(?<ip>\d+\.\d+\.\d+\.\d+)\/(?<netmask>(?:\d+\.\d+\.\d+\.\d+)|\d+)$/))
-                #        # it is ok
-                #        break
-                #    else
-                #        # something is broken in the sync network definition
-                #    end
-                #else
-                #    # error
-                #end
             end
 
             # error, do another loop
@@ -706,8 +654,9 @@ EOF
 
         end
 
+        # normalizing
         sync_netaddr = NetAddr::CIDRv4.create(sync["Sync Network:"])
-        @conf = "#{sync_netaddr.ip}#{sync_netaddr.netmask}"
+        @conf = "#{sync_netaddr.network}/#{sync_netaddr.netmask_ext}"
  
     end
 
@@ -755,7 +704,7 @@ EOF
         data.select = false # default
         items.push(data.to_a)
 
-        dialog.title = "Communication Cluster mode"
+        dialog.title = "Communication cluster mode"
         selected_item = dialog.radiolist(text, items)
 
         if dialog.dialog_ok
@@ -776,7 +725,88 @@ class SerfCryptConf < WizConf
     end
 
     def doit
+
+        result = {}
+
+        loop do
+
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.insecure = true
+            dialog.title = "Serf encryption key"
+            text = <<EOF
+
+Please, provide a password for encryption of serf network traffic.
+
+This password will avoid not allowed connection from nodes not belonging to the cluster. Any printable character is allowed, and you can use from 6 to 20 characters.
+  
+EOF
+
+            flen = 20
+            form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen)
  
+
+            items = []
+            label = "Password:"
+            data = form_data.new
+            data.label = label
+            data.ly = 1
+            data.lx = 1
+            data.item = ""
+            data.iy = 1
+            data.ix = 15
+            data.flen = flen
+            data.ilen = 0
+            items.push(data.to_a)
+    
+            label = "Enter again:"
+            data = form_data.new
+            data.label = label
+            data.ly = 2
+            data.lx = 1
+            data.item = ""
+            data.iy = 2
+            data.ix = 15
+            data.flen = flen
+            data.ilen = 0
+            items.push(data.to_a)
+ 
+
+            result = dialog.passwordform(text, items, 20, 60, 0)
+
+            if dialog.dialog_ok
+                if result["Password:"] == result["Enter again:"]
+                    if result["Password:"].length < 6 or result["Password:"].length > 20
+                        # error, incorrect length
+                    else
+                        # it is ok
+                        break
+                    end
+                else
+                    # error, password does not match
+                end
+            else
+                @cancel = true
+                break
+            end
+
+            # error, do another loop
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.title = "ERROR in the Serf encryption key"
+            text = <<EOF
+
+We have detected an error in Serf encryption key.
+
+Please, remember that the minimum length is 6 and maximum is 20 characters. Also, both fields must match.
+ 
+EOF
+            dialog.msgbox(text, 15, 41)
+            
+        end
+
+        @conf = Config_utils.get_encrypt_key(result["Password:"])
+
     end
 end
 
