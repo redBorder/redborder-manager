@@ -36,7 +36,6 @@ install -D -m 0644 resources/lib/rb_manager_functions.sh %{buildroot}/usr/lib/re
 cp -r resources/chef/* %{buildroot}/var/chef/data
 chmod -R 0644 %{buildroot}/var/chef/data
 install -D -m 0644 resources/mode-list.yml %{buildroot}/usr/lib/redborder
-install -D -m 0644 resources/parameter-list.yml %{buildroot}/usr/lib/redborder
 install -D -m 0644 resources/systemd/rb-init-conf.service %{buildroot}/usr/lib/systemd/system/rb-init-conf.service
 
 %pre
@@ -61,7 +60,6 @@ firewall-cmd --reload
 %defattr(0644,root,root)
 /etc/redborder
 /usr/lib/redborder/mode-list.yml
-/usr/lib/redborder/parameter-list.yml
 /usr/lib/systemd/system/rb-init-conf.service
 /usr/lib/redborder/lib/rb_wiz_lib.rb
 /usr/lib/redborder/lib/rb_config_utils.rb
@@ -70,14 +68,14 @@ firewall-cmd --reload
 %doc
 
 %changelog
-* Thu Sep 06 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
+* Tue Sep 06 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
 - Add rb-init-conf service and remove chef package installation
 - Remove rb_manager_functions.rb from spec
 
 * Fri Sep 02 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
 - Add YML config files
 
-* Thu Aug 30 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
+* Tue Aug 30 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
 - Change chef packages
 
 * Thu Jul 07 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
