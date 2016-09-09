@@ -3,13 +3,10 @@
 require 'json'
 require 'mrdialog'
 require 'yaml'
+require "#{ENV['RBLIB']}/rb_wiz_lib"
 
-require File.join(ENV['RBDIR'].nil? ? '/usr/lib/redborder' : ENV['RBDIR'],'lib/rb_wiz_lib')
-
-RBETC = ENV['RBETC'].nil? ? '/etc/redborder' : ENV['RBETC']
-
-CONFFILE = "#{RBETC}/rb_init_conf.yml"
-DIALOGRC = "#{RBETC}/dialogrc"
+CONFFILE = "#{ENV['RBETC']}/rb_init_conf.yml"
+DIALOGRC = "#{ENV['RBETC']}/dialogrc"
 if File.exist?(DIALOGRC)
     ENV['DIALOGRC'] = DIALOGRC
 end
@@ -135,5 +132,9 @@ cancel_wizard if cryptconf.cancel
 general_conf["serf"]["encrypt_key"] = cryptconf.conf
 
 File.open(CONFFILE, 'w') {|f| f.write general_conf.to_yaml } #Store
+
+# TODO: execute rb_init_conf.sh into a progress dialog
+
+#exec("#{ENV['RBBIN']}/rb_init_conf.sh")
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
