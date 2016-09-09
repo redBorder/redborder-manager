@@ -11,7 +11,7 @@ source $RBLIB/rb_manager_functions.sh
 CHEFORG="redborder"
 
 CLIENTNAME=`hostname -s`
-IPLEADER=`serf members -status alive -name=$CLIENTNAME -format=json | jq -r .members[].addr | cut -d ":" -f 1`
+IPLEADER=`serf query -timeout=250ms -format json chef-server-location | jq .Responses[] | head -n 1 | tr -d "\""`
 MANAGERMODE=`serf members -status alive -name=$CLIENTNAME -format=json | jq -r .members[].tags.mode`
 
 # Get cdomain
@@ -49,14 +49,15 @@ e_title "Creating custom chef role"
 mv /var/chef/data/role/manager_node.json /var/chef/data/role/$(hostname -s).json
 # Change hostname in new role
 sed -i "s/manager_node/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
-
-# Upload role
+# Upload custom role
 knife role -c /root/.chef/knife.rb from file /var/chef/data/role/$CLIENTNAME.json
 
 # Create chef node and client from files in /etc/chef
-/usr/bin/chef-client
+e_title "Registering chef-client ..."
+chef-client
 
-# Adding role to node
+# Adding chef roles to node
+knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
 knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[$CLIENTNAME]"
 
 # MANAGER MODES
