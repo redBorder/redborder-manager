@@ -8,10 +8,15 @@ source $RBLIB/rb_manager_functions.sh
 # MAIN #
 ########
 
-CHEFORG="redborder"
+IPLEADER=$1 #Chef server IP. Received from serf-choose-leader
+valid_ip $IPLEADER
+if [ "x$?" != "x0"]; then
+  error_title "Invalid chef server IP"
+  exit 1
+fi
 
+CHEFORG="redborder"
 CLIENTNAME=`hostname -s`
-IPLEADER=`serf query -timeout=250ms -format json chef-server-location | jq .Responses[] | head -n 1 | tr -d "\""`
 MANAGERMODE=`serf members -status alive -name=$CLIENTNAME -format=json | jq -r .members[].tags.mode`
 
 # Get cdomain
