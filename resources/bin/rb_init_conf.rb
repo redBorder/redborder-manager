@@ -147,8 +147,17 @@ file_serf_tags = File.open(TAGSJSON,"w")
 file_serf_tags.write(serf_tags.to_json)
 file_serf_tags.close
 
+# Allow multicast packets from sync_net. This rule allows a new serf node publish it in multicast address
+system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -s #{sync_net} -m pkttype --pkt-type multicast -j ACCEPT &>/dev/null")
+# Allow traffic from 5353/udp and sync_net. This rule allows other serf nodes to communicate with the new node
+system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --sport 5353 -j ACCEPT &>/dev/null")
+# Reload firewalld configuration
+system("firewall-cmd --reload &>/dev/null")
+
 # Enable and start SERF
 system('systemctl enable serf &> /dev/null')
 system('systemctl enable serf-join &> /dev/null')
 system('systemctl start serf &> /dev/null')
+# wait a moment before start serf-join to ensure connectivity
+sleep(3)
 system('systemctl start serf-join &> /dev/null')
