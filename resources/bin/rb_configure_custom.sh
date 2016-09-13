@@ -10,7 +10,7 @@ source $RBLIB/rb_manager_functions.sh
 
 IPLEADER=$1 #Chef server IP. Received from serf-choose-leader
 valid_ip $IPLEADER
-if [ "x$?" != "x0"]; then
+if [ "x$?" != "x0" ]; then
   error_title "Invalid chef server IP"
   exit 1
 fi
@@ -27,8 +27,8 @@ grep -q erchef.${cdomain} /etc/hosts
 [ $? -ne 0 ] && echo "$IPLEADER   erchef.${cdomain}" >> /etc/hosts
 
 # Get chef validator and admin certificates
-$RBBIN/serf-query-certificate.sh -q certificate-validator > /etc/chef/redborder-validator.pem
-$RBBIN/serf-query-certificate.sh -q certificate-admin > /etc/chef/admin.pem
+$RBBIN/serf-query-certificate.sh -q certificate-validator > /tmp/cert && mv /tmp/cert /etc/chef/redborder-validator.pem
+$RBBIN/serf-query-certificate.sh -q certificate-admin > /tmp/cert && mv /tmp/cert /etc/chef/admin.pem
 
 #############################
 # CHEF CLIENT Configuration #

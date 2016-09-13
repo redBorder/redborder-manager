@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'yaml'
-#require '/usr/lib/redborder/bin/rb_config_utils.rb'
-require './rb_config_utils.rb'
+require '/usr/lib/redborder/lib/rb_config_utils.rb'
 
 @userdata_path="/var/lib/cloud/instance/user-data.txt"
 @userdataconfig_path="/var/lib/cloud/instance/user-data-config.yml"
