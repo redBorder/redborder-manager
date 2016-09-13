@@ -49,8 +49,8 @@ exit 0
 %post
 firewall-cmd --zone=public --add-port=443/tcp --permanent
 firewall-cmd --zone=public --add-port=7946/tcp --permanent
-firewall-cmd --zone=public --add-port=7373/tcp --permanent
-firewall-cmd --zone=public --add-port=5353/tcp --permanent
+#firewall-cmd --zone=public --add-port=7373/tcp --permanent
+#firewall-cmd --zone=public --add-port=5353/tcp --permanent
 firewall-cmd --reload
 
 %files
