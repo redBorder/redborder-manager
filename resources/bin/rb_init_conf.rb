@@ -33,7 +33,7 @@ if Config_utils.check_hostname(hostname)
     # Set cdomain file
     File.open("/etc/redborder/cdomain", 'w') { |f| f.puts "#{cdomain}" }
     # Also set hostname with this IP in /etc/hosts
-    File.open("/etc/hosts", 'a') { |f| f.puts "127.0.0.1  #{hostname} #{hostname}.#{cdomain}" }
+    File.open("/etc/hosts", 'a') { |f| f.puts "127.0.0.1  #{hostname} #{hostname}.#{cdomain}" } if !File.open("/etc/hosts").grep(/#{hostname}/).any?
   else
     p err_msg = "Invalid cdomain. Please review #{INITCONF} file"
     system("logger -t rb_init_conf #{err_msg}")
