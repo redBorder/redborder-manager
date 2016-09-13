@@ -11,6 +11,24 @@ if File.exist?(DIALOGRC)
     ENV['DIALOGRC'] = DIALOGRC
 end
 
+def cancel_wizard() 
+
+    dialog = MRDialog.new
+    dialog.clear = true
+    dialog.title = "SETUP wizard cancelled"
+
+    text = <<EOF
+
+The setup has been cancelled or stopped.
+
+If you want to complete the setup wizard, please execute it again.
+ 
+EOF
+    result = dialog.msgbox(text, 11, 41)
+    exit(1)
+
+end
+
 puts "\033]0;redborder - setup wizard\007"
 
 general_conf = {
@@ -33,49 +51,37 @@ general_conf = {
 
 # TODO: intro to the wizard, define color set, etc.
 
+text = <<EOF
+ 
+Este wizard le guiará a través de la configuración necesaria del 
+equipo para poder convertirlo en un nodo redborder dentro de un cluster redborder.
 
-def cancel_wizard() 
+Los pasos necesarios por los que pasará son: configuración de red,
+configuración de hostname, dominio y DNS, configuración de serf (servicio de
+cluster) y, por último, el modo del nodo (el modo determina el conjunto mínimo
+de servicios que conforma el nodo, dotándolo de mayor o menor peso dentro
+del cluster).
 
-    dialog = MRDialog.new
-    dialog.clear = true
-    dialog.title = "SETUP wizard cancelled"
-
-    text = <<EOF
-The setup has been cancelled or stopped.
-
-If you want to complete the setup wizard, please execute it again.
+¿Desea continuar?
 
 EOF
-    result = dialog.msgbox(text, 10, 41)
-    exit(1)
 
+dialog = MRDialog.new
+dialog.clear = true
+dialog.title = "Configure wizard"
+yesno = dialog.yesno(text,0,0)
+
+unless yesno # yesno is "yes" -> true
+    cancel_wizard
 end
 
 # Conf for network
+netconf = NetConf.new
+netconf.doit # launch wizard
+cancel_wizard if netconf.cancel
+general_conf["network"]["interfaces"] = netconf.conf
 
-#text = <<EOF
-#Do you want to configure network in your system?
-#
-#EOF
-
-#dialog = MRDialog.new
-#dialog.clear = true
-#dialog.title = "CONFIGURE NETWORK"
-#yesno = dialog.yesno(text,0,0)
-
-#if yesno # yesno is "yes" -> true
-    # configure network
-    netconf = NetConf.new
-    netconf.doit # launch wizard
-    cancel_wizard if netconf.cancel
-    general_conf["network"]["interfaces"] = netconf.conf
-#else
-#    cancel_wizard
-#end
-
-# Conf for hostname
-
-# configure hostname and domain name
+# Conf for hostname and domain
 hostconf = HostConf.new
 hostconf.doit # launch wizard
 cancel_wizard if hostconf.cancel
@@ -83,12 +89,28 @@ general_conf["hostname"] = hostconf.conf[:hostname]
 general_conf["cdomain"] = hostconf.conf[:domainname]
 
 # Conf for DNS
+text = <<EOF
 
-# configure dns and hostname
-dnsconf = DNSConf.new
-dnsconf.doit # launch wizard
-cancel_wizard if dnsconf.cancel
-general_conf["network"]["dns"] = dnsconf.conf
+Do you to configure DNS servers?
+
+If you have configured the network as Dynamic and
+you get the DNS servers via DHCP, you should say
+'No' to this  question.
+ 
+EOF
+
+dialog = MRDialog.new
+dialog.clear = true
+dialog.title = "CONFIGURE DNS"
+yesno = dialog.yesno(text,0,0)
+
+if yesno # yesno is "yes" -> true
+    # configure dns 
+    dnsconf = DNSConf.new
+    dnsconf.doit # launch wizard
+    cancel_wizard if dnsconf.cancel
+    general_conf["network"]["dns"] = dnsconf.conf
+end
 
 text = <<EOF
  
@@ -111,25 +133,76 @@ dialog.title = "Configure Cluster Service (Serf)"
 dialog.msgbox(text,0, 0)
 
 # Conf synchronization network
-
 syncconf = SerfSyncConf.new
 syncconf.doit # launch wizard
 cancel_wizard if syncconf.cancel
 general_conf["serf"]["sync_net"] = syncconf.conf
 
 # Select multicast or unicast
-
 mcastconf = SerfMcastConf.new
 mcastconf.doit # launch wizard
 cancel_wizard if mcastconf.cancel
 general_conf["serf"]["multicast"] = mcastconf.conf
 
 # Password for serf
-
 cryptconf = SerfCryptConf.new
 cryptconf.doit # launch wizard
 cancel_wizard if cryptconf.cancel
 general_conf["serf"]["encrypt_key"] = cryptconf.conf
+
+# Set mode
+modeconf = ModeConf.new
+modeconf.doit # launch wizard
+cancel_wizard if modeconf.cancel
+general_conf["mode"] = modeconf.conf
+
+# Confirm
+text = <<EOF
+
+You have selected the following parameter values for your configuration:
+
+EOF
+
+unless general_conf["network"]["interfaces"].empty?
+    text += "- Networking:\n"
+    general_conf["network"]["interfaces"].each do |i|
+        text += "    device: #{i["device"]}\n"
+        text += "    mode: #{i["mode"]}\n"
+        if i["mode"] == "static"
+            text += "    ip: #{i["ip"]}\n"
+            text += "    netmask: #{i["netmask"]}\n"
+            unless i["gateway"].nil? or i["gateway"] == ""
+                text += "    gateway: #{i["gateway"]}\n"
+            end
+        end
+        text += "\n"
+    end
+end
+
+unless general_conf["network"]["dns"].empty?
+    text += "- DNS:\n"
+    general_conf["network"]["dns"].each do |dns|
+        text += "    #{dns}\n"
+    end
+end
+
+text += "\n- Serf:\n"
+text += "    mode: #{general_conf["serf"]["multicast"] ? "multicast" : "unicast"}\n"
+text += "    sync net: #{general_conf["serf"]["sync_net"]}\n"
+text += "    encrypt key: #{general_conf["serf"]["encrypt_key"]}\n"
+
+text += "\n- Mode: #{general_conf["mode"]}\n"
+
+text += "\nPlease, is this configuration ok?\n \n"
+
+dialog = MRDialog.new
+dialog.clear = true
+dialog.title = "Confirm configuration"
+yesno = dialog.yesno(text,0,0)
+
+unless yesno # yesno is "yes" -> true
+    cancel_wizard
+end
 
 File.open(CONFFILE, 'w') {|f| f.write general_conf.to_yaml } #Store
 

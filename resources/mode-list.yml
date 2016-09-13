@@ -1,3 +1,9 @@
-- custom
-- core
-- full
+- 
+  name: 'custom'
+  description: 'Minimum set of services to join into a cluster'
+- 
+  name: 'core'
+  description: 'Basic set of services to create a cluster'
+- 
+  name: 'full'
+  description: 'All services running to perform a full cluster experience'

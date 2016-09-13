@@ -128,7 +128,10 @@ EOF
                         if dev.conf['Mode:'] == "Static"
                             @confdev[selected_item]["ip"] = dev.conf['IP:']
                             @confdev[selected_item]["netmask"] = dev.conf['Netmask:']
-                            @confdev[selected_item]["gateway"] = dev.conf['Gateway:'] unless dev.conf['Gateway:'].nil?
+                            unless dev.conf['Gateway:'].nil? or dev.conf['Gateway:'] == ""
+                                @confdev[selected_item]["gateway"] = dev.conf['Gateway:']
+                            end
+
                         end
                     end
                 else
@@ -285,7 +288,7 @@ EOF
                         @conf['Mode:'] = "Static"
                         if Config_utils.check_ipv4({:ip => @conf['IP:']}) and Config_utils.check_ipv4({:netmask => @conf['Netmask:']})
                             # seems to be ok
-                            unless @conf['Gateway:'].nil?
+                            unless @conf['Gateway:'] == ""
                                 if Config_utils.check_ipv4({:ip => @conf['Gateway:']})
                                     # seems to be ok
                                     ret = false
@@ -624,17 +627,18 @@ EOF
 
             dialog.title = "Sync Network configuration"
             sync = dialog.mixedform(text, items, 24, 54, 0)
-            if sync.empty?
-                # Cancel button pushed
-                @cancel = true
-                break
-            else
+
+            if dialog.dialog_ok
                 if Config_utils.check_ipv4(sync["Sync Network:"])
                     # it is ok
                     break
                 else
                     # error
                 end
+            else
+                # Cancel button pushed
+                @cancel = true
+                break
             end
 
             # error, do another loop
@@ -656,7 +660,7 @@ EOF
 
         # normalizing
         sync_netaddr = NetAddr::CIDRv4.create(sync["Sync Network:"])
-        @conf = "#{sync_netaddr.network}/#{sync_netaddr.netmask_ext}"
+        @conf = "#{sync_netaddr.network}#{sync_netaddr.netmask}"
  
     end
 
@@ -809,5 +813,60 @@ EOF
 
     end
 end
+
+class ModeConf < WizConf
+
+    attr_accessor :conf, :cancel
+
+    def initialize()
+        @cancel = false
+        @conf = ""
+    end
+
+    def doit
+        
+        modelist = [
+            {"name"=>"custom", "description"=>"Minimum set of services to join into a cluster"},
+            {"name"=>"core", "description"=>"Basic set of services to create a cluster"},
+            {"name"=>"full", "description"=>"All services running to perform a full cluster experience"}
+            ] # default values
+
+        if File.exist?("#{ENV['RBETC']}/mode-list.yml")
+            modelist = YAML.load_file("#{ENV['RBETC']}/mode-list.yml")
+        end
+        
+        dialog = MRDialog.new
+        dialog.clear = true
+        text = <<EOF
+
+Please, select mode of operation of the manager node.
+
+If this is the first installation of a redborder manager, and you are planning to create a cluster based on multiple nodes, you should select 'core' mode. For the rest of nodes, you should select 'custom' mode.
+
+If this is an stand alone manager installation, you should select 'full' mode.
+ 
+EOF
+        items = []
+        radiolist_data = Struct.new(:tag, :item, :select)
+
+        modelist.each do |m|
+            data = radiolist_data.new
+            data.tag = m['name']
+            data.item = m['description']
+            data.select = m['name'] == 'full' ? true : false
+            items.push(data.to_a)
+        end
+
+        dialog.title = "Set manager mode"
+        selected_item = dialog.radiolist(text, items)
+
+        if dialog.dialog_ok
+            @conf = selected_item
+        else
+            @cancel = true
+        end
+    end
+end
+
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
