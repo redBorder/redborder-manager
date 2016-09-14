@@ -53,17 +53,16 @@ general_conf = {
 
 text = <<EOF
  
-Este wizard le guiará a través de la configuración necesaria del 
-equipo para poder convertirlo en un nodo redborder dentro de un cluster redborder.
+This wizard will guide you through the necessary configuration of the device 
+in order to convert it into a redborder node within a redborder cluster.
 
-Los pasos necesarios por los que pasará son: configuración de red,
-configuración de hostname, dominio y DNS, configuración de serf (servicio de
-cluster) y, por último, el modo del nodo (el modo determina el conjunto mínimo
-de servicios que conforma el nodo, dotándolo de mayor o menor peso dentro
-del cluster).
+It will go through the following required steps: network configuration,
+configuration of hostname, domain and DNS, Serf configuration, and finally
+the node mode (the mode determines the minimum group of services that make up
+the node, giving it more or less weight within the cluster).
 
-¿Desea continuar?
-
+Would you like to continue?
+ 
 EOF
 
 dialog = MRDialog.new
