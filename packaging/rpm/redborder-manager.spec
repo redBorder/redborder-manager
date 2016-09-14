@@ -40,11 +40,6 @@ install -D -m 0644 resources/mode-list.yml %{buildroot}/usr/lib/redborder
 install -D -m 0644 resources/systemd/rb-init-conf.service %{buildroot}/usr/lib/systemd/system/rb-init-conf.service
 
 %pre
-getent group opscode-pgsql >/dev/null || groupadd -r opscode.pgsql
-getent passwd opscode-pgsql >/dev/null || \
-    useradd -r -g opscode-pgsql -d /opt/opscode/embedded/postgresql -s /bin/bash \
-    -c "PostgreSQL" opscode-pgsql
-exit 0
 
 %post
 firewall-cmd --zone=public --add-port=443/tcp --permanent
