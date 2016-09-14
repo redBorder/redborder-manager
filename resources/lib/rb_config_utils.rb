@@ -17,7 +17,7 @@ module Config_utils
     #TODO: protect from exception like file not found
     def self.check_mode(mode)
         mode_list = YAML.load_file(@modelist_path)
-        return mode_list.include?(mode)
+        return mode_list.map { |x| x["name"] }.include?(mode)
     end
 
     # Function that return an encript key from a provided string

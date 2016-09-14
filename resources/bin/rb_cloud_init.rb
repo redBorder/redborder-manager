@@ -6,7 +6,7 @@ require '/usr/lib/redborder/lib/rb_config_utils.rb'
 @userdata_path="/var/lib/cloud/instance/user-data.txt"
 @userdataconfig_path="/var/lib/cloud/instance/user-data-config.yml"
 @instanceid_path="/var/lib/cloud/data/instance-id"
-@initconf_path="/etc/redborder/init-conf.yml"
+@initconf_path="/etc/redborder/rb_init_conf.yml"
 
 # Function to obtain instance-id from cloud-init files
 # TODO: protect from file open failures or empty files
@@ -99,9 +99,9 @@ puts "#{userdata_config}"
 #Processing parameters
 config = {}
 config = config_hostname(config, userdata_config)
-config = config_serf(config, userdata_config)
 config = config_cdomain(config, userdata_config)
+config = config_serf(config, userdata_config)
 config = config_mode(config, userdata_config)
 
 File.write(@initconf_path, config.to_yaml)
-#system("systemctl start rb-init-conf")
+system("systemctl start rb-init-conf")
