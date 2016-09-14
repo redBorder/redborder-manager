@@ -29,19 +29,17 @@ mode = init_conf['mode']
 # Configure HOSTNAME and CDOMAIN
 if Config_utils.check_hostname(hostname)
   if Config_utils.check_domain(cdomain)
-    system("hostnamectl set-hostname \"#{hostname}.#{cdomain}\"")
+    system("hostnamectl set-hostname #{hostname}.#{cdomain}")
     # Set cdomain file
     File.open("/etc/redborder/cdomain", 'w') { |f| f.puts "#{cdomain}" }
     # Also set hostname with this IP in /etc/hosts
     File.open("/etc/hosts", 'a') { |f| f.puts "127.0.0.1  #{hostname} #{hostname}.#{cdomain}" } if !File.open("/etc/hosts").grep(/#{hostname}/).any?
   else
     p err_msg = "Invalid cdomain. Please review #{INITCONF} file"
-    system("logger -t rb_init_conf #{err_msg}")
     exit 1
   end
 else
   p err_msg = "Invalid hostname. Please review #{INITCONF} file"
-  system("logger -t rb_init_conf #{err_msg}")
   exit 1
 end
 
@@ -52,19 +50,20 @@ if !network.nil? # network will not be defined in cloud deployments
   system('systemctl stop NetworkManager &> /dev/null')
 
   # Configure DNS
-  dns = network['dns']
-  open("/etc/sysconfig/network", "w") { |f|
-    dns.each_with_index do |dns_ip, i|
-      if Config_utils.check_ipv4({:ip => dns_ip})
-        f.puts "DNS#{i+1}=#{dns_ip}"
-      else
-        p err_msg = "Invalid DNS Address. Please review #{INITCONF} file"
-        system("logger -t rb_init_conf #{err_msg}")
-        exit 1
+  if !network['dns'].nil?
+    dns = network['dns']
+    open("/etc/sysconfig/network", "w") { |f|
+      dns.each_with_index do |dns_ip, i|
+        if Config_utils.check_ipv4({:ip => dns_ip})
+          f.puts "DNS#{i+1}=#{dns_ip}"
+        else
+          p err_msg = "Invalid DNS Address. Please review #{INITCONF} file"
+          exit 1
+        end
       end
-    end
-    f.puts "SEARCH=#{cdomain}"
-  }
+      f.puts "SEARCH=#{cdomain}"
+    }
+  end
 
   # Configure NETWORK
   network['interfaces'].each do |iface|
@@ -78,7 +77,6 @@ if !network.nil? # network will not be defined in cloud deployments
           f.puts "GATEWAY=#{iface['gateway']}" if !iface['gateway'].nil?
         else
           p err_msg = "Invalid network configuration for device #{dev}. Please review #{INITCONF} file"
-          system("logger -t rb_init_conf #{err_msg}")
           exit 1
         end
       end
@@ -147,12 +145,14 @@ file_serf_tags = File.open(TAGSJSON,"w")
 file_serf_tags.write(serf_tags.to_json)
 file_serf_tags.close
 
-# Allow multicast packets from sync_net. This rule allows a new serf node publish it in multicast address
-system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -s #{sync_net} -m pkttype --pkt-type multicast -j ACCEPT &>/dev/null")
-# Allow traffic from 5353/udp and sync_net. This rule allows other serf nodes to communicate with the new node
-system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --sport 5353 -j ACCEPT &>/dev/null")
-# Reload firewalld configuration
-system("firewall-cmd --reload &>/dev/null")
+if !network.nil? #Firewall rules are not needed in cloud environments
+  # Allow multicast packets from sync_net. This rule allows a new serf node publish it in multicast address
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -s #{sync_net} -m pkttype --pkt-type multicast -j ACCEPT &>/dev/null")
+  # Allow traffic from 5353/udp and sync_net. This rule allows other serf nodes to communicate with the new node
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --sport 5353 -j ACCEPT &>/dev/null")
+  # Reload firewalld configuration
+  system("firewall-cmd --reload &>/dev/null")
+end
 
 # Enable and start SERF
 system('systemctl enable serf &> /dev/null')
