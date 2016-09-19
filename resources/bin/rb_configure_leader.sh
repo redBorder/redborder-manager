@@ -167,7 +167,7 @@ function configure_dataBags(){
   ## Data bags for passwords ##
   mkdir -p /var/chef/data/data_bag_encrypted/passwords/
 
-  ## S3 passwords
+  ## S3 passwords ## TODO
   sed -i "s/s3.redborder.cluster/s3.$cdomain/" /var/chef/data/data_bag/passwords/s3_secrets.json
 
   ## DB opscode (chef) passwords
@@ -418,7 +418,7 @@ cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
 
 # Chef server Installation
 e_title "Installing Chef-Server from repository"
-yum install -y chef-server-core chef #&> /dev/null #Maybe chef package is not needed
+yum install -y redborder-chef-server
 
 # Chef server initial configuration
 e_title "Configuring Chef-Server (first time)"
