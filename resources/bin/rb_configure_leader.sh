@@ -358,7 +358,7 @@ function configure_leader(){
   done
 
   e_title "Registering chef-client ..."
-  /usr/bin/chef-client
+  /opt/opscode/bin/chef-client
   # Adding chef role to node
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[$CLIENTNAME]"
