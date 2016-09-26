@@ -868,5 +868,99 @@ EOF
     end
 end
 
+class S3Conf < WizConf
+
+    attr_accessor :conf, :cancel
+
+    def initialize()
+        @cancel = false
+        @conf = { "access_key" => "", "secret_key" => "" }
+    end
+
+    def doit
+
+        s3conf = { "AWS access key:" => "", "AWS secret key:" => "" }
+                
+        loop do
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.insecure = true
+            text = <<EOF
+ 
+You need to provide two paratemeters in order to use
+Amazon S3 Storage Service:
+
+AWS access key:  This is an alphanumeric text string that
+                 uniquely identifies the user who owns the
+                 account in Amazon Web Services.
+AWS secret key:  This is an encoded password used to confirm
+                 the user's indentity.
+
+Please, set this two S3 parameters:
+ 
+EOF
+            items = []
+            form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen, :attr)
+
+            items = []
+            label = "AWS access key:"
+            data = form_data.new
+            data.label = label
+            data.ly = 1
+            data.lx = 1
+            data.item = s3conf[label]
+            data.iy = 1
+            data.ix = 17
+            data.flen = 42
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+        
+            label = "AWS secret key:"
+            data = form_data.new
+            data.label = label
+            data.ly = 2
+            data.lx = 1
+            data.item = s3conf[label]
+            data.iy = 2
+            data.ix = 17
+            data.flen = 42
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+
+            dialog.title = "S3 configuration"
+            s3conf = dialog.mixedform(text, items, 0, 0, 0)
+            
+            if dialog.dialog_ok
+                unless s3conf["AWS access key:"].empty? or s3conf["AWS secret key:"].empty?
+                    @conf['access_key'] = s3conf["AWS access key:"]
+                    @conf['secret_key'] = s3conf["AWS secret key:"]
+                    break
+                end
+            else
+                @cancel = true
+            end
+           
+            # error, do another loop
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.title = "ERROR in S3 configuration"
+            text = <<EOF
+
+We have detected an error in S3 configuration.
+
+Please, provide correct values for the parameters.
+ 
+EOF
+            dialog.msgbox(text, 12, 41)
+
+        end
+
+    end
+
+end
+
+
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:

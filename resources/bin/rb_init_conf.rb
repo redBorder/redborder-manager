@@ -92,6 +92,9 @@ if !network.nil? # network will not be defined in cloud deployments
   system('service network restart &> /dev/null')
 end
 
+# TODO: check s3 connectivity and configure
+# If s3 parameters fails -> inform and relaunch wizard!!!
+
 ######################
 # Serf configuration #
 ######################

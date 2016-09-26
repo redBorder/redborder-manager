@@ -44,6 +44,10 @@ general_conf = {
         "sync_net" => "",
         "encrypt_key" => ""
         },
+    "s3" => {
+        "access_key" => "",
+        "secret_key" => ""
+        },
     "mode" => "full" # default mode
     }
 
@@ -148,6 +152,26 @@ cryptconf = SerfCryptConf.new
 cryptconf.doit # launch wizard
 cancel_wizard if cryptconf.cancel
 general_conf["serf"]["encrypt_key"] = cryptconf.conf
+
+# External S3 storage
+text = <<EOF
+ 
+Do you want to use Amazon S3 Storage service?
+
+EOF
+
+dialog = MRDialog.new
+dialog.clear = true
+dialog.title = "Confirm configuration"
+yesno = dialog.yesno(text,0,0)
+
+if yesno # yesno is "yes" -> true
+    # configure dns 
+    s3conf = S3Conf.new
+    s3conf.doit # launch wizard
+    cancel_wizard if s3conf.cancel
+    general_conf["s3"] = s3conf.conf
+end
 
 # Set mode
 modeconf = ModeConf.new
