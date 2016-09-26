@@ -209,6 +209,10 @@ unless general_conf["network"]["dns"].empty?
     end
 end
 
+text += "\n- S3:\n"
+text += "    AWS access key: #{general_conf["s3"]["access_key"]}\n"
+text += "    AWS secret key: #{general_conf["s3"]["secret_key"]}\n"
+
 text += "\n- Serf:\n"
 text += "    mode: #{general_conf["serf"]["multicast"] ? "multicast" : "unicast"}\n"
 text += "    sync net: #{general_conf["serf"]["sync_net"]}\n"
