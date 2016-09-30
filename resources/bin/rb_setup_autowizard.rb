@@ -107,3 +107,6 @@ if discover
 else
 	general_conf["mode"] = "core"
 end
+
+File.open(CONFFILE, 'w') {|f| f.write general_conf.to_yaml } #Store
+
