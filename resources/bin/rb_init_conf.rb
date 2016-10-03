@@ -29,7 +29,6 @@ mode = init_conf['mode']
 # Configure HOSTNAME and CDOMAIN
 if Config_utils.check_hostname(hostname)
   if Config_utils.check_domain(cdomain)
-    p "Configuring hostname and cluster domain"
     system("hostnamectl set-hostname #{hostname}.#{cdomain}")
     # Set cdomain file
     File.open("/etc/redborder/cdomain", 'w') { |f| f.puts "#{cdomain}" }
@@ -52,7 +51,6 @@ if !network.nil? # network will not be defined in cloud deployments
 
   # Configure DNS
   if !network['dns'].nil?
-    p "Configuring DNS servers and search domain"
     dns = network['dns']
     open("/etc/sysconfig/network", "w") { |f|
       dns.each_with_index do |dns_ip, i|
@@ -71,7 +69,6 @@ if !network.nil? # network will not be defined in cloud deployments
   network['interfaces'].each do |iface|
     dev = iface['device']
     iface_mode = iface['mode']
-    p "Configuring network device #{dev}"
     open("/etc/sysconfig/network-scripts/ifcfg-#{dev}", 'w') { |f|
       if iface_mode != 'dhcp'
         if Config_utils.check_ipv4({:ip => iface['ipaddr'], :netmask => iface['netmask']})  and Config_utils.check_ipv4(:ip => iface['gateway'])
@@ -92,9 +89,10 @@ if !network.nil? # network will not be defined in cloud deployments
   end
 
   # Restart NetworkManager
-  p "Restarting network service"
   system('service network restart &> /dev/null')
 end
+
+# TODO: check network connectivity. Try to resolve repo.redborder.com
 
 # TODO: check s3 connectivity and configure
 # If s3 parameters fails -> inform and relaunch wizard!!!
@@ -110,8 +108,6 @@ serf_tags = {}
 sync_net = serf['sync_net']
 encrypt_key = serf['encrypt_key']
 multicast = serf['multicast']
-
-p "Configuring Serf cluster service"
 
 # local IP to bind to
 if !sync_net.nil?
@@ -154,8 +150,6 @@ file_serf_tags = File.open(TAGSJSON,"w")
 file_serf_tags.write(serf_tags.to_json)
 file_serf_tags.close
 
-p "Configuring firewalld entries"
-
 if !network.nil? #Firewall rules are not needed in cloud environments
   # Allow multicast packets from sync_net. This rule allows a new serf node publish it in multicast address
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -s #{sync_net} -m pkttype --pkt-type multicast -j ACCEPT &>/dev/null")
@@ -164,8 +158,6 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   # Reload firewalld configuration
   system("firewall-cmd --reload &>/dev/null")
 end
-
-p "Starting Serf and Serf-join services"
 
 # Enable and start SERF
 system('systemctl enable serf &> /dev/null')
