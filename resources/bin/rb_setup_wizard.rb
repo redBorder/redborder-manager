@@ -233,8 +233,12 @@ end
 
 File.open(CONFFILE, 'w') {|f| f.write general_conf.to_yaml } #Store
 
-# TODO: execute rb_init_conf.sh into a progress dialog
-
 #exec("#{ENV['RBBIN']}/rb_init_conf.sh")
+command = "#{ENV['RBBIN']}/rb_init_conf.sh"
+
+dialog = MRDialog.new
+dialog.clear = false
+dialog.title = "Applying configuration"
+dialog.prgbox(command,20,100, "Executing rb_init_conf.sh")
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:

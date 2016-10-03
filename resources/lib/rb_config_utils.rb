@@ -80,10 +80,71 @@ module Config_utils
      ret
    end
 
-   #TODO: Function to check encrypt key format
-   def self.check_encryptkey(encrypt_key)
-       return true
-   end
+    #TODO: Function to check encrypt key format
+    def self.check_encryptkey(encrypt_key)
+      return true
+    end
+
+    # Function that return true if the interface dev has a default route or false if not
+    def self.has_default_route?(dev)
+      ret = false
+      Net::IP.routes.each do |r|
+        if r.to_h[:dev] == dev.to_s
+          if r.to_h[:prefix] == "default"
+            ret = true
+            break
+          end
+        end
+      end
+      ret
+    end
+
+    # Function that retrun the gateway if exist for dev interface
+    def self.get_gateway(dev)
+      ret = nil
+      Net::IP.routes.each do |r|
+        route = r.to_h
+        next unless route[:dev] == dev
+        next unless route[:prefix] == "default"
+        ret = route[:via]
+      end
+      ret
+    end
+
+    # Function that return the first route non default for one dev interface
+    def self.get_first_route(dev)
+      ret = {}
+      Net::IP.routes.each do |r|
+        route = r.to_h
+        next unless route[:dev] == dev
+        next unless route[:prefix] != "default"
+        ret = route
+      end
+      ret
+    end
+
+    # Function that return a hash with route object that contains the default route
+    # with maximun metric
+    def self.get_default_max_metric
+      ret = {}
+      Net::IP.routes.each do |r|
+        route = r.to_h
+        route[:metric] = 1 if route[:metric].nil?
+        # only perform with default routes
+        if route[:prefix] == "default"
+          if ret.empty?
+            # first default route founded
+            ret = route
+          else
+            # new route has metric bigger than saved route?
+            if route[:metric] > ret[:metric]
+              ret = route # this is the new saved route
+            end
+          end
+        end
+      end
+      ret
+    end
 
 end
 
