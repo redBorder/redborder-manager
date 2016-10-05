@@ -51,9 +51,9 @@ buckets.each do |b|
         printf "INFO: the bucket #{b} is already created but it doesn't look working\n"
       end
     else
-        out=`s3cmd --config /root/.s3cfg  mb s3://#{b}`.strip if found!="1"
-        if out=="Bucket 's3://#{b}/' created" or found=="1"
-        user_data=`/opt/rb/bin/rb_s3_user -u #{b} -e #{b}@#{CDOMAIN} -q`
+      out=`s3cmd --config /root/.s3cfg mb s3://#{b}`.strip if found!="1"
+      if out=="Bucket 's3://#{b}/' created" or found=="1"
+        user_data=`curl -H 'Content-Type: application/json' -X POST http://s3.#{CDOMAIN}:8088/riak-cs/user --data '{"email":"#{b}@#{CDOMAIN}", "name":"#{b}"}'`
         user_data_h = JSON.parse(user_data)
         data["user"] = user_data_h
         s3_grant=`s3cmd --config /root/.s3cfg --acl-grant=all:#{b}@#{CDOMAIN} setacl s3://#{b}`

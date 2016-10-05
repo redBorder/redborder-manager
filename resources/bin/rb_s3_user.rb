@@ -23,10 +23,10 @@ def translate_upload_json(data, domain)
     # Add new keys
     data["riak-cs_id"] = data["id"]
     data["id"] = DBINAME
-    data["hostname"]      = "s3.#{domain}"
-    data["bucket"]        = "redborder"
+    data["hostname"] = "s3.#{domain}"
+    data["bucket"] = "redborder"
     # Create new data bag item --> passwords.s3_secrets
-    databag_item          = Chef::DataBagItem.new
+    databag_item  = Chef::DataBagItem.new
     databag_item.data_bag DBNAME
     databag_item.raw_data = Chef::JSONCompat.from_json(data.to_json)
     if databag_item.save
@@ -73,7 +73,7 @@ if opt["a"]
         data = Chef::DataBagItem.load(DBNAME, DBINAME)
       end
 
-      if data['key_id'].nil? or data["key_secret"].nil?
+      if data['key_id'].nil? or data["key_secret"].nil? or data['key_id'] == "admin-key" or data["key_secret"] == "admin-secret"
         # The databag doesn't contain proper values. Then we have to create new user
         create=true
       else
@@ -87,7 +87,7 @@ if opt["a"]
       create=true
     end
 
-    # New user creation
+    # New admin user creation
     if create
       printf "Creating username #{username} (#{email}) into riak-cs server (#{riak_cs_ip}):\n"
       out  = `curl -H 'Content-Type: application/json' -X POST http://#{riak_cs_ip}:8088/riak-cs/user --data '{"email":"#{email}", "name":"#{username}"}'`# 2>/dev/null`
@@ -112,14 +112,13 @@ if opt["a"]
     end
   end
 else
-  riak_cs_ip="riak.#{CDOMAIN}" if (riak_cs_ip.nil? or riak_cs_ip=="" or riak_cs_ip=="0.0.0.0")
+  # New user (no admin) creation
+  riak_cs_ip="riak.#{mdat["DOMAIN"]}" if (riak_cs_ip.nil? or riak_cs_ip=="" or riak_cs_ip=="0.0.0.0")
   username=opt["u"]
   email=opt["e"]
-  if username.nil? or email.nil?
-    system("env HOME=/root /usr/lib/redborder/bin/s3curl.pl --id admin --contentType application/json -- --proxy1.0 riak.#{CDOMAIN}:8088 -H 'Accept: application/json' http://s3.amazonaws.com/riak-cs/users")
-  else
+  unless username.nil? or email.nil?
     printf "Creating username #{username} (#{email}) into riak-cs server (#{riak_cs_ip}):\n" if !opt["q"]
-    system("env HOME=/root /usr/lib/redborder/bin/s3curl.pl --id admin --contentType application/json -- --proxy1.0 riak.#{CDOMAIN}:8088 -X POST -H 'Accept: application/json' -d '{\"email\":\"#{email}\", \"name\":\"#{username}\"}' http://s3.amazonaws.com/riak-cs/user")
+    `curl -H 'Content-Type: application/json' -X POST http://#{riak_cs_ip}:8088/riak-cs/user --data '{"email":"#{email}", "name":"#{username}"}'`# 2>/dev/null`
   end
   print("\n")
 end
