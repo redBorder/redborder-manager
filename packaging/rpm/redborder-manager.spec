@@ -8,7 +8,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash ntp dialog rvm s3cmd dmidecode rsync postgresql-pgpool-II redborder-serf redborder-common redborder-chef-client
+Requires: bash git ntp dialog rvm s3cmd dmidecode rsync postgresql-pgpool-II redborder-serf redborder-common redborder-chef-client
 
 %description
 %{summary}
@@ -40,11 +40,6 @@ install -D -m 0644 resources/mode-list.yml %{buildroot}/usr/lib/redborder
 install -D -m 0644 resources/systemd/rb-init-conf.service %{buildroot}/usr/lib/systemd/system/rb-init-conf.service
 
 %pre
-getent group opscode-pgsql >/dev/null || groupadd -r opscode.pgsql
-getent passwd opscode-pgsql >/dev/null || \
-    useradd -r -g opscode-pgsql -d /opt/opscode/embedded/postgresql -s /bin/bash \
-    -c "PostgreSQL" opscode-pgsql
-exit 0
 
 %post
 firewall-cmd --zone=public --add-port=443/tcp --permanent

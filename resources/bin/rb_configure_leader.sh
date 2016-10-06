@@ -167,7 +167,7 @@ function configure_dataBags(){
   ## Data bags for passwords ##
   mkdir -p /var/chef/data/data_bag_encrypted/passwords/
 
-  ## S3 passwords
+  ## S3 passwords ## TODO
   sed -i "s/s3.redborder.cluster/s3.$cdomain/" /var/chef/data/data_bag/passwords/s3_secrets.json
 
   ## DB opscode (chef) passwords
@@ -350,7 +350,7 @@ function configure_leader(){
   # Save into cache directory
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid nomad http2k cron compat_resource logrotate chef-client memcached rb-manager" # The order matters!
+  listCookbooks="zookeeper kafka druid nomad http2k cron memcached chef-server riak rb-manager" # The order matters!
   for n in $listCookbooks; do # cookbooks
     rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
@@ -358,7 +358,7 @@ function configure_leader(){
   done
 
   e_title "Registering chef-client ..."
-  /usr/bin/chef-client
+  /opt/opscode/bin/chef-client
   # Adding chef role to node
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[$CLIENTNAME]"
@@ -418,7 +418,7 @@ cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
 
 # Chef server Installation
 e_title "Installing Chef-Server from repository"
-yum install -y chef-server-core chef #&> /dev/null #Maybe chef package is not needed
+yum install -y redborder-chef-server
 
 # Chef server initial configuration
 e_title "Configuring Chef-Server (first time)"

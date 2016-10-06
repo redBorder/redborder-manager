@@ -44,6 +44,10 @@ general_conf = {
         "sync_net" => "",
         "encrypt_key" => ""
         },
+    "s3" => {
+        "access_key" => "",
+        "secret_key" => ""
+        },
     "mode" => "full" # default mode
     }
 
@@ -53,17 +57,16 @@ general_conf = {
 
 text = <<EOF
  
-Este wizard le guiará a través de la configuración necesaria del 
-equipo para poder convertirlo en un nodo redborder dentro de un cluster redborder.
+This wizard will guide you through the necessary configuration of the device 
+in order to convert it into a redborder node within a redborder cluster.
 
-Los pasos necesarios por los que pasará son: configuración de red,
-configuración de hostname, dominio y DNS, configuración de serf (servicio de
-cluster) y, por último, el modo del nodo (el modo determina el conjunto mínimo
-de servicios que conforma el nodo, dotándolo de mayor o menor peso dentro
-del cluster).
+It will go through the following required steps: network configuration,
+configuration of hostname, domain and DNS, Serf configuration, and finally
+the node mode (the mode determines the minimum group of services that make up
+the node, giving it more or less weight within the cluster).
 
-¿Desea continuar?
-
+Would you like to continue?
+ 
 EOF
 
 dialog = MRDialog.new
@@ -110,6 +113,8 @@ if yesno # yesno is "yes" -> true
     dnsconf.doit # launch wizard
     cancel_wizard if dnsconf.cancel
     general_conf["network"]["dns"] = dnsconf.conf
+else
+    general_conf["network"].delete("dns")
 end
 
 text = <<EOF
@@ -150,6 +155,28 @@ cryptconf.doit # launch wizard
 cancel_wizard if cryptconf.cancel
 general_conf["serf"]["encrypt_key"] = cryptconf.conf
 
+# External S3 storage
+text = <<EOF
+ 
+Do you want to use Amazon S3 Storage service?
+
+EOF
+
+dialog = MRDialog.new
+dialog.clear = true
+dialog.title = "Confirm configuration"
+yesno = dialog.yesno(text,0,0)
+
+if yesno # yesno is "yes" -> true
+    # configure dns 
+    s3conf = S3Conf.new
+    s3conf.doit # launch wizard
+    cancel_wizard if s3conf.cancel
+    general_conf["s3"] = s3conf.conf
+else
+    general_conf.delete("s3")
+end
+
 # Set mode
 modeconf = ModeConf.new
 modeconf.doit # launch wizard
@@ -179,11 +206,17 @@ unless general_conf["network"]["interfaces"].empty?
     end
 end
 
-unless general_conf["network"]["dns"].empty?
+unless general_conf["network"]["dns"].nil?
     text += "- DNS:\n"
     general_conf["network"]["dns"].each do |dns|
         text += "    #{dns}\n"
     end
+end
+
+unless general_conf["s3"].nil?
+    text += "\n- S3:\n"
+    text += "    AWS access key: #{general_conf["s3"]["access_key"]}\n"
+    text += "    AWS secret key: #{general_conf["s3"]["secret_key"]}\n"
 end
 
 text += "\n- Serf:\n"
@@ -206,8 +239,12 @@ end
 
 File.open(CONFFILE, 'w') {|f| f.write general_conf.to_yaml } #Store
 
-# TODO: execute rb_init_conf.sh into a progress dialog
-
 #exec("#{ENV['RBBIN']}/rb_init_conf.sh")
+command = "#{ENV['RBBIN']}/rb_init_conf.sh"
+
+dialog = MRDialog.new
+dialog.clear = false
+dialog.title = "Applying configuration"
+dialog.prgbox(command,20,100, "Executing rb_init_conf.sh")
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
