@@ -112,18 +112,17 @@ def config_postgresql(config, userdata_config)
 end
 
 def config_s3(config, userdata_config)
-    if !userdata_config.has_key?("aws_access_key") or !Config_utils.check_accesskey(userdata_config["aws_access_key"])
-        puts "WARN: access_key not valid, ignoring s3 configuration"
-    elsif !userdata_config.has_key?("aws_secret_key") or !Config_utils.check_secretkey(userdata_config["aws_secret_key"])
-        puts "WARN: secret_key not valid, ignoring s3 configuration"
-    elsif !userdata_config.has_key?("s3_bucket") or !Config_utils.check_s3bucket(userdata_config["s3_bucket"])
+    if !userdata_config.has_key?("s3_bucket") or !Config_utils.check_s3bucket(userdata_config["s3_bucket"])
         puts "WARN: s3_bucket not valid, ignoring s3 configuration"
     elsif !userdata_config.has_key?("s3_endpoint") or !Config_utils.check_s3endpoint(userdata_config["s3_endpoint"])
         puts "WARN: s3_endpoint not valid, ignorig s3 configuration"
     else
         config["s3"] = {}
-        config["s3"]["access_key"] = userdata_config["aws_access_key"]
-        config["s3"]["secret_key"] = userdata_config["aws_secret_key"]
+        if userdata_config.has_key?("aws_access_key") and Config_utils.check_accesskey(userdata_config["aws_access_key"]) and
+                userdata_config.has_key?("aws_secret_key") and Config_utils.check_secretkey(userdata_config["aws_secret_key"])
+            config["s3"]["access_key"] = userdata_config["aws_access_key"]
+            config["s3"]["secret_key"] = userdata_config["aws_secret_key"]
+        end
         config["s3"]["bucket"] = userdata_config["s3_bucket"]
         config["s3"]["endpoint"] = userdata_config["s3_endpoint"]
     end
