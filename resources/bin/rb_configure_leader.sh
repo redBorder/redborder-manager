@@ -420,6 +420,10 @@ cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
 e_title "Installing Chef-Server from repository"
 yum install -y redborder-chef-server
 
+# Set chef-server.rb configuration file (S3 and postgresql)
+[ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb
+[ -f /etc/redborder/chef-server-postgresql.rb ] && cat /etc/redborder/chef-server-postgresql.rb >> /etc/opscode/chef-server.rb
+
 # Chef server initial configuration
 e_title "Configuring Chef-Server (first time)"
 /usr/bin/chef-server-ctl reconfigure #&>> /root/.install-chef-server.log

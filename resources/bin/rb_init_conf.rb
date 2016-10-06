@@ -33,7 +33,7 @@ if Config_utils.check_hostname(hostname)
     # Set cdomain file
     File.open("/etc/redborder/cdomain", 'w') { |f| f.puts "#{cdomain}" }
     # Also set hostname with this IP in /etc/hosts
-    File.open("/etc/hosts", 'a') { |f| f.puts "127.0.0.1  #{hostname} #{hostname}.#{cdomain}" } if !File.open("/etc/hosts").grep(/#{hostname}/).any?
+    File.open("/etc/hosts", 'a') { |f| f.puts "127.0.0.1  #{hostname} #{hostname}.#{cdomain}" } unless File.open("/etc/hosts").grep(/#{hostname}/).any?
   else
     p err_msg = "Invalid cdomain. Please review #{INITCONF} file"
     exit 1
@@ -43,14 +43,14 @@ else
   exit 1
 end
 
-if !network.nil? # network will not be defined in cloud deployments
+unless network.nil? # network will not be defined in cloud deployments
 
   # Disable and stop NetworkManager
   system('systemctl disable NetworkManager &> /dev/null')
   system('systemctl stop NetworkManager &> /dev/null')
 
   # Configure DNS
-  if !network['dns'].nil?
+  unless network['dns'].nil?
     dns = network['dns']
     open("/etc/sysconfig/network", "w") { |f|
       dns.each_with_index do |dns_ip, i|
@@ -74,7 +74,7 @@ if !network.nil? # network will not be defined in cloud deployments
         if Config_utils.check_ipv4({:ip => iface['ipaddr'], :netmask => iface['netmask']})  and Config_utils.check_ipv4(:ip => iface['gateway'])
           f.puts "IPADDR=#{iface['ipaddr']}"
           f.puts "NETMASK=#{iface['netmask']}"
-          f.puts "GATEWAY=#{iface['gateway']}" if !iface['gateway'].nil?
+          f.puts "GATEWAY=#{iface['gateway']}" unless iface['gateway'].nil?
         else
           p err_msg = "Invalid network configuration for device #{dev}. Please review #{INITCONF} file"
           exit 1
@@ -94,8 +94,69 @@ end
 
 # TODO: check network connectivity. Try to resolve repo.redborder.com
 
-# TODO: check s3 connectivity and configure
-# If s3 parameters fails -> inform and relaunch wizard!!!
+####################
+# S3 configuration #
+####################
+
+s3_conf = init_conf['s3']
+unless s3_conf.nil?
+  s3_access = s3_conf['access_key']
+  s3_secret = s3_conf['secret_key']
+  s3_endpoint = s3_conf['endpoint']
+  s3_bucket = s3_conf['bucket']
+
+  # Check S3 connectivity
+  open("/root/.s3cfg-test", "w") { |f|
+    f.puts "[default]"
+    f.puts "access_key = #{s3_access}"
+    f.puts "secret_key = #{s3_secret}"
+  }
+  out = system("/usr/bin/s3cmd -c /root/.s3cfg-test ls s3://#{s3_bucket} &>/dev/null")
+  File.delete("/root/.s3cfg-test")
+  unless out
+    p err_msg = "Impossible connect to S3. Please review #{INITCONF} file"
+    exit 1
+  end
+
+  # Create chef-server configuration file for S3
+  open("/etc/redborder/chef-server-s3.rb", "w") { |f|
+    f.puts "bookshelf['enable'] = false"
+    f.puts "bookshelf['vip'] = \"#{s3_endpoint}\""
+    f.puts "bookshelf['external_url'] = \"https://#{s3_endpoint}\""
+    f.puts "bookshelf['access_key_id'] = \"#{s3_access}\""
+    f.puts "bookshelf['secret_access_key'] = \"#{s3_secret}\""
+    f.puts "opscode_erchef['s3_bucket'] = \"#{s3_bucket}\""
+  }
+
+end
+
+####################
+# DB configuration #
+####################
+
+db_conf = init_conf['postgresql']
+unless db_conf.nil?
+  db_superuser = db_conf['superuser']
+  db_password = db_conf['password']
+  db_host = db_conf['host']
+  db_port = db_conf['port']
+
+  # Check database connectivity
+  out = system("env PGPASSWORD='#{db_password}' psql -U #{db_superuser} -h #{db_host} -c '\\q' &>/dev/null")
+  unless out
+     p err_msg = "Impossible connect to database. Please review #{INITCONF} file"
+    exit 1
+  end
+
+  # Create chef-server configuration file for postgresql
+  open("/etc/redborder/chef-server-postgresql.rb", "w") { |f|
+    f.puts "postgresql['db_superuser'] = \"#{db_superuser}\""
+    f.puts "postgresql['db_superuser_password'] = \"#{db_password}\""
+    f.puts "postgresql['external'] = true"
+    f.puts "postgresql['port'] = #{db_port}"
+    f.puts "postgresql['vip'] = \"#{db_host}\""
+  }
+end
 
 ######################
 # Serf configuration #
@@ -110,7 +171,7 @@ encrypt_key = serf['encrypt_key']
 multicast = serf['multicast']
 
 # local IP to bind to
-if !sync_net.nil?
+unless sync_net.nil?
     # Initialize network device
     System.get_all_ifaddrs.each do |netdev|
         if IPAddr.new(sync_net).include?(netdev[:inet_addr])
@@ -130,7 +191,7 @@ if multicast # Multicast configuration
   serf_conf["discover"] = cdomain
 end
 
-if !encrypt_key.nil?
+unless encrypt_key.nil?
   serf_conf["encrypt_key"] = encrypt_key
 end
 
