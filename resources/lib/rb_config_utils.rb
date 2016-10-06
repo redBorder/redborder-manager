@@ -85,6 +85,42 @@ module Config_utils
        return true
    end
 
+   # POSTGRESQL PARAMETER CHECKS
+   #TODO
+   def self.check_sql_host(host)
+       return true
+   end
+   #TODO
+   def self.check_sql_port(port)
+       return true
+   end
+   #TODO
+   def self.check_sql_superuser(superuser)
+       return true
+   end
+   #TODO
+   def self.check_sql_password(password)
+       return true
+   end
+
+   #S3 PARAMETER CHECKS
+   #TODO
+   def self.check_accesskey(access_key)
+       return true
+   end
+   #TODO
+   def self.check_secretkey(secret_key)
+       return true
+   end
+   #TODO
+   def self.check_s3bucket(bucket)
+       return true
+   end
+   #TODO
+   def self.check_s3endpoint(endpoint)
+       return true
+   end
+
 end
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
