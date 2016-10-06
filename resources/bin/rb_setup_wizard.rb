@@ -113,6 +113,8 @@ if yesno # yesno is "yes" -> true
     dnsconf.doit # launch wizard
     cancel_wizard if dnsconf.cancel
     general_conf["network"]["dns"] = dnsconf.conf
+else
+    general_conf["network"].delete("dns")
 end
 
 text = <<EOF
@@ -171,6 +173,8 @@ if yesno # yesno is "yes" -> true
     s3conf.doit # launch wizard
     cancel_wizard if s3conf.cancel
     general_conf["s3"] = s3conf.conf
+else
+    general_conf.delete("s3")
 end
 
 # Set mode
@@ -202,16 +206,18 @@ unless general_conf["network"]["interfaces"].empty?
     end
 end
 
-unless general_conf["network"]["dns"].empty?
+unless general_conf["network"]["dns"].nil?
     text += "- DNS:\n"
     general_conf["network"]["dns"].each do |dns|
         text += "    #{dns}\n"
     end
 end
 
-text += "\n- S3:\n"
-text += "    AWS access key: #{general_conf["s3"]["access_key"]}\n"
-text += "    AWS secret key: #{general_conf["s3"]["secret_key"]}\n"
+unless general_conf["s3"].nil?
+    text += "\n- S3:\n"
+    text += "    AWS access key: #{general_conf["s3"]["access_key"]}\n"
+    text += "    AWS secret key: #{general_conf["s3"]["secret_key"]}\n"
+end
 
 text += "\n- Serf:\n"
 text += "    mode: #{general_conf["serf"]["multicast"] ? "multicast" : "unicast"}\n"
