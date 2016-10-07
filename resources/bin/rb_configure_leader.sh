@@ -318,12 +318,12 @@ function configure_leader(){
   ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config" # old app.config
 
   # Configure AWS (if is a cloud deployment)
-  if [ "x$S3HOST" != "x" -a "x$S3TYPE" == "xaws" -a "x$AWS_ACCESS_KEY" != "x" -a "x$AWS_SECRET_KEY" != "x" -a "x${S3BUCKET}" != "x" ]; then
-    configure_aws $ERCHEFCFG
-  else
-    # Configuring erchef to use local cookbooks
-    sed -i 's|s3_external_url.*$|s3_external_url, "https://localhost"},|' $ERCHEFCFG |grep s3_external_url
-  fi
+  #if [ "x$S3HOST" != "x" -a "x$S3TYPE" == "xaws" -a "x$AWS_ACCESS_KEY" != "x" -a "x$AWS_SECRET_KEY" != "x" -a "x${S3BUCKET}" != "x" ]; then
+  #  configure_aws $ERCHEFCFG
+  #else
+  #  # Configuring erchef to use local cookbooks
+  #  sed -i 's|s3_external_url.*$|s3_external_url, "https://localhost"},|' $ERCHEFCFG |grep s3_external_url
+  #fi
 
   # Configure database
   e_title "Configuring Database"
