@@ -5,100 +5,6 @@
 source /etc/profile
 source $RBLIB/rb_manager_functions.sh
 
-function configure_aws(){
-    # AMAZON Installation (user-data)
-    [ -f /etc/redborder/externals.conf ] && source /etc/redborder/externals.conf
-
-    # Chef server configuration
-    ERCHEFCFG=$1
-
-    # External S3 with user data
-    sed -i "s|s3_access_key_id,.*|s3_access_key_id, \"${AWS_ACCESS_KEY}\"},|" $ERCHEFCFG
-    sed -i "s|s3_secret_key_id,.*|s3_secret_key_id, \"${AWS_SECRET_KEY}\"},|" $ERCHEFCFG
-    sed -i "s|s3_url,.*|s3_url, \"https://${S3HOST}\"},|" $ERCHEFCFG
-    sed -i "s|s3_platform_bucket_name,.*|s3_platform_bucket_name, \"${S3BUCKET}\"},|" $ERCHEFCFG
-    sed -i "s|s3_external_url,.*|s3_external_url, \"https://${S3HOST}\"},|" $ERCHEFCFG
-    sed -i  's/"redborder": {/"redborder": {\n      "uploaded_s3": true,/' /var/chef/data/role/manager.json
-    #rm -rf /var/opt/opscode/bookshelf/data/bookshelf
-
-    if [ "x$CDOMAIN" != "x" -a "x$S3HOST" != "x" -a "x$AWS_ACCESS_KEY" != "x" -a "x$AWS_SECRET_KEY" != "x" -a -f /root/.aws/credentials ]; then
-    #bash $RBBIN/rb_route53.sh -d "$CDOMAIN" -r "${REGION}" -v "$VPCID" -a "$PUBLIC_HOSTEDZONE_ID" -b "$PRIVATE_HOSTEDZONE_ID" -x "master"
-
-        cat > /root/.s3cfg <<_RBEOF2_
-[default]
-access_key = $AWS_ACCESS_KEY
-secret_key = $AWS_SECRET_KEY
-_RBEOF2_
-
-        if [ "x$S3TYPE" == "xaws" ] ; then
-            # External S3
-            cat >> /root/.s3cfg <<_RBEOF2_
-host_base = s3.amazonaws.com
-host_bucket = %(bucket)s.s3.amazonaws.com
-_RBEOF2_
-        else
-            # Local S3
-              cat >> /root/.s3cfg <<_RBEOF2_
-host_base = $S3HOST
-host_bucket = %(bucket)s.${S3HOST}
-_RBEOF2_
-        fi
-
-        # s3cmd copnfiguration
-        cat >> /root/.s3cfg <<_RBEOF2_
-access_token =
-add_encoding_exts =
-add_headers =
-cache_file =
-cloudfront_host = cloudfront.amazonaws.com
-default_mime_type = binary/octet-stream
-delay_updates = False
-delete_after = False
-delete_after_fetch = False
-delete_removed = False
-dry_run = False
-enable_multipart = True
-encoding = UTF-8
-encrypt = False
-follow_symlinks = False
-force = False
-get_continue = False
-gpg_command = /usr/bin/gpg
-gpg_decrypt = %(gpg_command)s -d --verbose --no-use-agent --batch --yes --passphrase-fd %(passphrase_fd)s -o %(output_file)s %(input_file)s
-gpg_encrypt = %(gpg_command)s -c --verbose --no-use-agent --batch --yes --passphrase-fd %(passphrase_fd)s -o %(output_file)s %(input_file)s
-gpg_passphrase = redborder
-guess_mime_type = True
-human_readable_sizes = False
-invalidate_default_index_on_cf = False
-invalidate_default_index_root_on_cf = True
-invalidate_on_cf = False
-list_md5 = False
-log_target_prefix =
-mime_type =
-multipart_chunk_size_mb = 50
-preserve_attrs = True
-progress_meter = True
-proxy_host =
-proxy_port = 0
-recursive = False
-recv_chunk = 4096
-reduced_redundancy = False
-send_chunk = 4096
-simpledb_host = sdb.amazonaws.com
-skip_existing = False
-socket_timeout = 300
-urlencoding_mode = normal
-use_https = True
-verbosity = WARNING
-website_endpoint = http://%(bucket)s.s3-website-%(location)s.amazonaws.com/
-website_error =
-website_index = index.html
-_RBEOF2_
-
-    fi
-
-}
-
 function configure_db(){
     ########################
     # Configuring database #
@@ -349,14 +255,6 @@ function configure_leader(){
 
   # Chef server configuration
   ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config" # old app.config
-
-  # Configure AWS (if is a cloud deployment)
-  #if [ "x$S3HOST" != "x" -a "x$S3TYPE" == "xaws" -a "x$AWS_ACCESS_KEY" != "x" -a "x$AWS_SECRET_KEY" != "x" -a "x${S3BUCKET}" != "x" ]; then
-  #  configure_aws $ERCHEFCFG
-  #else
-  #  # Configuring erchef to use local cookbooks
-  #  sed -i 's|s3_external_url.*$|s3_external_url, "https://localhost"},|' $ERCHEFCFG |grep s3_external_url
-  #fi
 
   # Configure database
   e_title "Configuring Database"
