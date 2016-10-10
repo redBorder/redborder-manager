@@ -9,7 +9,6 @@ function configure_db(){
     ########################
     # Configuring database #
     ########################
-    echo "Initiating database: "
     ldconfig &>/dev/null
 
     OCID_DBCFG="/var/opt/opscode/oc_id/config/database.yml"
@@ -20,9 +19,9 @@ function configure_db(){
     [ "x$REDBORDERDBPASS" == "x" ] && REDBORDERDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
 
     # Chef database configurations
-    OPSCODE_DBPASS="`grep db_pass $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
-    OPSCODE_DBHOST="`grep db_host $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
-    OPSCODE_DBPORT="`grep db_port $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+    OPSCODE_DBPASS="`grep {db_pass $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+    OPSCODE_DBHOST="`grep {db_host $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+    OPSCODE_DBPORT="`grep {db_port $ERCHEFCFG |sed 's/.*{db_port, //' | sed 's/},//'`"
     OPSCODE_OCID_PASS="`grep password $OCID_DBCFG | sed 's/ password: //' | tr -d ' '`"
     OPSCODE_OCBIFROST_PASS="`grep db_pass $OCBIFROST_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
     OPSCODE_CHEFMOVER_PASS="`grep db_pass $CHEFMOVER_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
@@ -82,8 +81,6 @@ function configure_db(){
     #su - opscode-pgsql -s /bin/bash -c "echo \"ALTER  USER druid WITH PASSWORD '$DRUIDDBPASS';\" | psql -U opscode-pgsql"
     #su - opscode-pgsql -s /bin/bash -c "echo \"CREATE USER oozie WITH PASSWORD '$OOZIEPASS';\" | psql -U opscode-pgsql"
     #su - opscode-pgsql -s /bin/bash -c "echo \"ALTER  USER oozie WITH PASSWORD '$OOZIEPASS';\" | psql -U opscode-pgsql"
-
-    echo "Configuring first secrets"
 }
 
 function configure_dataBags(){
@@ -105,7 +102,7 @@ function configure_dataBags(){
   "pass": "$OPSCODE_DBPASS",
   "ocid_pass": "$OPSCODE_OCID_PASS",
   "ocbifrost_pass": "$OPSCODE_OCBIFROST_PASS",
-  "chefmover_pass": "$OPSCODE_CHEFMOVER_PASS",
+  "chefmover_pass": "$OPSCODE_CHEFMOVER_PASS"
 }
 _RBEOF_
 
