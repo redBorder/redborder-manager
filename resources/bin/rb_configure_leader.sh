@@ -5,100 +5,6 @@
 source /etc/profile
 source $RBLIB/rb_manager_functions.sh
 
-function configure_aws(){
-    # AMAZON Installation (user-data)
-    [ -f /etc/redborder/externals.conf ] && source /etc/redborder/externals.conf
-
-    # Chef server configuration
-    ERCHEFCFG=$1
-
-    # External S3 with user data
-    sed -i "s|s3_access_key_id,.*|s3_access_key_id, \"${AWS_ACCESS_KEY}\"},|" $ERCHEFCFG
-    sed -i "s|s3_secret_key_id,.*|s3_secret_key_id, \"${AWS_SECRET_KEY}\"},|" $ERCHEFCFG
-    sed -i "s|s3_url,.*|s3_url, \"https://${S3HOST}\"},|" $ERCHEFCFG
-    sed -i "s|s3_platform_bucket_name,.*|s3_platform_bucket_name, \"${S3BUCKET}\"},|" $ERCHEFCFG
-    sed -i "s|s3_external_url,.*|s3_external_url, \"https://${S3HOST}\"},|" $ERCHEFCFG
-    sed -i  's/"redborder": {/"redborder": {\n      "uploaded_s3": true,/' /var/chef/data/role/manager.json
-    #rm -rf /var/opt/opscode/bookshelf/data/bookshelf
-
-    if [ "x$CDOMAIN" != "x" -a "x$S3HOST" != "x" -a "x$AWS_ACCESS_KEY" != "x" -a "x$AWS_SECRET_KEY" != "x" -a -f /root/.aws/credentials ]; then
-    #bash $RBBIN/rb_route53.sh -d "$CDOMAIN" -r "${REGION}" -v "$VPCID" -a "$PUBLIC_HOSTEDZONE_ID" -b "$PRIVATE_HOSTEDZONE_ID" -x "master"
-
-        cat > /root/.s3cfg <<_RBEOF2_
-[default]
-access_key = $AWS_ACCESS_KEY
-secret_key = $AWS_SECRET_KEY
-_RBEOF2_
-
-        if [ "x$S3TYPE" == "xaws" ] ; then
-            # External S3
-            cat >> /root/.s3cfg <<_RBEOF2_
-host_base = s3.amazonaws.com
-host_bucket = %(bucket)s.s3.amazonaws.com
-_RBEOF2_
-        else
-            # Local S3
-              cat >> /root/.s3cfg <<_RBEOF2_
-host_base = $S3HOST
-host_bucket = %(bucket)s.${S3HOST}
-_RBEOF2_
-        fi
-
-        # s3cmd copnfiguration
-        cat >> /root/.s3cfg <<_RBEOF2_
-access_token =
-add_encoding_exts =
-add_headers =
-cache_file =
-cloudfront_host = cloudfront.amazonaws.com
-default_mime_type = binary/octet-stream
-delay_updates = False
-delete_after = False
-delete_after_fetch = False
-delete_removed = False
-dry_run = False
-enable_multipart = True
-encoding = UTF-8
-encrypt = False
-follow_symlinks = False
-force = False
-get_continue = False
-gpg_command = /usr/bin/gpg
-gpg_decrypt = %(gpg_command)s -d --verbose --no-use-agent --batch --yes --passphrase-fd %(passphrase_fd)s -o %(output_file)s %(input_file)s
-gpg_encrypt = %(gpg_command)s -c --verbose --no-use-agent --batch --yes --passphrase-fd %(passphrase_fd)s -o %(output_file)s %(input_file)s
-gpg_passphrase = redborder
-guess_mime_type = True
-human_readable_sizes = False
-invalidate_default_index_on_cf = False
-invalidate_default_index_root_on_cf = True
-invalidate_on_cf = False
-list_md5 = False
-log_target_prefix =
-mime_type =
-multipart_chunk_size_mb = 50
-preserve_attrs = True
-progress_meter = True
-proxy_host =
-proxy_port = 0
-recursive = False
-recv_chunk = 4096
-reduced_redundancy = False
-send_chunk = 4096
-simpledb_host = sdb.amazonaws.com
-skip_existing = False
-socket_timeout = 300
-urlencoding_mode = normal
-use_https = True
-verbosity = WARNING
-website_endpoint = http://%(bucket)s.s3-website-%(location)s.amazonaws.com/
-website_error =
-website_index = index.html
-_RBEOF2_
-
-    fi
-
-}
-
 function configure_db(){
     ########################
     # Configuring database #
@@ -106,58 +12,76 @@ function configure_db(){
     echo "Initiating database: "
     ldconfig &>/dev/null
 
-    # Configuring passwords
-    PGPOOLPASS=""
-    [ "x$REDBORDERDBPASS" == "x" ] && REDBORDERDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-    DRUIDDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-    OOZIEPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-    RABBITMQPASS="`grep rabbitmq_password $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/">>},[ ]*$//'`"
-    OPSCODE_CHEFPASS="`grep db_pass $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
-    BOOKSHELFKEY="`grep s3_access_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
-    BOOKSHELFSECRET="`grep s3_secret_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+    OCID_DBCFG="/var/opt/opscode/oc_id/config/database.yml"
+    OCBIFROST_DBCFG="/var/opt/opscode/oc_bifrost/sys.config"
+    CHEFMOVER_DBCFG="/var/opt/opscode/opscode-chef-mover/sys.config"
 
-    #wait_service postgresql # Check
+    # Configuring passwords
+    [ "x$REDBORDERDBPASS" == "x" ] && REDBORDERDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+
+    # Chef database configurations
+    OPSCODE_DBPASS="`grep db_pass $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+    OPSCODE_DBHOST="`grep db_host $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+    OPSCODE_DBPORT="`grep db_port $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+    OPSCODE_OCID_PASS="`grep password $OCID_DBCFG | sed 's/ password: //' | tr -d ' '`"
+    OPSCODE_OCBIFROST_PASS="`grep db_pass $OCBIFROST_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
+    OPSCODE_CHEFMOVER_PASS="`grep db_pass $CHEFMOVER_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
+
+    S3KEY="`grep s3_access_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+    S3SECRET="`grep s3_secret_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+    S3URL="`grep s3_url, $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+    S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+    S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+
+    #BOOKSHELFKEY="`grep s3_access_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+    #BOOKSHELFSECRET="`grep s3_secret_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+
+    #RABBITMQPASS="`grep rabbitmq_password $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/">>},[ ]*$//'`"
+
+    #PGPOOLPASS=""
+    #DRUIDDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+    #OOZIEPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
 
     #pgpool passwords #Check recovery SQL files. Not found!!!
-    [ -f /usr/share/pgpool-II/pgpool-recovery.sql ] && su - opscode-pgsql -s /bin/bash -c "psql -f /usr/share/pgpool-II/pgpool-recovery.sql template1"
-    [ -f /usr/share/pgpool-II/pgpool-regclass.sql ] && su - opscode-pgsql -s /bin/bash -c "psql -f /usr/share/pgpool-II/pgpool-regclass.sql template1"
+    #[ -f /usr/share/pgpool-II/pgpool-recovery.sql ] && su - opscode-pgsql -s /bin/bash -c "psql -f /usr/share/pgpool-II/pgpool-recovery.sql template1"
+    #[ -f /usr/share/pgpool-II/pgpool-regclass.sql ] && su - opscode-pgsql -s /bin/bash -c "psql -f /usr/share/pgpool-II/pgpool-regclass.sql template1"
 
-    for n in redborder ; do # only redborder database?
-      su - opscode-pgsql -s /bin/bash -c "dropdb $n &>/dev/null"
-      su - opscode-pgsql -s /bin/bash -c "createdb --encoding=UTF8 --template=template0 $n"
-      [ -f /usr/share/pgpool-II/pgpool-recovery.sql ] && su - opscode-pgsql -s /bin/bash -c "psql -f /usr/share/pgpool-II/pgpool-recovery.sql $n"
-      [ -f /usr/share/pgpool-II/pgpool-regclass.sql ] && su - opscode-pgsql -s /bin/bash -c "psql -f /usr/share/pgpool-II/pgpool-regclass.sql $n"
-    done
+    #for n in redborder ; do # only redborder database?
+    #  su - opscode-pgsql -s /bin/bash -c "dropdb $n &>/dev/null"
+    #  su - opscode-pgsql -s /bin/bash -c "createdb --encoding=UTF8 --template=template0 $n"
+    #  [ -f /usr/share/pgpool-II/pgpool-recovery.sql ] && su - opscode-pgsql -s /bin/bash -c "psql -f /usr/share/pgpool-II/pgpool-recovery.sql $n"
+    #  [ -f /usr/share/pgpool-II/pgpool-regclass.sql ] && su - opscode-pgsql -s /bin/bash -c "psql -f /usr/share/pgpool-II/pgpool-regclass.sql $n"
+    #done
 
-    su - opscode-pgsql -s /bin/bash -c "dropdb druid &>/dev/null"
-    su - opscode-pgsql -s /bin/bash -c "createdb druid"
-    su - opscode-pgsql -s /bin/bash -c "dropdb oozie &>/dev/null"
-    su - opscode-pgsql -s /bin/bash -c "createdb oozie"
+    #su - opscode-pgsql -s /bin/bash -c "dropdb druid &>/dev/null"
+    #su - opscode-pgsql -s /bin/bash -c "createdb druid"
+    #su - opscode-pgsql -s /bin/bash -c "dropdb oozie &>/dev/null"
+    #su - opscode-pgsql -s /bin/bash -c "createdb oozie"
 
     # Generate MD5 password for pgpool
-    if [ ! -f /etc/pgpool-II/pool_passwd ]; then
-      mkdir -p /etc/pgpool-II/ && rm -f /etc/pgpool-II/pool_passwd
-      touch /etc/pgpool-II/pool_passwd
-      [ ! -f /etc/pgpool-II/pgpool.conf -a -f /etc/pgpool-II/pgpool.conf.default ] && cp /etc/pgpool-II/pgpool.conf.default /etc/pgpool-II/pgpool.conf
-      pg_md5 --md5auth --username=redborder "${REDBORDERDBPASS}" -f /etc/pgpool-II/pgpool.conf
-      pg_md5 --md5auth --username=druid "${DRUIDDBPASS}" -f /etc/pgpool-II/pgpool.conf
-      pg_md5 --md5auth --username=oozie "${OOZIEPASS}" -f /etc/pgpool-II/pgpool.conf
-      pg_md5 --md5auth --username=opscode_chef "${OPSCODE_CHEFPASS}" -f /etc/pgpool-II/pgpool.conf
-    fi
+    #if [ ! -f /etc/pgpool-II/pool_passwd ]; then
+    #  mkdir -p /etc/pgpool-II/ && rm -f /etc/pgpool-II/pool_passwd
+    #  touch /etc/pgpool-II/pool_passwd
+    #  [ ! -f /etc/pgpool-II/pgpool.conf -a -f /etc/pgpool-II/pgpool.conf.default ] && cp /etc/pgpool-II/pgpool.conf.default /etc/pgpool-II/pgpool.conf
+    #  pg_md5 --md5auth --username=redborder "${REDBORDERDBPASS}" -f /etc/pgpool-II/pgpool.conf
+    #  pg_md5 --md5auth --username=druid "${DRUIDDBPASS}" -f /etc/pgpool-II/pgpool.conf
+    #  pg_md5 --md5auth --username=oozie "${OOZIEPASS}" -f /etc/pgpool-II/pgpool.conf
+    #  pg_md5 --md5auth --username=opscode_chef "${OPSCODE_CHEFPASS}" -f /etc/pgpool-II/pgpool.conf
+    #fi
 
-    PGPOOLPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c35 | sed 's/ //g'`"
-    PGPOOLPASSMD5="`pg_md5 $PGPOOLPASS`"
-    REDBORDERDBPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^redborder:"|tr ':' ' ' | awk '{print $2}'`"
-    DRUIDDBPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^druid:"|tr ':' ' ' | awk '{print $2}'`"
-    OOZIEPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^oozie:"|tr ':' ' ' | awk '{print $2}'`"
-    OPSCODE_CHEFPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^opscode_chef:"|tr ':' ' ' | awk '{print $2}'`"
+    #PGPOOLPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c35 | sed 's/ //g'`"
+    #PGPOOLPASSMD5="`pg_md5 $PGPOOLPASS`"
+    #REDBORDERDBPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^redborder:"|tr ':' ' ' | awk '{print $2}'`"
+    #DRUIDDBPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^druid:"|tr ':' ' ' | awk '{print $2}'`"
+    #OOZIEPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^oozie:"|tr ':' ' ' | awk '{print $2}'`"
+    #OPSCODE_CHEFPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^opscode_chef:"|tr ':' ' ' | awk '{print $2}'`"
 
-    su - opscode-pgsql -s /bin/bash -c "echo \"CREATE USER redborder WITH PASSWORD '$REDBORDERDBPASS';\" | psql -U opscode-pgsql"
-    su - opscode-pgsql -s /bin/bash -c "echo \"ALTER  USER redborder WITH PASSWORD '$REDBORDERDBPASS';\" | psql -U opscode-pgsql" &>/dev/null
-    su - opscode-pgsql -s /bin/bash -c "echo \"CREATE USER druid WITH PASSWORD '$DRUIDDBPASS';\" | psql -U opscode-pgsql"
-    su - opscode-pgsql -s /bin/bash -c "echo \"ALTER  USER druid WITH PASSWORD '$DRUIDDBPASS';\" | psql -U opscode-pgsql"
-    su - opscode-pgsql -s /bin/bash -c "echo \"CREATE USER oozie WITH PASSWORD '$OOZIEPASS';\" | psql -U opscode-pgsql"
-    su - opscode-pgsql -s /bin/bash -c "echo \"ALTER  USER oozie WITH PASSWORD '$OOZIEPASS';\" | psql -U opscode-pgsql"
+    #su - opscode-pgsql -s /bin/bash -c "echo \"CREATE USER redborder WITH PASSWORD '$REDBORDERDBPASS';\" | psql -U opscode-pgsql"
+    #su - opscode-pgsql -s /bin/bash -c "echo \"ALTER  USER redborder WITH PASSWORD '$REDBORDERDBPASS';\" | psql -U opscode-pgsql" &>/dev/null
+    #su - opscode-pgsql -s /bin/bash -c "echo \"CREATE USER druid WITH PASSWORD '$DRUIDDBPASS';\" | psql -U opscode-pgsql"
+    #su - opscode-pgsql -s /bin/bash -c "echo \"ALTER  USER druid WITH PASSWORD '$DRUIDDBPASS';\" | psql -U opscode-pgsql"
+    #su - opscode-pgsql -s /bin/bash -c "echo \"CREATE USER oozie WITH PASSWORD '$OOZIEPASS';\" | psql -U opscode-pgsql"
+    #su - opscode-pgsql -s /bin/bash -c "echo \"ALTER  USER oozie WITH PASSWORD '$OOZIEPASS';\" | psql -U opscode-pgsql"
 
     echo "Configuring first secrets"
 }
@@ -176,102 +100,116 @@ function configure_dataBags(){
   "id": "db_opscode_chef",
   "username": "opscode_chef",
   "database": "opscode_chef",
-  "hostname": "postgresql.${cdomain}",
-  "port": 5432,
-  "pass": "$OPSCODE_CHEFPASS",
-  "md5_pass": "$OPSCODE_CHEFPASSMD5"
+  "hostname": "$OPSCODE_DBHOST",
+  "port": "$OPSCODE_DBPORT",
+  "pass": "$OPSCODE_DBPASS",
+  "ocid_pass": "$OPSCODE_OCID_PASS",
+  "ocbifrost_pass": "$OPSCODE_OCBIFROST_PASS",
+  "chefmover_pass": "$OPSCODE_CHEFMOVER_PASS",
 }
 _RBEOF_
+
+## DB opscode (chef) passwords
+  cat > /var/chef/data/data_bag/passwords/s3_chef.json <<-_RBEOF_
+{
+  "id": "s3_chef",
+  "s3_access_key_id": "$S3KEY",
+  "s3_secret_key_id": "$S3SECRET",
+  "s3_url": "$S3URL",
+  "s3_external_url": "$S3EXTERNALURL",
+  "s3_platform_bucket_name": "$S3BUCKET"
+}
+_RBEOF_
+
+# rabbitmq passwords
+#cat > /var/chef/data/data_bag_encrypted/passwords/rabbitmq.json <<-_RBEOF_
+#{
+#  "id": "rabbitmq",
+#  "username": "chef",
+#  "pass": "$RABBITMQPASS"
+#}
+#_RBEOF_
+#
+## booksheld passwords
+#cat > /var/chef/data/data_bag_encrypted/passwords/opscode-bookshelf-admin.json <<-_RBEOF_
+#{
+#  "id": "opscode-bookshelf-admin",
+#  "key_id": "$BOOKSHELFKEY",
+#  "key_secret": "$BOOKSHELFSECRET"
+#}
+#_RBEOF_
 
   # DB redborder passwords
-  cat > /var/chef/data/data_bag_encrypted/passwords/db_redborder.json <<-_RBEOF_
-{
-  "id": "db_redborder",
-  "username": "redborder",
-  "database": "redborder",
-  "hostname": "postgresql.${cdomain}",
-  "port": 5432,
-  "pass": "$REDBORDERDBPASS",
-  "md5_pass": "$REDBORDERDBPASSMD5"
-}
-_RBEOF_
+#  cat > /var/chef/data/data_bag_encrypted/passwords/db_redborder.json <<-_RBEOF_
+#{
+#  "id": "db_redborder",
+#  "username": "redborder",
+#  "database": "redborder",
+#  "hostname": "$OPSCODE_DBHOST",
+#  "port": 5432,
+#  "pass": "$REDBORDERDBPASS",
+#  "md5_pass": "$REDBORDERDBPASSMD5"
+#}
+#_RBEOF_
 
   # DB druid passwords
-  cat > /var/chef/data/data_bag_encrypted/passwords/db_druid.json <<-_RBEOF_
-{
-  "id": "db_druid",
-  "username": "druid",
-  "database": "druid",
-  "hostname": "postgresql.${cdomain}",
-  "port": 5432,
-  "pass": "$DRUIDDBPASS",
-  "md5_pass": "$DRUIDDBPASSMD5"
-}
-_RBEOF_
+#  cat > /var/chef/data/data_bag_encrypted/passwords/db_druid.json <<-_RBEOF_
+#{
+#  "id": "db_druid",
+#  "username": "druid",
+#  "database": "druid",
+#  "hostname": "postgresql.${cdomain}",
+#  "port": 5432,
+#  "pass": "$DRUIDDBPASS",
+#  "md5_pass": "$DRUIDDBPASSMD5"
+#}
+#_RBEOF_
 
   # DB oozie passwords
-  cat > /var/chef/data/data_bag_encrypted/passwords/db_oozie.json <<-_RBEOF_
-{
-  "id": "db_oozie",
-  "username": "oozie",
-  "database": "oozie",
-  "hostname": "postgresql.${cdomain}",
-  "port": 5432,
-  "pass": "$OOZIEPASS",
-  "md5_pass": "$OOZIEPASSMD5"
-}
-_RBEOF_
+#  cat > /var/chef/data/data_bag_encrypted/passwords/db_oozie.json <<-_RBEOF_
+#{
+#  "id": "db_oozie",
+#  "username": "oozie",
+#  "database": "oozie",
+#  "hostname": "postgresql.${cdomain}",
+#  "port": 5432,
+#  "pass": "$OOZIEPASS",
+#  "md5_pass": "$OOZIEPASSMD5"
+#}
+#_RBEOF_
 
   # pgpool passwords
-  if [ "x$PGPOOLPASS" != "x" ]; then
-    cat > /var/chef/data/data_bag_encrypted/passwords/pgp_pgpool.json <<-_RBEOF_
-{
-  "id": "pgp_pgpool",
-  "username": "pgpool",
-  "pass": "$PGPOOLPASS",
-  "md5_pass": "$PGPOOLPASSMD5"
-}
-_RBEOF_
-  fi
-
-  # rabbitmq passwords
-  cat > /var/chef/data/data_bag_encrypted/passwords/rabbitmq.json <<-_RBEOF_
-{
-  "id": "rabbitmq",
-  "username": "chef",
-  "pass": "$RABBITMQPASS"
-}
-_RBEOF_
+#  if [ "x$PGPOOLPASS" != "x" ]; then
+#    cat > /var/chef/data/data_bag_encrypted/passwords/pgp_pgpool.json <<-_RBEOF_
+#{
+#  "id": "pgp_pgpool",
+#  "username": "pgpool",
+#  "pass": "$PGPOOLPASS",
+#  "md5_pass": "$PGPOOLPASSMD5"
+#}
+#_RBEOF_
+#  fi
 
   # vrrp passwords
-  if [ "x$VRRPPASS" != "x" ]; then
-  cat > /var/chef/data/data_bag_encrypted/passwords/vrrp.json <<-_RBEOF_
-{
-  "id": "vrrp",
-  "username": "vrrp",
-  "start_id": "$[ ( $RANDOM % ( $[ 200 - 10 ] + 1 ) ) + 10 ]",
-  "pass": "$VRRPPASS"
-}
-_RBEOF_
-  fi
-
-  # booksheld passwords
-  cat > /var/chef/data/data_bag_encrypted/passwords/opscode-bookshelf-admin.json <<-_RBEOF_
-{
-  "id": "opscode-bookshelf-admin",
-  "key_id": "$BOOKSHELFKEY",
-  "key_secret": "$BOOKSHELFSECRET"
-}
-_RBEOF_
+#  if [ "x$VRRPPASS" != "x" ]; then
+#  cat > /var/chef/data/data_bag_encrypted/passwords/vrrp.json <<-_RBEOF_
+#{
+#  "id": "vrrp",
+#  "username": "vrrp",
+#  "start_id": "$[ ( $RANDOM % ( $[ 200 - 10 ] + 1 ) ) + 10 ]",
+#  "pass": "$VRRPPASS"
+#}
+#_RBEOF_
+#  fi
 
   #rb-webui secret key
-  RBWEBISECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-  cat > /var/chef/data/data_bag_encrypted/passwords/rb-webui_secret_token.json <<-_RBEOF_
-{
-  "id": "rb-webui_secret_token",
-  "secret": "$RBWEBISECRET"
-}
-_RBEOF_
+#  RBWEBISECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+#  cat > /var/chef/data/data_bag_encrypted/passwords/rb-webui_secret_token.json <<-_RBEOF_
+#{
+#  "id": "rb-webui_secret_token",
+#  "secret": "$RBWEBISECRET"
+#}
+#_RBEOF_
 
   ## Domain
   cat > /var/chef/data/data_bag/rBglobal/domain.json <<-_RBEOF_
@@ -301,11 +239,6 @@ _RBEOF_
 
 }
 
-function configure_externals(){
-    #TODO
-    echo "Configuring externals"
-}
-
 function configure_leader(){
   # Check if leader is configuring now
   if [ -f /var/lock/leader-configuring.lock ]; then
@@ -316,14 +249,6 @@ function configure_leader(){
 
   # Chef server configuration
   ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config" # old app.config
-
-  # Configure AWS (if is a cloud deployment)
-  if [ "x$S3HOST" != "x" -a "x$S3TYPE" == "xaws" -a "x$AWS_ACCESS_KEY" != "x" -a "x$AWS_SECRET_KEY" != "x" -a "x${S3BUCKET}" != "x" ]; then
-    configure_aws $ERCHEFCFG
-  else
-    # Configuring erchef to use local cookbooks
-    sed -i 's|s3_external_url.*$|s3_external_url, "https://localhost"},|' $ERCHEFCFG |grep s3_external_url
-  fi
 
   # Configure database
   e_title "Configuring Database"
@@ -350,7 +275,7 @@ function configure_leader(){
   # Save into cache directory
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid nomad http2k cron memcached chef-server rb-manager" # The order matters!
+  listCookbooks="zookeeper kafka druid nomad http2k cron memcached chef-server riak rb-manager" # The order matters!
   for n in $listCookbooks; do # cookbooks
     rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
@@ -379,22 +304,28 @@ function configure_leader(){
   rsync /var/opt/opscode/nginx/ca/*.crt /home/redborder/.chef/trusted_certs/
   chown -R redborder:redborder /home/redborder/.chef
 
-  # Configure externals
-  e_title "Configuring externals"
-  configure_externals
-
   # Clean yum data (to install packages from chef)
   yum clean all
 
   # Multiple runs of chef-client
-  e_title "Configuring Chef-Client (first time). Please wait...  "
-  e_title "redborder install 1/3 run $(date)" #>>/root/.install-chef-client.log
+  e_title "Configuring Chef-Client. Please wait...  "
+  e_title "redborder install run $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
-  e_title "redborder install 2/3 run $(date)" #>>/root/.install-chef-client.log
-  chef-client #&>>/root/.install-chef-client.log
-  e_title "redborder install 3/3 run $(date)" #>>/root/.install-chef-client.log
-  chef-client #&>>/root/.install-chef-client.log
 
+  # Replace chef-server SV init scripts by systemd scripts
+  /usr/bin/chef-server-ctl graceful-kill
+  if [ "$(ls -A /opt/opscode/service)" ]; then
+    e_title "Stopping default private-chef-server services"
+    /usr/bin/chef-server-ctl stop
+    for i in `ls /opt/opscode/service/`;do
+      e_title "Starting systemd chef-server services"
+      systemctl enable $i && systemctl start $i
+      rm -rf /opt/opscode/service/$i
+    done
+  fi
+
+  e_title "redborder install run $(date)" #>>/root/.install-chef-client.log
+  chef-client #&>/root/.install-chef-client.log
 }
 
 ########
@@ -420,9 +351,14 @@ cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
 e_title "Installing Chef-Server from repository"
 yum install -y redborder-chef-server
 
+# Set chef-server.rb configuration file (S3 and postgresql)
+[ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb
+[ -f /etc/redborder/chef-server-postgresql.rb ] && cat /etc/redborder/chef-server-postgresql.rb >> /etc/opscode/chef-server.rb
+
 # Chef server initial configuration
-e_title "Configuring Chef-Server (first time)"
+e_title "Configuring Chef-Server"
 /usr/bin/chef-server-ctl reconfigure #&>> /root/.install-chef-server.log
+
 # Chef user creation
 # $ chef-server-ctl user-create USER_NAME FIRST_NAME LAST_NAME EMAIL 'PASSWORD' --filename FILE_NAME
 /usr/bin/chef-server-ctl user-create $CHEFUSER $CHEFUSER $CHEFUSER $CHEFUSER@$cdomain \'$CHEFPASS\' --filename /etc/opscode/$CHEFUSER.pem

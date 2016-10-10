@@ -92,16 +92,54 @@ def config_mode(config, userdata_config)
     return config
 end
 
+def config_postgresql(config, userdata_config)
+    if !userdata_config.has_key?("sql_host") or !Config_utils.check_sql_host(userdata_config["sql_host"])
+        puts "WARN: sql_host not valid, ignoring sql configuration"
+    elsif !userdata_config.has_key?("sql_port") or !Config_utils.check_sql_port(userdata_config["sql_port"])
+        puts "WARN: sql port not valid, ignoring sql configuration"
+    elsif !userdata_config.has_key?("sql_superuser") or !Config_utils.check_sql_superuser(userdata_config["sql_superuser"])
+        puts "WARN: sql superuser not valid, ignoring sql configuration"
+    elsif !userdata_config.has_key?("sql_password") or !Config_utils.check_sql_password(userdata_config["sql_password"])
+        puts "WARN: sql password not valid, ignoring sql configuration"
+    else
+        config["postgresql"] = {}
+        config["postgresql"]["host"] = userdata_config["sql_host"]
+        config["postgresql"]["port"] = userdata_config["sql_port"]
+        config["postgresql"]["superuser"] = userdata_config["sql_superuser"]
+        config["postgresql"]["password"] = userdata_config["sql_password"]
+    end
+    return config
+end
+
+def config_s3(config, userdata_config)
+    if !userdata_config.has_key?("s3_bucket") or !Config_utils.check_s3bucket(userdata_config["s3_bucket"])
+        puts "WARN: s3_bucket not valid, ignoring s3 configuration"
+    elsif !userdata_config.has_key?("s3_endpoint") or !Config_utils.check_s3endpoint(userdata_config["s3_endpoint"])
+        puts "WARN: s3_endpoint not valid, ignorig s3 configuration"
+    else
+        config["s3"] = {}
+        if userdata_config.has_key?("aws_access_key") and Config_utils.check_accesskey(userdata_config["aws_access_key"]) and
+                userdata_config.has_key?("aws_secret_key") and Config_utils.check_secretkey(userdata_config["aws_secret_key"])
+            config["s3"]["access_key"] = userdata_config["aws_access_key"]
+            config["s3"]["secret_key"] = userdata_config["aws_secret_key"]
+        end
+        config["s3"]["bucket"] = userdata_config["s3_bucket"]
+        config["s3"]["endpoint"] = userdata_config["s3_endpoint"]
+    end
+    return config
+end
+
 # MAIN EXECUTION
 
 userdata_config = readUserData()
-puts "#{userdata_config}"
 #Processing parameters
 config = {}
 config = config_hostname(config, userdata_config)
 config = config_cdomain(config, userdata_config)
 config = config_serf(config, userdata_config)
 config = config_mode(config, userdata_config)
+config = config_postgresql(config, userdata_config)
+config = config_s3(config, userdata_config)
 
 File.write(@initconf_path, config.to_yaml)
 system("systemctl start rb-init-conf")

@@ -25,6 +25,7 @@ def translate_upload_json(data, domain)
     data["id"] = DBINAME
     data["hostname"] = "s3.#{domain}"
     data["bucket"] = "redborder"
+    data["key_created"] = true
     # Create new data bag item --> passwords.s3_secrets
     databag_item  = Chef::DataBagItem.new
     databag_item.data_bag DBNAME
