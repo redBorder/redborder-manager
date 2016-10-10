@@ -79,9 +79,5 @@ yum clean all
 
 # Multiple runs of chef-client
 e_title "Configuring Chef-Client (first time). Please wait...  "
-e_title "redborder install 1/3 run $(date)" #>>/root/.install-chef-client.log
+e_title "redborder install run $(date)" #>>/root/.install-chef-client.log
 chef-client #&>/root/.install-chef-client.log
-e_title "redborder install 2/3 run $(date)" #>>/root/.install-chef-client.log
-chef-client #&>>/root/.install-chef-client.log
-e_title "redborder install 3/3 run $(date)" #>>/root/.install-chef-client.log
-chef-client #&>>/root/.install-chef-client.log
