@@ -628,7 +628,7 @@ EOF
             dialog.title = "Sync Network configuration"
             sync = dialog.mixedform(text, items, 24, 54, 0)
 
-            if dialog.dialog_ok
+            if dialog.exit_code == dialog.dialog_ok
                 if Config_utils.check_ipv4(sync["Sync Network:"])
                     # it is ok
                     break
@@ -711,7 +711,7 @@ EOF
         dialog.title = "Communication cluster mode"
         selected_item = dialog.radiolist(text, items)
 
-        if dialog.dialog_ok
+        if dialog.exit_code == dialog.dialog_ok
             @conf = ( selected_item == "Multicast" ? true : false )
         else
             @cancel = true
@@ -778,7 +778,7 @@ EOF
 
             result = dialog.passwordform(text, items, 20, 60, 0)
 
-            if dialog.dialog_ok
+            if dialog.exit_code == dialog.dialog_ok
                 if result["Password:"] == result["Enter again:"]
                     if result["Password:"].length < 6 or result["Password:"].length > 20
                         # error, incorrect length
@@ -860,7 +860,7 @@ EOF
         dialog.title = "Set manager mode"
         selected_item = dialog.radiolist(text, items)
 
-        if dialog.dialog_ok
+        if dialog.exit_code == dialog.dialog_ok
             @conf = selected_item
         else
             @cancel = true
@@ -932,7 +932,7 @@ EOF
             dialog.title = "S3 configuration"
             s3conf = dialog.mixedform(text, items, 0, 0, 0)
             
-            if dialog.dialog_ok
+            if dialog.exit_code == dialog.dialog_ok
                 unless s3conf["AWS access key:"].empty? or s3conf["AWS secret key:"].empty?
                     @conf['access_key'] = s3conf["AWS access key:"]
                     @conf['secret_key'] = s3conf["AWS secret key:"]
