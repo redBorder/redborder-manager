@@ -74,7 +74,7 @@ function configure_db(){
     #REDBORDERDBPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^redborder:"|tr ':' ' ' | awk '{print $2}'`"
     #DRUIDDBPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^druid:"|tr ':' ' ' | awk '{print $2}'`"
     #OOZIEPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^oozie:"|tr ':' ' ' | awk '{print $2}'`"
-    OPSCODE_CHEFPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^opscode_chef:"|tr ':' ' ' | awk '{print $2}'`"
+    #OPSCODE_CHEFPASSMD5="`cat /etc/pgpool-II/pool_passwd | grep "^opscode_chef:"|tr ':' ' ' | awk '{print $2}'`"
 
     #su - opscode-pgsql -s /bin/bash -c "echo \"CREATE USER redborder WITH PASSWORD '$REDBORDERDBPASS';\" | psql -U opscode-pgsql"
     #su - opscode-pgsql -s /bin/bash -c "echo \"ALTER  USER redborder WITH PASSWORD '$REDBORDERDBPASS';\" | psql -U opscode-pgsql" &>/dev/null
@@ -106,7 +106,6 @@ function configure_dataBags(){
   "ocid_pass": "$OPSCODE_OCID_PASS",
   "ocbifrost_pass": "$OPSCODE_OCBIFROST_PASS",
   "chefmover_pass": "$OPSCODE_CHEFMOVER_PASS",
-  "md5_pass": "$OPSCODE_CHEFPASSMD5"
 }
 _RBEOF_
 
@@ -240,11 +239,6 @@ _RBEOF_
 
 }
 
-function configure_externals(){
-    #TODO
-    echo "Configuring externals"
-}
-
 function configure_leader(){
   # Check if leader is configuring now
   if [ -f /var/lock/leader-configuring.lock ]; then
@@ -310,22 +304,28 @@ function configure_leader(){
   rsync /var/opt/opscode/nginx/ca/*.crt /home/redborder/.chef/trusted_certs/
   chown -R redborder:redborder /home/redborder/.chef
 
-  # Configure externals
-  #e_title "Configuring externals"
-  #configure_externals
-
   # Clean yum data (to install packages from chef)
   yum clean all
 
   # Multiple runs of chef-client
-  e_title "Configuring Chef-Client (first time). Please wait...  "
-  e_title "redborder install 1/3 run $(date)" #>>/root/.install-chef-client.log
+  e_title "Configuring Chef-Client. Please wait...  "
+  e_title "redborder install run $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
-  e_title "redborder install 2/3 run $(date)" #>>/root/.install-chef-client.log
-  chef-client #&>>/root/.install-chef-client.log
-  e_title "redborder install 3/3 run $(date)" #>>/root/.install-chef-client.log
-  chef-client #&>>/root/.install-chef-client.log
 
+  # Replace chef-server SV init scripts by systemd scripts
+  /usr/bin/chef-server-ctl graceful-kill
+  if [ "$(ls -A /opt/opscode/service)" ]; then
+    e_title "Stopping default private-chef-server services"
+    /usr/bin/chef-server-ctl stop
+    for i in `ls /opt/opscode/service/`;do
+      e_title "Starting systemd chef-server services"
+      systemctl enable $i && systemctl start $i
+      rm -rf /opt/opscode/service/$i
+    done
+  fi
+
+  e_title "redborder install run $(date)" #>>/root/.install-chef-client.log
+  chef-client #&>/root/.install-chef-client.log
 }
 
 ########
@@ -356,8 +356,9 @@ yum install -y redborder-chef-server
 [ -f /etc/redborder/chef-server-postgresql.rb ] && cat /etc/redborder/chef-server-postgresql.rb >> /etc/opscode/chef-server.rb
 
 # Chef server initial configuration
-e_title "Configuring Chef-Server (first time)"
+e_title "Configuring Chef-Server"
 /usr/bin/chef-server-ctl reconfigure #&>> /root/.install-chef-server.log
+
 # Chef user creation
 # $ chef-server-ctl user-create USER_NAME FIRST_NAME LAST_NAME EMAIL 'PASSWORD' --filename FILE_NAME
 /usr/bin/chef-server-ctl user-create $CHEFUSER $CHEFUSER $CHEFUSER $CHEFUSER@$cdomain \'$CHEFPASS\' --filename /etc/opscode/$CHEFUSER.pem
