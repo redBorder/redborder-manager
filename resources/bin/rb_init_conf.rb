@@ -145,7 +145,7 @@ unless db_conf.nil?
   db_port = db_conf['port']
 
   # Check database connectivity
-  out = system("env PGPASSWORD='#{db_password}' psql -U #{db_superuser} -h #{db_host} -c '\\q' &>/dev/null")
+  out = system("env PGPASSWORD='#{db_password}' psql -U #{db_superuser} -h #{db_host} -d template1 -c '\\q' &>/dev/null")
   unless out
      p err_msg = "Impossible connect to database. Please review #{INITCONF} file"
     exit 1
