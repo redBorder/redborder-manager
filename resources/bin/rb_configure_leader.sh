@@ -274,4 +274,5 @@ configure_leader
 
 rm -f /var/lock/leader-configuring.lock
 echo "Leader Node configured!"
+/usr/bin/serf tags -set bootstrap=ready
 touch /etc/redborder/cluster-installed.txt
