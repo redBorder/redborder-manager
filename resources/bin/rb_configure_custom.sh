@@ -78,6 +78,10 @@ $RBBIN/rb_update_timestamp.rb &>/dev/null
 yum clean all
 
 # Multiple runs of chef-client
-e_title "Configuring Chef-Client (first time). Please wait...  "
+e_title "Configuring Chef-Client. Please wait...  "
 e_title "redborder install run $(date)" #>>/root/.install-chef-client.log
 chef-client #&>/root/.install-chef-client.log
+
+echo "Custom Node configured!"
+/usr/bin/serf tags -set bootstrap=ready
+touch /etc/redborder/cluster-installed.txt
