@@ -1,13 +1,12 @@
 #!/usr/bin/env ruby
 
 require 'yaml'
-require '/usr/lib/redborder/bin/rb_config_utils.rb'
+require '/usr/lib/redborder/lib/rb_config_utils.rb'
 
 @userdata_path="/var/lib/cloud/instance/user-data.txt"
 @userdataconfig_path="/var/lib/cloud/instance/user-data-config.yml"
 @instanceid_path="/var/lib/cloud/data/instance-id"
-@parameterlist_path="/usr/lib/redborder/parameter-list.yml"
-@initconf_path="/etc/redborder/init-conf.yml"
+@initconf_path="/etc/redborder/rb_init_conf.yml"
 
 # Function to obtain instance-id from cloud-init files
 # TODO: protect from file open failures or empty files
@@ -33,69 +32,114 @@ def readUserData()
     return userdata_config
 end
 
-# Function to read allowed user-data parameters
-# Returns a hash with parameter data
-# TODO: protect from errors reading file
-def readParameterList()
-    return YAML.load_file @parameterlist_path
-end
+############ Parameter configuration functions ############
 
-# Function to check if a parameter value is correct, using allowed_pattern
-# regex defined in parameter object (read from parameter-list.yml)
-# Return true if value is valid or false if not.
-def check_parameter_pattern(parameter, value)
-    result = true
-    if parameter.values[0].has_key?("allowed_pattern")
-        prueba = /#{parameter.values[0]["allowed_pattern"]}/.match(value)
+#Function to configure hostname
+def config_hostname(config, userdata_config)
+    if userdata_config.has_key?("hostname") and Config_utils.check_hostname(userdata_config["hostname"])
+        config["hostname"] = userdata_config["hostname"]
+    else
+        config["hostname"] = getInstanceId()
     end
-    if parameter.values[0].has_key?("allowed_pattern") and
-            /#{parameter.values[0]["allowed_pattern"]}/.match(value).nil?
-        result = false
-    end
-    return result
-end
-
-def processUserDataParameters(userdata_config, parameter_list)
-    config = {}
-    parameter_list.each { |parameter|
-        parameter_name=parameter.keys[0]
-        #First calculate default value
-        if parameter.values[0].has_key?("default")
-            config[parameter_name] = parameter.values[0]["default"]
-        else
-            config[parameter_name] = nil
-        end
-        #Then, if there is a valid value, it will be overrided
-        if userdata_config.has_key?(parameter_name)
-            if check_parameter_pattern(parameter, userdata_config[parameter_name])
-                config[parameter_name] = userdata_config[parameter_name]
-            else
-                puts "ERROR: Value #{userdata_config[parameter_name]} for parameter #{parameter_name} is not valid, setting to default (#{config[parameter_name] = parameter.values[0]["default"]})"
-            end
-        end
-    }
     return config
 end
 
+#Function to configure serf parameters
+def config_serf(config, userdata_config)
+    #Multicast configuration
+    config["serf"] = {}
+    if userdata_config.has_key?("multicast_enabled") and userdata_config.is_a(boolean)
+        config["serf"]["multicast"] = userdata_config["multicast_enabled"]
+    else #Default for cloud environment is false
+        config["serf"]["multicast"] = false
+    end
+
+    #Encrypt key generation
+    if userdata_config.has_key?("serf_encryptkey") and Config_utils.check_encryptkey(userdata_config.key("serf_encryptkey"))
+        config["serf"]["encrypt_key"] = userdata_config.key("serf_encryptkey")
+    else
+        #encrypt key must be generated from cdomain
+        config["serf"]["encrypt_key"] = Config_utils.get_encrypt_key(config["cdomain"])
+    end
+
+    #Sync_net configuration
+    if userdata_config.has_key?("sync_net") and Config_utils.check_ipv4(userdata_config["sync_net"])
+        config["serf"]["sync_net"] = userdata_config["sync_net"]
+    else #TODO: search for interface that don't have default gateway
+        puts "WARN: sync_net not provided"
+        config["serf"]["sync_net"] = nil #TODO: Must be calculated via rb_config_utils function
+    end
+    return config
+end
+
+def config_cdomain(config, userdata_config)
+    if userdata_config.has_key?("cdomain") and Config_utils.check_domain(userdata_config["cdomain"])
+        config["cdomain"] = userdata_config["cdomain"]
+    else
+        puts "WARN: cdomain not provided, setting to redborder.cluster"
+        config["cdomain"] = "redborder.cluster"
+    end
+    return config
+end
+
+def config_mode(config, userdata_config)
+    if userdata_config.has_key?("mode") and Config_utils.check_mode(userdata_config["mode"])
+        config["mode"] = userdata_config["mode"]
+    else
+        puts "WARN: mode not provided, setting to custom"
+        config["mode"] = "custom"
+    end
+    return config
+end
+
+def config_postgresql(config, userdata_config)
+    if !userdata_config.has_key?("sql_host") or !Config_utils.check_sql_host(userdata_config["sql_host"])
+        puts "WARN: sql_host not valid, ignoring sql configuration"
+    elsif !userdata_config.has_key?("sql_port") or !Config_utils.check_sql_port(userdata_config["sql_port"])
+        puts "WARN: sql port not valid, ignoring sql configuration"
+    elsif !userdata_config.has_key?("sql_superuser") or !Config_utils.check_sql_superuser(userdata_config["sql_superuser"])
+        puts "WARN: sql superuser not valid, ignoring sql configuration"
+    elsif !userdata_config.has_key?("sql_password") or !Config_utils.check_sql_password(userdata_config["sql_password"])
+        puts "WARN: sql password not valid, ignoring sql configuration"
+    else
+        config["postgresql"] = {}
+        config["postgresql"]["host"] = userdata_config["sql_host"]
+        config["postgresql"]["port"] = userdata_config["sql_port"]
+        config["postgresql"]["superuser"] = userdata_config["sql_superuser"]
+        config["postgresql"]["password"] = userdata_config["sql_password"]
+    end
+    return config
+end
+
+def config_s3(config, userdata_config)
+    if !userdata_config.has_key?("s3_bucket") or !Config_utils.check_s3bucket(userdata_config["s3_bucket"])
+        puts "WARN: s3_bucket not valid, ignoring s3 configuration"
+    elsif !userdata_config.has_key?("s3_endpoint") or !Config_utils.check_s3endpoint(userdata_config["s3_endpoint"])
+        puts "WARN: s3_endpoint not valid, ignorig s3 configuration"
+    else
+        config["s3"] = {}
+        if userdata_config.has_key?("aws_access_key") and Config_utils.check_accesskey(userdata_config["aws_access_key"]) and
+                userdata_config.has_key?("aws_secret_key") and Config_utils.check_secretkey(userdata_config["aws_secret_key"])
+            config["s3"]["access_key"] = userdata_config["aws_access_key"]
+            config["s3"]["secret_key"] = userdata_config["aws_secret_key"]
+        end
+        config["s3"]["bucket"] = userdata_config["s3_bucket"]
+        config["s3"]["endpoint"] = userdata_config["s3_endpoint"]
+    end
+    return config
+end
 
 # MAIN EXECUTION
 
 userdata_config = readUserData()
-parameter_list = readParameterList()
-config = processUserDataParameters(userdata_config, parameter_list)
-
-#Adding more parameters
-if !config.has_key?("hostname") or config["hostname"] == "rbmanager"
-    config["hostname"] = getInstanceId()
-    puts "#{getInstanceId()}"
-end
-
-# Checking if mode is correct
-if !Config_utils.check_mode(config["mode"])
-    default_mode = parameter_list.select{|parameter| parameter.keys[0]=="mode"}[0]["mode"]["default"]
-    puts "WARNING: unrecognized mode. Setting to #{default_mode} (default) mode "
-    config["mode"] = default_mode
-end
+#Processing parameters
+config = {}
+config = config_hostname(config, userdata_config)
+config = config_cdomain(config, userdata_config)
+config = config_serf(config, userdata_config)
+config = config_mode(config, userdata_config)
+config = config_postgresql(config, userdata_config)
+config = config_s3(config, userdata_config)
 
 File.write(@initconf_path, config.to_yaml)
-exec
+system("systemctl start rb-init-conf")

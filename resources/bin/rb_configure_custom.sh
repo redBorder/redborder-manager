@@ -2,30 +2,33 @@
 # redborder CUSTOM node initialization
 
 source /etc/profile
-
-function configure_custom(){
-   echo "Configure CUSTOM node"
-}
+source $RBLIB/rb_manager_functions.sh
 
 ########
 # MAIN #
 ########
 
+IPLEADER=$1 #Chef server IP. Received from serf-choose-leader
+valid_ip $IPLEADER
+if [ "x$?" != "x0" ]; then
+  error_title "Invalid chef server IP"
+  exit 1
+fi
+
+CHEFORG="redborder"
 CLIENTNAME=`hostname -s`
-CHEFORG="redborder" # Chef org
+MANAGERMODE=`serf members -status alive -name=$CLIENTNAME -format=json | jq -r .members[].tags.mode`
 
 # Get cdomain
 [ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
 
-# Get MASTER IP and add to /etc/hosts
-# Proteger por si aun no esta ready el master #TODO
-IPMASTER=`serf members -status alive -tag master=ready -format=json | jq -r .members[].addr | cut -d ":" -f 1`
+# Add erchef domain /etc/hosts
 grep -q erchef.${cdomain} /etc/hosts
-[ $? -ne 0 ] && echo "$IPMASTER   erchef.${cdomain}" >> /etc/hosts
+[ $? -ne 0 ] && echo "$IPLEADER   erchef.${cdomain}" >> /etc/hosts
 
 # Get chef validator and admin certificates
-$RBBIN/serf-query-certificate.sh -q certificate-validator > /etc/chef/redborder-validator.pem
-$RBBIN/serf-query-certificate.sh -q certificate-admin > /etc/chef/admin.pem
+$RBBIN/serf-query-certificate.sh -q certificate-validator > /tmp/cert && mv /tmp/cert /etc/chef/redborder-validator.pem
+$RBBIN/serf-query-certificate.sh -q certificate-admin > /tmp/cert && mv /tmp/cert /etc/chef/admin.pem
 
 #############################
 # CHEF CLIENT Configuration #
@@ -47,41 +50,34 @@ sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organiz
 sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
 
 # Create specific role for this node
-cp /var/chef/data/role/manager.json /var/chef/data/role/$(hostname -s).json
+e_title "Creating custom chef role"
+mv /var/chef/data/role/manager_node.json /var/chef/data/role/$(hostname -s).json
 # Change hostname in new role
-sed -i "s/manager/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
-
-# Upload role
+sed -i "s/manager_node/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
+# Upload custom role
 knife role -c /root/.chef/knife.rb from file /var/chef/data/role/$CLIENTNAME.json
 
 # Create chef node and client from files in /etc/chef
-/usr/bin/chef-client
+e_title "Registering chef-client ..."
+chef-client
 
-# Adding role to node
+# Adding chef roles to node
+knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
 knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[$CLIENTNAME]"
 
-# MANAGER ROLES (modes)
-[ -f /etc/chef/initialrole ] && initialrole=$(head /etc/chef/initialrole -n 1)
-[ "x$initialrole" == "x" ] && initialrole="custom"
+# MANAGER MODES
+e_title "Configuring manager mode"
 # Set manager role
-$RBBIN/rb_set_mode.rb $initialrole
+[ "x$MANAGERMODE" == "x" ] && MANAGERMODE="custom"
+$RBBIN/rb_set_mode.rb $MANAGERMODE
+
+# Update timestamp #??#
 $RBBIN/rb_update_timestamp.rb &>/dev/null
 
 # Cleaning yum data and cache
 yum clean all
-echo "Configuring chef client (first time). Please wait...  "
-echo "###########################################################" #>>/root/.install-chef-client.log
-echo "redborder install 1/3 run $(date)" #>>/root/.install-chef-client.log
-echo "###########################################################" #>>/root/.install-chef-client.log
+
+# Multiple runs of chef-client
+e_title "Configuring Chef-Client (first time). Please wait...  "
+e_title "redborder install run $(date)" #>>/root/.install-chef-client.log
 chef-client #&>/root/.install-chef-client.log
-echo "" #>>/root/.install-chef-client.log
-echo "###########################################################" #>>/root/.install-chef-client.log
-echo "redborder install 2/3 run $(date)" #>>/root/.install-chef-client.log
-echo "###########################################################" #>>/root/.install-chef-client.log
-chef-client #&>>/root/.install-chef-client.log
-echo "" #>>/root/.install-chef-client.log
-echo "###########################################################" #>>/root/.install-chef-client.log
-echo "redborder install 3/3 run $(date)" #>>/root/.install-chef-client.log
-echo "###########################################################" #>>/root/.install-chef-client.log
-chef-client #&>>/root/.install-chef-client.log
-echo "" #>>/root/.install-chef-client.log

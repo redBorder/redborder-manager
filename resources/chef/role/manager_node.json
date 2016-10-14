@@ -1,0 +1,20 @@
+{
+  "name": "manager_node",
+  "description": "redborder manager specific role for manager_node",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+
+  },
+  "override_attributes": {
+    "redborder": {
+
+    }
+  },
+  "chef_type": "role",
+  "run_list": [
+
+  ],
+  "env_run_lists": {
+
+  }
+}

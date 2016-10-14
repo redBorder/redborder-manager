@@ -6,7 +6,7 @@
 
   },
   "override_attributes": {
-    "redBorder": {
+    "redborder": {
       "network": {
         "routes": {
 
@@ -37,12 +37,7 @@
   },
   "chef_type": "role",
   "run_list": [
-    "recipe[zookeeper]",
-    "recipe[kafka]",
-    "recipe[druid]",
-    "recipe[nomad]",
-    "recipe[http2k]",
-    "recipe[chef-client]"
+    "recipe[rb-manager]"
   ],
   "env_run_lists": {
 
