@@ -178,7 +178,7 @@ function configure_leader(){
 
   # Multiple runs of chef-client
   e_title "Configuring Chef-Client. Please wait...  "
-  e_title "redborder install run $(date)" #>>/root/.install-chef-client.log
+  e_title "redborder install run (1/2) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
 
   # Replace chef-server SV init scripts by systemd scripts
@@ -193,7 +193,7 @@ function configure_leader(){
     done
   fi
 
-  e_title "redborder install run $(date)" #>>/root/.install-chef-client.log
+  e_title "redborder install run (2/2) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
 }
 
@@ -223,6 +223,8 @@ yum install -y redborder-chef-server
 # Set chef-server.rb configuration file (S3 and postgresql)
 [ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb
 [ -f /etc/redborder/chef-server-postgresql.rb ] && cat /etc/redborder/chef-server-postgresql.rb >> /etc/opscode/chef-server.rb
+# Set chef-server internal nginx port to 4443
+echo "nginx['ssl_port'] = 4443" >> /etc/opscode/chef-server.rb
 
 # Chef server initial configuration
 e_title "Configuring Chef-Server"
@@ -248,16 +250,16 @@ mkdir -p /root/.chef
 
 # Customize client.rb
 sed -i "s/\HOSTNAME/$CLIENTNAME/g" /etc/chef/client.rb
-sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/$CHEFORG\"|" /etc/chef/client.rb
+sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.service.$cdomain:4443/organizations/$CHEFORG\"|" /etc/chef/client.rb
 
 # Customize knife.rb
 sed -i "s/\HOSTNAME/admin/g" /root/.chef/knife.rb
-sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/$CHEFORG\"|" /root/.chef/knife.rb
+sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.service.$cdomain:4443/organizations/$CHEFORG\"|" /root/.chef/knife.rb
 sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
 
 # Add erchef domain /etc/hosts
 grep -q erchef.${cdomain} /etc/hosts
-[ $? -ne 0 ] && echo "$IPLEADER   erchef.${cdomain}" >> /etc/hosts
+[ $? -ne 0 ] && echo "$IPLEADER   erchef.service.${cdomain}" >> /etc/hosts
 
 # Modifying some default chef parameters (rabbitmq, postgresql) ## Check
 # Rabbitmq # Check
@@ -275,4 +277,8 @@ configure_leader
 rm -f /var/lock/leader-configuring.lock
 echo "Leader Node configured!"
 /usr/bin/serf tags -set bootstrap=ready
+
+# Delete erchef from /etc/hosts
+sed -i 's/.*erchef.*//g' /etc/hosts
+
 touch /etc/redborder/cluster-installed.txt
