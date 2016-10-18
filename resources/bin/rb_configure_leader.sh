@@ -26,7 +26,7 @@ function configure_dataBags(){
   S3KEY="`grep s3_access_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   S3SECRET="`grep s3_secret_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   S3URL="`grep s3_url, $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
-  S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+  S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`" #CHECK when {s3_external_url, host_header},
   S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
 
   ## Data bags for passwords ##
@@ -144,7 +144,7 @@ function configure_leader(){
   # Save into cache directory
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid nomad http2k cron memcached chef-server riak rb-manager" # The order matters!
+  listCookbooks="zookeeper kafka druid http2k cron memcached chef-server consul rb-manager" # The order matters!
   for n in $listCookbooks; do # cookbooks
     rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
@@ -178,7 +178,7 @@ function configure_leader(){
 
   # Multiple runs of chef-client
   e_title "Configuring Chef-Client. Please wait...  "
-  e_title "redborder install run (1/2) $(date)" #>>/root/.install-chef-client.log
+  e_title "redborder install run (1/3) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
 
   # Replace chef-server SV init scripts by systemd scripts
@@ -193,7 +193,9 @@ function configure_leader(){
     done
   fi
 
-  e_title "redborder install run (2/2) $(date)" #>>/root/.install-chef-client.log
+  e_title "redborder install run (2/3) $(date)" #>>/root/.install-chef-client.log
+  chef-client #&>/root/.install-chef-client.log
+  e_title "redborder install run (3/3) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
 }
 
@@ -262,13 +264,13 @@ grep -q erchef.${cdomain} /etc/hosts
 [ $? -ne 0 ] && echo "$IPLEADER   erchef.service.${cdomain}" >> /etc/hosts
 
 # Modifying some default chef parameters (rabbitmq, postgresql) ## Check
-# Rabbitmq # Check
+# Rabbitmq # CHECK
 sed -i "s/rabbit@localhost/rabbit@$CLIENTNAME/" /opt/opscode/embedded/cookbooks/private-chef/attributes/default.rb
 mkdir -p /var/opt/opscode/rabbitmq/db
 rm -f /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
 ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
 
-# Permit all IP address source in postgresql
+# Permit all IP address source in postgresql #Check
 sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgresql/*/data/postgresql.conf
 
 # Configure LEADER
