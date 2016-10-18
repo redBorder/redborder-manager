@@ -38,6 +38,7 @@ cp -r resources/chef/* %{buildroot}/var/chef/data
 chmod -R 0644 %{buildroot}/var/chef/data
 install -D -m 0644 resources/mode-list.yml %{buildroot}/usr/lib/redborder
 install -D -m 0644 resources/systemd/rb-init-conf.service %{buildroot}/usr/lib/systemd/system/rb-init-conf.service
+install -D -m 0755 resources/dhcp/dhclient-enter-hooks %{buildroot}/etc/dhcp/dhclient-enter-hooks
 
 %pre
 
@@ -54,6 +55,7 @@ firewall-cmd --reload
 %defattr(0755,root,root)
 /etc/profile.d/redborder-manager.sh
 /var/chef/data
+/etc/dhcp/dhclient-enter-hooks
 %defattr(0644,root,root)
 /etc/redborder
 /usr/lib/redborder/mode-list.yml
