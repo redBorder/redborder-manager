@@ -145,7 +145,7 @@ unless db_conf.nil?
   db_port = db_conf['port']
 
   # Check database connectivity
-  out = system("env PGPASSWORD='#{db_password}' psql -U #{db_superuser} -h #{db_host} -c '\\q' &>/dev/null")
+  out = system("env PGPASSWORD='#{db_password}' psql -U #{db_superuser} -h #{db_host} -d template1 -c '\\q' &>/dev/null")
   unless out
      p err_msg = "Impossible connect to database. Please review #{INITCONF} file"
     exit 1
@@ -214,11 +214,22 @@ file_serf_tags = File.open(TAGSJSON,"w")
 file_serf_tags.write(serf_tags.to_json)
 file_serf_tags.close
 
+#Firewall rules
 if !network.nil? #Firewall rules are not needed in cloud environments
   # Allow multicast packets from sync_net. This rule allows a new serf node publish it in multicast address
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -s #{sync_net} -m pkttype --pkt-type multicast -j ACCEPT &>/dev/null")
   # Allow traffic from 5353/udp and sync_net. This rule allows other serf nodes to communicate with the new node
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --sport 5353 -j ACCEPT &>/dev/null")
+  
+  #Consul ports
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8300 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8301 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 8301 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8302 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 8302 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8400 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8500 -j ACCEPT &>/dev/null")
+
   # Reload firewalld configuration
   system("firewall-cmd --reload &>/dev/null")
 end
