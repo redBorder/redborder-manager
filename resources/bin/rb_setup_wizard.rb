@@ -46,7 +46,15 @@ general_conf = {
         },
     "s3" => {
         "access_key" => "",
-        "secret_key" => ""
+        "secret_key" => "",
+        "bucket" => "",
+        "endpoint" => ""
+        },
+    "postgresql" => {
+        "superuser" => "",
+        "password" => "",
+        "host" => "",
+        "port" => ""
         },
     "mode" => "full" # default mode
     }
@@ -177,6 +185,30 @@ else
     general_conf.delete("s3")
 end
 
+# External Postgres DataBase
+text = <<EOF
+ 
+Do you want to use Amazon RDS service or other
+external PostygreSQL DataBase?
+
+EOF
+
+dialog = MRDialog.new
+dialog.clear = true
+dialog.title = "Confirm configuration"
+yesno = dialog.yesno(text,0,0)
+
+if yesno # yesno is "yes" -> true
+    # configure dns 
+    rdsconf = RDSConf.new
+    rdsconf.doit # launch wizard
+    cancel_wizard if rdsconf.cancel
+    general_conf["postgresql"] = rdsconf.conf
+else
+    general_conf.delete("postgresql")
+end
+
+
 # Set mode
 modeconf = ModeConf.new
 modeconf.doit # launch wizard
@@ -214,9 +246,19 @@ unless general_conf["network"]["dns"].nil?
 end
 
 unless general_conf["s3"].nil?
-    text += "\n- S3:\n"
+    text += "\n- AWS S3:\n"
     text += "    AWS access key: #{general_conf["s3"]["access_key"]}\n"
     text += "    AWS secret key: #{general_conf["s3"]["secret_key"]}\n"
+    text += "    bucket: #{general_conf["s3"]["bucket"]}\n"
+    text += "    endpoint: #{general_conf["s3"]["endpoint"]}\n"
+end
+
+unless general_conf["postgresql"].nil?
+    text += "\n- AWS RDS or External PostgreSQL:\n"
+    text += "    superuser: #{general_conf["postgresql"]["superuser"]}\n"
+    text += "    password: #{general_conf["postgresql"]["password"]}\n"
+    text += "    host: #{general_conf["postgresql"]["host"]}\n"
+    text += "    port: #{general_conf["postgresql"]["port"]}\n"
 end
 
 text += "\n- Serf:\n"
