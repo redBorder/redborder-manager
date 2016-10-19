@@ -220,7 +220,7 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -s #{sync_net} -m pkttype --pkt-type multicast -j ACCEPT &>/dev/null")
   # Allow traffic from 5353/udp and sync_net. This rule allows other serf nodes to communicate with the new node
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --sport 5353 -j ACCEPT &>/dev/null")
-  
+
   #Consul ports
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8300 -j ACCEPT &>/dev/null")
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8301 -j ACCEPT &>/dev/null")
@@ -229,6 +229,9 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 8302 -j ACCEPT &>/dev/null")
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8400 -j ACCEPT &>/dev/null")
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8500 -j ACCEPT &>/dev/null")
+
+  #Chef server
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 4443 -j ACCEPT &>/dev/null")
 
   # Reload firewalld configuration
   system("firewall-cmd --reload &>/dev/null")
