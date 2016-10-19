@@ -232,6 +232,7 @@ if !network.nil? #Firewall rules are not needed in cloud environments
 
   #Chef server
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 4443 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 5432 -j ACCEPT &>/dev/null")
 
   # Reload firewalld configuration
   system("firewall-cmd --reload &>/dev/null")
