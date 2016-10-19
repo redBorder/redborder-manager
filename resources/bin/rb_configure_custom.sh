@@ -93,5 +93,8 @@ e_title "Configuring Chef-Client. Please wait...  "
 e_title "redborder install run $(date)" #>>/root/.install-chef-client.log
 chef-client #&>/root/.install-chef-client.log
 
+# Copy dhclient hook
+cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
+
 echo "Custom Node configured!"
 touch /etc/redborder/cluster-installed.txt
