@@ -182,14 +182,14 @@ function configure_leader(){
   chef-client #&>/root/.install-chef-client.log
 
   # Replace chef-server SV init scripts by systemd scripts
-  /usr/bin/chef-server-ctl graceful-kill
+  /usr/bin/chef-server-ctl graceful-kill &>/dev/null
   if [ "$(ls -A /opt/opscode/service)" ]; then
     e_title "Stopping default private-chef-server services"
-    /usr/bin/chef-server-ctl stop
+    /usr/bin/chef-server-ctl stop &>/dev/null
     for i in `ls /opt/opscode/service/`;do
       e_title "Starting systemd chef-server services"
-      systemctl enable $i && systemctl start $i
-      rm -rf /opt/opscode/service/$i
+      systemctl enable $i &>/dev/null && systemctl start $i &>/dev/null
+      rm -rf /opt/opscode/service/$i &>/dev/null
     done
   fi
 
