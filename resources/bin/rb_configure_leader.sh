@@ -276,6 +276,10 @@ sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgres
 configure_leader
 
 rm -f /var/lock/leader-configuring.lock
+
+# Copy dhclient hook
+cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
+
 echo "Leader Node configured!"
 
 touch /etc/redborder/cluster-installed.txt
