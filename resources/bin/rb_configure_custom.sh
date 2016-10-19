@@ -13,10 +13,10 @@ CLIENTNAME=$(hostname -s)
 MANAGERMODE=$(serf members -status alive -name=$CLIENTNAME -format=json | jq -r .members[].tags.mode)
 
 # Get cdomain
-[ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
+[ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 $RBETC/cdomain | tr '\n' ' ' | awk '{print $1}')
 
 # Change resolv.conf file temporally
-cp -f /etc/resolv.conf /etc/resolv.conf.init
+cp -f /etc/resolv.conf $RBETC/original_resolv.conf
 
 # Check if consul ready and get IP
 CONSULIP=$(serf members -tag consul=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
@@ -30,7 +30,7 @@ else
   ret="null"
 fi
 
-if [ "x$ret" == "xnull" ]; then #If not chef-server registered
+if [ "x$ret" == "xnull" -o "x$ret" == "x" ]; then #If not chef-server registered
   # Get IP leader as a chef-server IP and Add chef-server IP to /etc/hosts
   IPLEADER=$(serf members -tag leader=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
   grep -q erchef.service.${cdomain} /etc/hosts
