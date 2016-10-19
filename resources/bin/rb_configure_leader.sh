@@ -259,18 +259,17 @@ sed -i "s/\HOSTNAME/admin/g" /root/.chef/knife.rb
 sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.service.$cdomain:4443/organizations/$CHEFORG\"|" /root/.chef/knife.rb
 sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
 
-# Add erchef domain /etc/hosts
+# Add erchef domain /etc/hosts (consul is not ready at this moment)
 grep -q erchef.${cdomain} /etc/hosts
 [ $? -ne 0 ] && echo "$IPLEADER   erchef.service.${cdomain}" >> /etc/hosts
 
 # Modifying some default chef parameters (rabbitmq, postgresql) ## Check
-# Rabbitmq # CHECK
+# Rabbitmq # CHECK CHECK CHECK
 sed -i "s/rabbit@localhost/rabbit@$CLIENTNAME/" /opt/opscode/embedded/cookbooks/private-chef/attributes/default.rb
 mkdir -p /var/opt/opscode/rabbitmq/db
 rm -f /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
 ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
-
-# Permit all IP address source in postgresql #Check
+# Permit all IP address source in postgresql # CHECK CHECK CHECK
 sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgresql/*/data/postgresql.conf
 
 # Configure LEADER
@@ -278,9 +277,5 @@ configure_leader
 
 rm -f /var/lock/leader-configuring.lock
 echo "Leader Node configured!"
-/usr/bin/serf tags -set bootstrap=ready
-
-# Delete erchef from /etc/hosts
-sed -i 's/.*erchef.*//g' /etc/hosts
 
 touch /etc/redborder/cluster-installed.txt
