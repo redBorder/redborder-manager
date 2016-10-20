@@ -271,8 +271,13 @@ sed -i "s/rabbit@localhost/rabbit@$CLIENTNAME/" /opt/opscode/embedded/cookbooks/
 mkdir -p /var/opt/opscode/rabbitmq/db
 rm -f /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
 ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
-# Permit all IP address source in postgresql # CHECK CHECK CHECK
+
+# Permit all source IP address connecting to postgresql
 sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgresql/*/data/postgresql.conf
+cat > /var/opt/opscode/postgresql/9.2/data/pg_hba.conf <<- _RBEOF2_
+#TYPE   DATABASE        USER            CIDR-ADDRESS            METHOD
+host  all  all 0.0.0.0/0 md5
+_RBEOF2_
 
 # Configure LEADER
 configure_leader
