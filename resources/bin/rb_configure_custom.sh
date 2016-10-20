@@ -23,7 +23,7 @@ CONSULIP=$(serf members -tag consul=ready | awk {'print $2'} |cut -d ":" -f 1 | 
 valid_ip $CONSULIP
 if [ "x$?" == "x0" ]; then
   # Use Consul IP as DNS
-  sed -i 's/nameserver .*/nameserver $CONSULIP/g' /etc/resolv.conf
+  sed -i "s/nameserver .*/nameserver $CONSULIP/g" /etc/resolv.conf
   # Check if chef-server is registered in consul
   ret=$(curl $CONSULIP:8500/v1/catalog/services 2> /dev/null | jq .erchef)
 else
