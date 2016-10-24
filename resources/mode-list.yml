@@ -13,3 +13,6 @@
 -
   name: 'kafka'
   description: 'Kafka server node'
+-
+  name: 'druid'
+  description: 'Druid server node'
