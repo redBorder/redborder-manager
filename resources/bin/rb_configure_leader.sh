@@ -265,9 +265,9 @@ yum install -y redborder-chef-server
 # Set chef-server.rb configuration file (postgresql) and obtain database credentials
 if [ -f /etc/redborder/chef-server-postgresql.rb ]; then
   cat /etc/redborder/chef-server-postgresql.rb >> /etc/opscode/chef-server.rb
-  DB_ADMINUSER=$(cat /etc/redborder/chef-server-postgresql.rb | grep "db_superuser.]" | awk {'print $3'})
-  DB_ADMINPASS=$(cat /etc/redborder/chef-server-postgresql.rb | grep "db_superuser_password.]" | awk {'print $3'})
-  DB_HOST=$(cat /etc/redborder/chef-server-postgresql.rb | grep "vip.]" | awk {'print $3'})
+  DB_ADMINUSER=$(cat /etc/redborder/chef-server-postgresql.rb | grep "db_superuser.]" | awk {'print $3'} | tr -d "\"")
+  DB_ADMINPASS=$(cat /etc/redborder/chef-server-postgresql.rb | grep "db_superuser_password.]" | awk {'print $3'}| tr -d "\"")
+  DB_HOST=$(cat /etc/redborder/chef-server-postgresql.rb | grep "vip.]" | awk {'print $3'}| tr -d "\"")
   rm -f /etc/redborder/chef-server-postgresql.rb
 else
   DB_ADMINUSER="opscode-pgsql"
@@ -275,7 +275,6 @@ else
   DB_HOST=$IPLEADER
 fi
 
-rm -f /etc/redborder/chef-server-postgresql.rb
 # Set chef-server internal nginx port to 4443
 echo "nginx['ssl_port'] = 4443" >> /etc/opscode/chef-server.rb
 
