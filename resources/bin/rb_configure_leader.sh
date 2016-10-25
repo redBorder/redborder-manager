@@ -5,21 +5,38 @@
 source /etc/profile
 source $RBLIB/rb_manager_functions.sh
 
+function configure_db(){
+  # Configuring database passwords
+  [ "x$REDBORDERDBPASS" == "x" ] && REDBORDERDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  [ "x$DRUIDDBPASS" == "x" ] && DRUIDDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+
+  # Druid DATABASE
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER druid WITH PASSWORD '$DRUIDDBPASS';"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS druid;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE druid OWNER druid;"
+
+  # redborder DATABASE
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER redborder WITH PASSWORD '$REDBORDERDBPASS';"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS redborder;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE redborder OWNER redborder;"
+
+}
+
 function configure_dataBags(){
+
+  # Data bag encrypted key
+  [ "x$DATABAGKEY" == "x" ] && DATABAGKEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  echo $DATABAGKEY > /etc/chef/encrypted_data_bag_secret
 
   OCID_DBCFG="/var/opt/opscode/oc_id/config/database.yml"
   OCBIFROST_DBCFG="/var/opt/opscode/oc_bifrost/sys.config"
   CHEFMOVER_DBCFG="/var/opt/opscode/opscode-chef-mover/sys.config"
 
-  # Configuring redborder passwords
-  [ "x$REDBORDERDBPASS" == "x" ] && REDBORDERDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-
   # Obtaining chef database current configuration
-  OPSCODE_DBPASS="`grep {db_pass $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   OPSCODE_DBHOST="`grep {db_host $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   [ "x$OPSCODE_DBHOST" == "x127.0.0.1" ] && OPSCODE_DBHOST=$IPLEADER
-
   OPSCODE_DBPORT="`grep {db_port $ERCHEFCFG |sed 's/.*{db_port, //' | sed 's/},//'`"
+  OPSCODE_DBPASS="`grep {db_pass $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   OPSCODE_OCID_PASS="`grep password $OCID_DBCFG | sed 's/ password: //' | tr -d ' '`"
   OPSCODE_OCBIFROST_PASS="`grep db_pass $OCBIFROST_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
   OPSCODE_CHEFMOVER_PASS="`grep db_pass $CHEFMOVER_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
@@ -52,7 +69,7 @@ function configure_dataBags(){
 }
 _RBEOF_
 
-## DB opscode (chef) passwords
+  # S3 passwords
   cat > /var/chef/data/data_bag/passwords/s3_chef.json <<-_RBEOF_
 {
   "id": "s3_chef",
@@ -64,18 +81,32 @@ _RBEOF_
 }
 _RBEOF_
 
+  # DB druid passwords
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_druid.json <<-_RBEOF_
+{
+  "id": "db_druid",
+  "username": "druid",
+  "database": "druid",
+  "hostname": "$OPSCODE_DBHOST",
+  "port": "$OPSCODE_DBPORT",
+  "pass": "$DRUIDDBPASS"
+}
+_RBEOF_
+  rm -f $RBDIR/var/chef/data/data_bag_encrypted/passwords/db_druid.json
+
+
   # DB redborder passwords
-#  cat > /var/chef/data/data_bag_encrypted/passwords/db_redborder.json <<-_RBEOF_
-#{
-#  "id": "db_redborder",
-#  "username": "redborder",
-#  "database": "redborder",
-#  "hostname": "$OPSCODE_DBHOST",
-#  "port": 5432,
-#  "pass": "$REDBORDERDBPASS",
-#  "md5_pass": "$REDBORDERDBPASSMD5"
-#}
-#_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_redborder.json <<-_RBEOF_
+{
+  "id": "db_redborder",
+  "username": "redborder",
+  "database": "redborder",
+  "hostname": "$OPSCODE_DBHOST",
+  "port": "$OPSCODE_DBPORT",
+  "pass": "$REDBORDERDBPASS"
+}
+_RBEOF_
+  rm -f $RBDIR/var/chef/data/data_bag_encrypted/passwords/db_redborder.json
 
   #rb-webui secret key
 #  RBWEBISECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
@@ -123,13 +154,17 @@ function configure_leader(){
   touch /var/lock/leader-configuring.lock
 
   # Chef server configuration
-  ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config" # old app.config
+  ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config"
 
   # Create specific role for this node
   e_title "Creating custom chef role"
   mv /var/chef/data/role/manager_node.json /var/chef/data/role/$(hostname -s).json
   # Change hostname in new role
   sed -i "s/manager_node/$(hostname -s)/g" /var/chef/data/role/$(hostname -s).json
+
+  # Configure databases
+  e_title "Configuring DataBases"
+  configure_db
 
   # Configure DataBags
   e_title "Configuring Data bags"
@@ -224,9 +259,23 @@ cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
 e_title "Installing Chef-Server from repository"
 yum install -y redborder-chef-server
 
-# Set chef-server.rb configuration file (S3 and postgresql)
-[ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb
-[ -f /etc/redborder/chef-server-postgresql.rb ] && cat /etc/redborder/chef-server-postgresql.rb >> /etc/opscode/chef-server.rb
+# Set chef-server.rb configuration file (S3)
+[ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb && rm -f /etc/redborder/chef-server-s3.rb
+
+# Set chef-server.rb configuration file (postgresql) and obtain database credentials
+if [ -f /etc/redborder/chef-server-postgresql.rb ]; then
+  cat /etc/redborder/chef-server-postgresql.rb >> /etc/opscode/chef-server.rb
+  DB_ADMINUSER=$(cat /etc/redborder/chef-server-postgresql.rb | grep "db_superuser.]" | awk {'print $3'})
+  DB_ADMINPASS=$(cat /etc/redborder/chef-server-postgresql.rb | grep "db_superuser_password.]" | awk {'print $3'})
+  DB_HOST=$(cat /etc/redborder/chef-server-postgresql.rb | grep "vip.]" | awk {'print $3'})
+  rm -f /etc/redborder/chef-server-postgresql.rb
+else
+  DB_ADMINUSER="opscode-pgsql"
+  DB_ADMINPASS="" #TODO
+  DB_HOST=$IPLEADER
+fi
+
+rm -f /etc/redborder/chef-server-postgresql.rb
 # Set chef-server internal nginx port to 4443
 echo "nginx['ssl_port'] = 4443" >> /etc/opscode/chef-server.rb
 
@@ -272,16 +321,20 @@ mkdir -p /var/opt/opscode/rabbitmq/db
 rm -f /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
 ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
 
-# Permit all source IP address connecting to postgresql
-sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgresql/*/data/postgresql.conf
-cat > /var/opt/opscode/postgresql/9.2/data/pg_hba.conf <<- _RBEOF2_
-#TYPE   DATABASE        USER            CIDR-ADDRESS            METHOD
-host  all  all 0.0.0.0/0 md5
-_RBEOF2_
+# Permit all source IP address connecting to postgresql (if using chef local postgresql)
+cat /etc/redborder/rb_init_conf.yml | grep postgresql &>/dev/null
+if [ "x$?" == "x0" ]; then
+  sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgresql/*/data/postgresql.conf
+  cat > /var/opt/opscode/postgresql/9.2/data/pg_hba.conf <<- _RBEOF2_
+  #TYPE   DATABASE        USER            CIDR-ADDRESS            METHOD
+  host  all  all 0.0.0.0/0 md5
+  _RBEOF2_
+fi
 
 # Configure LEADER
 configure_leader
 
+#rm -f /etc/opscode/chef-server.rb
 rm -f /var/lock/leader-configuring.lock
 
 # Copy dhclient hook
