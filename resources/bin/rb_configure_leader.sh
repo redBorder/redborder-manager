@@ -325,10 +325,10 @@ ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabb
 cat /etc/redborder/rb_init_conf.yml | grep postgresql &>/dev/null
 if [ "x$?" == "x0" ]; then
   sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgresql/*/data/postgresql.conf
-  cat > /var/opt/opscode/postgresql/9.2/data/pg_hba.conf <<- _RBEOF2_
-  #TYPE   DATABASE        USER            CIDR-ADDRESS            METHOD
-  host  all  all 0.0.0.0/0 md5
-  _RBEOF2_
+  cat > /var/opt/opscode/postgresql/9.2/data/pg_hba.conf <<-_RBEOF_
+#TYPE   DATABASE        USER            CIDR-ADDRESS            METHOD
+host  all  all 0.0.0.0/0 md5
+_RBEOF_
 fi
 
 # Configure LEADER
