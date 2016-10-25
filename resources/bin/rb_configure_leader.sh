@@ -82,7 +82,7 @@ _RBEOF_
 _RBEOF_
 
   # DB druid passwords
-  cat > /var/chef/data/data_bag_encrypted/passwords/db_druid.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag/passwords/db_druid.json <<-_RBEOF_
 {
   "id": "db_druid",
   "username": "druid",
@@ -92,7 +92,7 @@ _RBEOF_
   "pass": "$DRUIDDBPASS"
 }
 _RBEOF_
-  rm -f $RBDIR/var/chef/data/data_bag_encrypted/passwords/db_druid.json
+  rm -f $RBDIR/var/chef/data/data_bag/passwords/db_druid.json
 
 
   # DB redborder passwords
@@ -322,7 +322,7 @@ ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabb
 
 # Permit all source IP address connecting to postgresql (if using chef local postgresql)
 cat /etc/redborder/rb_init_conf.yml | grep postgresql &>/dev/null
-if [ "x$?" == "x0" ]; then
+if [ "x$?" != "x0" ]; then
   sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgresql/*/data/postgresql.conf
   cat > /var/opt/opscode/postgresql/9.2/data/pg_hba.conf <<-_RBEOF_
 #TYPE   DATABASE        USER            CIDR-ADDRESS            METHOD
