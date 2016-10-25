@@ -8,7 +8,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash git ntp dialog rvm s3cmd dmidecode rsync postgresql postgresql-pgpool-II redborder-serf redborder-common redborder-chef-client redborder-cookbooks
+Requires: bash ntp dialog rvm s3cmd dmidecode rsync redborder-serf redborder-common redborder-chef-client redborder-cookbooks
 
 %description
 %{summary}
@@ -27,6 +27,7 @@ mkdir -p %{buildroot}/var/chef/cookbooks
 mkdir -p %{buildroot}/var/chef/data/role
 mkdir -p %{buildroot}/var/chef/data/data_bag/passwords
 mkdir -p %{buildroot}/var/chef/data/data_bag/rBglobal
+mkdir -p %{buildroot}/var/chef/data/data_bag_encrypted/passwords
 install -D -m 0644 resources/redborder-manager.sh %{buildroot}/etc/profile.d
 install -D -m 0644 resources/dialogrc %{buildroot}/etc/redborder
 cp resources/bin/* %{buildroot}/usr/lib/redborder/bin
