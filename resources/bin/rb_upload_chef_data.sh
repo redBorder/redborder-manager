@@ -25,7 +25,7 @@ source $RBLIB/rb_manager_functions.sh
 function upload_data_bag(){
 	X="data bag"
 	key="$1"
-        local files=$2
+  local files=$2
 
 	if [ "x$key" == "x" ]; then
 		DIRDB="data_bag"
@@ -38,10 +38,9 @@ function upload_data_bag(){
 		[ "x$key" != "x" ] && echo -n " encrypted"
 		echo "\":"
 
-
-                if [ "x$files" != "x" ]; then
+    if [ "x$files" != "x" ]; then
 			for n2 in `ls $files 2>/dev/null`; do
-                        	n1=$(dirname $n2|sed 's|.*/||')
+        n1=$(dirname $n2|sed 's|.*/||')
 				if [ $ANSWERYES -eq 0 ]; then
 					echo -n "    Would you like to upload $n1/`basename $n2` $X? (y/N) "
 					read VAR
@@ -51,15 +50,14 @@ function upload_data_bag(){
 				fi
 				if [ "x$VAR" == "xy" ]; then
 					echo -n "    - $(echo $n2 | sed "s|/var/chef/data/||")"
-
 					if [ "x$key" != "x" ]; then
-                        		        knife data bag -c /root/.chef/knife.rb from file $n1 $n2 --secret-file $key &>/dev/null
-                        		        RET=$?
-                        		        [ $RET -eq 0 ] && rm -f $n2
-                        		else
-                        		        knife data bag -c /root/.chef/knife.rb from file $n1 $n2 &>/dev/null
-                        		        RET=$?
-                        		fi
+            knife data bag -c /root/.chef/knife.rb from file $n1 $n2 --secret-file $key &>/dev/null
+            RET=$?
+            [ $RET -eq 0 ] && rm -f $n2
+          else
+            knife data bag -c /root/.chef/knife.rb from file $n1 $n2 &>/dev/null
+            RET=$?
+          fi
 					print_result $?
 				fi
 			done
@@ -111,8 +109,8 @@ function upload_data_bag(){
 
 function upload_x(){
 	X=$1
-        local files=$2
-        [ "x$files" == "x" ] && files="$DATADIR/$X/*.json"
+  local files=$2
+  [ "x$files" == "x" ] && files="$DATADIR/$X/*.json"
 
 	if [ "x$X" != "x" ]; then
 		echo -e "* Uploading \"$X\":"
@@ -154,13 +152,12 @@ function usage(){
 
 while getopts "hd:yf:" name
 do
-        case $name in
-                d) DATADIR=$OPTARG;;
-                y) ANSWERYES=1;;
-		f) FILE=$OPTARG;;
-		h) usage;;
-
-        esac
+  case $name in
+    d) DATADIR=$OPTARG;;
+    y) ANSWERYES=1;;
+	  f) FILE=$OPTARG;;
+	  h) usage;;
+  esac
 done
 
 if [ "x$DIRCANDIDATE" != "x" ]; then
@@ -187,7 +184,7 @@ if [ "x$FILE" != "x" ]; then
 		upload_x "node" $FILE
 	elif [ "x$cheftype" == "xrole" ]; then
 		upload_x "role" $FILE
-        else
+  else #DataBags
 		chefdatabag=$(basename $(dirname $(dirname $FILE)))
 		if [ "x$chefdatabag" == "xdata_bag" ]; then
 			upload_data_bag "" $FILE
