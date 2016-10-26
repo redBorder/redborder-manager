@@ -25,3 +25,6 @@
 -
   name: 'broker'
   description: 'Druid broker node'
+-
+  name: 'http2k'
+  description: 'Http2k node'
