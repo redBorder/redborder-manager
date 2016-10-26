@@ -15,4 +15,13 @@
   description: 'Kafka server node'
 -
   name: 'druid'
-  description: 'Druid server node'
+  description: 'Druid full server node'
+-
+  name: 'middlemanager'
+  description: 'Druid middlemanager node'
+-
+  name: 'historical'
+  description: 'Druid historical node'
+-
+  name: 'broker'
+  description: 'Druid broker node'
