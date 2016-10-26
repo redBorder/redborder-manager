@@ -98,7 +98,7 @@ function upload_data_bag(){
 								knife data bag -c /root/.chef/knife.rb from file $n1 $n2 &>/dev/null
 								RET=$?
 							fi
-					    		print_result $?
+					    print_result $?
 						fi
 					done
 				fi
