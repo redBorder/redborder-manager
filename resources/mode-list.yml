@@ -1,9 +1,18 @@
-- 
+-
   name: 'custom'
   description: 'Minimum set of services to join into a cluster'
-- 
+-
   name: 'core'
   description: 'Basic set of services to create a cluster'
-- 
+-
   name: 'full'
   description: 'All services running to perform a full cluster experience'
+-
+  name: 'chef'
+  description: 'Chef server node'
+-
+  name: 'kafka'
+  description: 'Kafka server node'
+-
+  name: 'druid'
+  description: 'Druid server node'

@@ -119,8 +119,34 @@ module Config_utils
         next unless route[:dev] == dev
         next unless route[:prefix] != "default"
         ret = route
+        break
       end
       ret
+    end
+
+    # TODO ipv6 support
+    def self.get_ipv4_network(devname)
+      hsh = {}
+      # looking for device with default route
+      Net::IP.routes.each do |r|
+          unless r.to_h[:via].nil?
+              if r.to_h[:dev] == devname
+                  if r.to_h[:prefix] == "default" or r.to_h[:prefix] == "0.0.0.0/0"
+                      hsh[:gateway] = r.to_h[:via]
+                      break
+                  end
+              end
+          end
+      end
+      System.get_all_ifaddrs.each do |i|
+          if i[:interface].to_s == devname
+              if i[:inet_addr].ipv4?
+                  hsh[:ip] = i[:inet_addr].to_s
+                  hsh[:netmask] = i[:netmask].to_s
+              end
+          end
+      end
+      hsh
     end
 
     # Function that return a hash with route object that contains the default route

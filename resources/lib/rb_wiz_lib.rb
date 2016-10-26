@@ -30,31 +30,6 @@ class WizConf
 
         netdev
     end
-
-    # TODO ipv6 support
-    def get_ipv4_network(devname)
-        hsh = {}
-        # looking for device with default route
-        Net::IP.routes.each do |r|
-            unless r.to_h[:via].nil?
-                if r.to_h[:dev] == devname
-                    if r.to_h[:prefix] == "default" or r.to_h[:prefix] == "0.0.0.0/0"
-                        hsh[:gateway] = r.to_h[:via]
-                        break
-                    end
-                end
-            end
-        end
-        System.get_all_ifaddrs.each do |i|
-            if i[:interface].to_s == devname
-                if i[:inet_addr].ipv4?
-                    hsh[:ip] = i[:inet_addr].to_s
-                    hsh[:netmask] = i[:netmask].to_s
-                end
-            end
-        end
-        hsh
-    end
   
 end
 
@@ -128,8 +103,10 @@ EOF
                         if dev.conf['Mode:'] == "Static"
                             @confdev[selected_item]["ip"] = dev.conf['IP:']
                             @confdev[selected_item]["netmask"] = dev.conf['Netmask:']
-                            unless dev.conf['Gateway:'].nil? or dev.conf['Gateway:'] == ""
+                            unless dev.conf['Gateway:'].nil? or dev.conf['Gateway:'].empty?
                                 @confdev[selected_item]["gateway"] = dev.conf['Gateway:']
+                            else
+                                @confdev[selected_item]["gateway"] = ""
                             end
 
                         end
@@ -230,9 +207,9 @@ EOF
                 text += "STATUS: #{netdevprop["STATUS"]}\n" unless netdevprop["STATUS"].nil?
                 text += " \n"
     
-                @conf['IP:'] = get_ipv4_network(@device_name)[:ip] if @conf['IP:'].nil?
-                @conf['Netmask:'] = get_ipv4_network(@device_name)[:netmask] if @conf['Netmask:'].nil?
-                @conf['Gateway:'] = get_ipv4_network(@device_name)[:gateway] if @conf['Gateway:'].nil?
+                @conf['IP:'] = Config_utils.get_ipv4_network(@device_name)[:ip] if @conf['IP:'].nil?
+                @conf['Netmask:'] = Config_utils.get_ipv4_network(@device_name)[:netmask] if @conf['Netmask:'].nil?
+                @conf['Gateway:'] = Config_utils.get_ipv4_network(@device_name)[:gateway] if @conf['Gateway:'].nil?
     
                 flen = 20
                 form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen)
@@ -576,6 +553,72 @@ EOF
 
 end
 
+class SerfSyncDevConf < WizConf
+
+    attr_accessor :conf, :cancel, :networks
+
+    def initialize()
+        @cancel = false
+        @conf = ""
+        @networks = {}
+    end
+
+    def doit
+
+        dialog = MRDialog.new
+        dialog.clear = true
+
+        text = <<EOF
+
+Please, set the synchronism network.
+
+You must select one of the device networks to set the synchronism
+network associated to it.
+
+This network is needed to connect nodes and build the cluster. Also,
+internal services will use it to communicate between them.
+
+In some cases, this network has no default gateway and it is isolated from
+rest of the networks.
+
+EOF
+
+        items = []
+        radiolist_data = Struct.new(:tag, :item, :select)
+
+        select = true
+        networks.each do |k,v|
+            data = radiolist_data.new
+            data.tag = k
+            data.item = v
+            data.select = select
+            if select == true
+                select = false # only the first is true -> default value
+            end
+            items.push(data.to_a)
+        end
+
+        data = radiolist_data.new
+        data.tag = "Manual"
+        data.item = "Set network manually"
+        items.push(data.to_a)
+
+        dialog.title = "Sync Network configuration"
+        selected_item = dialog.radiolist(text, items)
+
+        if dialog.exit_code == dialog.dialog_ok
+            if selected_item == "Manual"
+                @conf = "Manual"
+            else
+                @conf = networks[selected_item]
+            end
+        else
+            @cancel = true
+        end
+    end
+end
+
+
 class SerfSyncConf < WizConf
 
     attr_accessor :conf, :cancel
@@ -604,7 +647,7 @@ You must set a synchronism network in two formats:
 This network is needed to connect nodes and build the cluster. Also,
 internal services will use it to communicate between them.
 
-Usually, this network has no default gateway and is isolated from
+In some cases, this network has no default gateway and it is isolated from
 rest of the networks.
  
 EOF
@@ -868,6 +911,139 @@ EOF
     end
 end
 
+class RDSConf < WizConf
+
+    attr_accessor :conf, :cancel
+
+    def initialize()
+        @cancel = false
+        @conf = {
+        "superuser" => "",
+        "password" => "",
+        "host" => "",
+        "port" => ""
+        }
+    end
+
+    def doit
+
+        rdsconf = {
+        "Superuser:" => "",
+        "Password:" => "",
+        "Host:" => "",
+        "Port:" => 5432
+        }
+                
+        loop do
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.insecure = true
+            text = <<EOF
+ 
+You need to provide some paratemeters in order to use
+Amazon RDS database Service or external PostgreSQL:
+
+Superuser: User allowed to create and manage databases, users
+           and permissions.
+Password: Needed to access with superuser.
+Host: IP address or hostname of the database service.
+Port: Port of the database service (default: 5432).
+
+Please, set these PostgreSQL parameters:
+ 
+EOF
+            items = []
+            form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen, :attr)
+
+            items = []
+            label = "Superuser:"
+            data = form_data.new
+            data.label = label
+            data.ly = 1
+            data.lx = 1
+            data.item = rdsconf[label]
+            data.iy = 1
+            data.ix = 17
+            data.flen = 42
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+        
+            label = "Password:"
+            data = form_data.new
+            data.label = label
+            data.ly = 2
+            data.lx = 1
+            data.item = rdsconf[label]
+            data.iy = 2
+            data.ix = 17
+            data.flen = 42
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+
+            label = "Host:"
+            data = form_data.new
+            data.label = label
+            data.ly = 3
+            data.lx = 1
+            data.item = rdsconf[label]
+            data.iy = 3
+            data.ix = 17
+            data.flen = 42
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+
+            label = "Port:"
+            data = form_data.new
+            data.label = label
+            data.ly = 4
+            data.lx = 1
+            data.item = rdsconf[label]
+            data.iy = 4
+            data.ix = 17
+            data.flen = 42
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+
+            dialog.title = "RDS or PostgreSQL configuration"
+            rdsconf = dialog.mixedform(text, items, 0, 0, 0)
+            
+            if dialog.exit_code == dialog.dialog_ok
+                unless rdsconf["Superuser:"].empty? or rdsconf["Password:"].empty? or rdsconf["Host:"].empty? or rdsconf["Port:"].empty?
+                    @conf['superuser'] = rdsconf["Superuser:"]
+                    @conf['password'] = rdsconf["Password:"]
+                    @conf['host'] = rdsconf["Host:"]
+                    @conf['port'] = rdsconf["Port:"]
+                    break
+                end
+            else
+                @cancel = true
+                break
+            end
+           
+            # error, do another loop
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.title = "ERROR in S3 configuration"
+            text = <<EOF
+
+We have detected an error in S3 configuration.
+
+Please, provide correct values for the parameters.
+ 
+EOF
+            dialog.msgbox(text, 12, 41)
+
+        end
+
+    end
+
+end
+
+
 class S3Conf < WizConf
 
     attr_accessor :conf, :cancel
@@ -895,8 +1071,11 @@ AWS access key:  This is an alphanumeric text string that
                  account in Amazon Web Services.
 AWS secret key:  This is an encoded password used to confirm
                  the user's indentity.
+Bucket: This is a logical unit of storage created in AWS S3
+                  Storage Service, needed to storage objects.
+Endpoint: URL that is the entry point for a web service.
 
-Please, set this two S3 parameters:
+Please, set these S3 parameters:
  
 EOF
             items = []
@@ -929,17 +1108,46 @@ EOF
             data.attr = 0
             items.push(data.to_a)
 
+            label = "Bucket:"
+            data = form_data.new
+            data.label = label
+            data.ly = 3
+            data.lx = 1
+            data.item = s3conf[label]
+            data.iy = 3
+            data.ix = 17
+            data.flen = 42
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+
+            label = "Endpoint:"
+            data = form_data.new
+            data.label = label
+            data.ly = 4
+            data.lx = 1
+            data.item = s3conf[label]
+            data.iy = 4
+            data.ix = 17
+            data.flen = 42
+            data.ilen = 0
+            data.attr = 0
+            items.push(data.to_a)
+
             dialog.title = "S3 configuration"
             s3conf = dialog.mixedform(text, items, 0, 0, 0)
             
             if dialog.exit_code == dialog.dialog_ok
-                unless s3conf["AWS access key:"].empty? or s3conf["AWS secret key:"].empty?
+                unless s3conf["AWS access key:"].empty? or s3conf["AWS secret key:"].empty? or s3conf["Bucket:"].empty? or s3conf["Endpoint:"].empty?
                     @conf['access_key'] = s3conf["AWS access key:"]
                     @conf['secret_key'] = s3conf["AWS secret key:"]
+                    @conf['bucket'] = s3conf["Bucket:"]
+                    @conf['endpoint'] = s3conf["Endpoint:"]
                     break
                 end
             else
                 @cancel = true
+                break
             end
            
             # error, do another loop

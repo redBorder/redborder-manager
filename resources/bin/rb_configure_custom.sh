@@ -8,23 +8,34 @@ source $RBLIB/rb_manager_functions.sh
 # MAIN #
 ########
 
-IPLEADER=$1 #Chef server IP. Received from serf-choose-leader
-valid_ip $IPLEADER
-if [ "x$?" != "x0" ]; then
-  error_title "Invalid chef server IP"
-  exit 1
-fi
-
 CHEFORG="redborder"
-CLIENTNAME=`hostname -s`
-MANAGERMODE=`serf members -status alive -name=$CLIENTNAME -format=json | jq -r .members[].tags.mode`
+CLIENTNAME=$(hostname -s)
+MANAGERMODE=$(serf members -status alive -name=$CLIENTNAME -format=json | jq -r .members[].tags.mode)
 
 # Get cdomain
-[ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
+[ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 $RBETC/cdomain | tr '\n' ' ' | awk '{print $1}')
 
-# Add erchef domain /etc/hosts
-grep -q erchef.${cdomain} /etc/hosts
-[ $? -ne 0 ] && echo "$IPLEADER   erchef.${cdomain}" >> /etc/hosts
+# Change resolv.conf file temporally
+cp -f /etc/resolv.conf $RBETC/original_resolv.conf
+
+# Check if consul ready and get IP
+CONSULIP=$(serf members -tag consul=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
+valid_ip $CONSULIP
+if [ "x$?" == "x0" ]; then
+  # Use Consul IP as DNS
+  sed -i "s/nameserver .*/nameserver $CONSULIP/g" /etc/resolv.conf
+  # Check if chef-server is registered in consul
+  ret=$(curl $CONSULIP:8500/v1/catalog/services 2> /dev/null | jq .erchef)
+else
+  ret="null"
+fi
+
+if [ "x$ret" == "xnull" -o "x$ret" == "x" ]; then #If not chef-server registered
+  # Get IP leader as a chef-server IP and Add chef-server IP to /etc/hosts
+  IPLEADER=$(serf members -tag leader=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
+  grep -q erchef.service.${cdomain} /etc/hosts
+  [ $? -ne 0 ] && echo "$IPLEADER   erchef.service.${cdomain}" >> /etc/hosts
+fi
 
 # Get chef validator and admin certificates
 $RBBIN/serf-query-certificate.sh -q certificate-validator > /tmp/cert && mv /tmp/cert /etc/chef/redborder-validator.pem
@@ -42,11 +53,11 @@ mkdir -p /root/.chef
 
 # Customize client.rb
 sed -i "s/\HOSTNAME/$CLIENTNAME/g" /etc/chef/client.rb
-sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/$CHEFORG\"|" /etc/chef/client.rb
+sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.service.$cdomain:4443/organizations/$CHEFORG\"|" /etc/chef/client.rb
 
 # Customize knife.rb
 sed -i "s/\HOSTNAME/admin/g" /root/.chef/knife.rb
-sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.$cdomain/organizations/$CHEFORG\"|" /root/.chef/knife.rb
+sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.service.$cdomain:4443/organizations/$CHEFORG\"|" /root/.chef/knife.rb
 sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
 
 # Create specific role for this node
@@ -78,6 +89,12 @@ $RBBIN/rb_update_timestamp.rb &>/dev/null
 yum clean all
 
 # Multiple runs of chef-client
-e_title "Configuring Chef-Client (first time). Please wait...  "
+e_title "Configuring Chef-Client. Please wait...  "
 e_title "redborder install run $(date)" #>>/root/.install-chef-client.log
 chef-client #&>/root/.install-chef-client.log
+
+# Copy dhclient hook
+cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
+
+echo "Custom Node configured!"
+touch /etc/redborder/cluster-installed.txt
