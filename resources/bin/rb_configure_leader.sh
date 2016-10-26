@@ -72,14 +72,14 @@ function configure_dataBags(){
 _RBEOF_
 
   # S3 passwords
-  cat > /var/chef/data/data_bag/passwords/s3_chef.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag/passwords/s3.json <<-_RBEOF_
 {
-  "id": "s3_chef",
+  "id": "s3",
   "s3_access_key_id": "$S3KEY",
   "s3_secret_key_id": "$S3SECRET",
   "s3_url": "$S3URL",
   "s3_external_url": "$S3EXTERNALURL",
-  "s3_platform_bucket_name": "$S3BUCKET"
+  "s3_bucket": "$S3BUCKET"
 }
 _RBEOF_
 
@@ -144,6 +144,10 @@ _RBEOF_
   "uuid": "$(cat /proc/sys/kernel/random/uuid)"
 }
 _RBEOF_
+
+}
+
+function create_buckets(){
 
 }
 
