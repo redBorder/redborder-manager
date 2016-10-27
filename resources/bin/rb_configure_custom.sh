@@ -38,8 +38,8 @@ if [ "x$ret" == "xnull" -o "x$ret" == "x" ]; then #If not chef-server registered
 fi
 
 # Get chef validator and admin certificates
-$RBBIN/serf-query-certificate.sh -q certificate-validator > /tmp/cert && mv /tmp/cert /etc/chef/redborder-validator.pem
-$RBBIN/serf-query-certificate.sh -q certificate-admin > /tmp/cert && mv /tmp/cert /etc/chef/admin.pem
+$RBBIN/serf-query-certificate -q certificate-validator > /tmp/cert && mv /tmp/cert /etc/chef/redborder-validator.pem
+$RBBIN/serf-query-certificate -q certificate-admin > /tmp/cert && mv /tmp/cert /etc/chef/admin.pem
 
 #############################
 # CHEF CLIENT Configuration #
@@ -80,10 +80,10 @@ knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[$CLIENTNAME]"
 e_title "Configuring manager mode"
 # Set manager role
 [ "x$MANAGERMODE" == "x" ] && MANAGERMODE="custom"
-$RBBIN/rb_set_mode.rb $MANAGERMODE
+$RBBIN/rb_set_mode $MANAGERMODE
 
 # Update timestamp #??#
-$RBBIN/rb_update_timestamp.rb &>/dev/null
+$RBBIN/rb_update_timestamp &>/dev/null
 
 # Cleaning yum data and cache
 yum clean all
