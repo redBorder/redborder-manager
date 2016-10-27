@@ -21,6 +21,7 @@ Requires: bash ntp dialog rvm postgresql s3cmd dmidecode rsync redborder-serf re
 %install
 mkdir -p %{buildroot}/etc/redborder
 mkdir -p %{buildroot}/usr/lib/redborder/bin
+mkdir -p %{buildroot}/usr/lib/redborder/scripts
 mkdir -p %{buildroot}/usr/lib/redborder/lib
 mkdir -p %{buildroot}/etc/profile.d
 mkdir -p %{buildroot}/var/chef/cookbooks
@@ -31,7 +32,9 @@ mkdir -p %{buildroot}/var/chef/data/data_bag_encrypted/passwords
 install -D -m 0644 resources/redborder-manager.sh %{buildroot}/etc/profile.d
 install -D -m 0644 resources/dialogrc %{buildroot}/etc/redborder
 cp resources/bin/* %{buildroot}/usr/lib/redborder/bin
+cp resources/scripts/* %{buildroot}/usr/lib/redborder/scripts
 chmod 0755 %{buildroot}/usr/lib/redborder/bin/*
+chmod 0755 %{buildroot}/usr/lib/redborder/scripts/*
 install -D -m 0644 resources/lib/rb_wiz_lib.rb %{buildroot}/usr/lib/redborder/lib
 install -D -m 0644 resources/lib/rb_config_utils.rb %{buildroot}/usr/lib/redborder/lib
 install -D -m 0644 resources/lib/rb_manager_functions.sh %{buildroot}/usr/lib/redborder/lib
@@ -44,6 +47,7 @@ install -D -m 0755 resources/lib/dhclient-enter-hooks %{buildroot}/usr/lib/redbo
 %pre
 
 %post
+/usr/lib/redborder/bin/rb_rubywrapper.sh -c
 firewall-cmd --zone=public --add-port=443/tcp --permanent
 firewall-cmd --zone=public --add-port=7946/tcp --permanent
 #firewall-cmd --zone=public --add-port=7373/tcp --permanent
@@ -53,6 +57,7 @@ firewall-cmd --reload
 %files
 %defattr(0755,root,root)
 /usr/lib/redborder/bin
+/usr/lib/redborder/scripts
 %defattr(0755,root,root)
 /etc/profile.d/redborder-manager.sh
 /var/chef/data
@@ -68,6 +73,9 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Wed Oct 26 2016 Juan J. Prieto <jjprieto@redborder.com> - 1.0.0-1
+- Add directory scripts and support for wrapper on ruby.
+
 * Tue Sep 06 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
 - Add rb-init-conf service and remove chef package installation
 - Remove rb_manager_functions.rb from spec

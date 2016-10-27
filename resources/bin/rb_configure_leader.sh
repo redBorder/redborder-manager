@@ -148,7 +148,7 @@ _RBEOF_
 }
 
 function create_buckets(){
-
+  echo "create_buckets"
 }
 
 function configure_leader(){
@@ -204,10 +204,10 @@ function configure_leader(){
   e_title "Configuring manager mode"
   # Set manager role
   [ "x$MANAGERMODE" == "x" ] && MANAGERMODE="custom"
-  $RBBIN/rb_set_mode.rb $MANAGERMODE
+  $RBBIN/rb_set_mode $MANAGERMODE
 
   # Update timestamp #??#
-  $RBBIN/rb_update_timestamp.rb &>/dev/null
+  $RBBIN/rb_update_timestamp &>/dev/null
 
   # Copy web certificates (use only chef-server certificate) #CHECK #??#
   mkdir -p /root/.chef/trusted_certs/

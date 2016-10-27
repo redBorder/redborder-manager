@@ -4,6 +4,7 @@ require 'json'
 require 'mrdialog'
 require 'yaml'
 require "#{ENV['RBLIB']}/rb_wiz_lib"
+require "#{ENV['RBLIB']}/rb_config_utils.rb"
 
 CONFFILE = "#{ENV['RBETC']}/rb_init_conf.yml"
 DIALOGRC = "#{ENV['RBETC']}/dialogrc"
@@ -11,7 +12,7 @@ if File.exist?(DIALOGRC)
     ENV['DIALOGRC'] = DIALOGRC
 end
 
-def cancel_wizard() 
+def cancel_wizard()
 
     dialog = MRDialog.new
     dialog.clear = true
@@ -22,7 +23,7 @@ def cancel_wizard()
 The setup has been cancelled or stopped.
 
 If you want to complete the setup wizard, please execute it again.
- 
+
 EOF
     result = dialog.msgbox(text, 11, 41)
     exit(1)
@@ -34,7 +35,7 @@ puts "\033]0;redborder - setup wizard\007"
 general_conf = {
     "hostname" => "",
     "cdomain" => "",
-    "cloud" => false, 
+    "cloud" => false,
     "network" => {
         "interfaces" => [],
         "dns" => []
@@ -64,8 +65,8 @@ general_conf = {
 # TODO: intro to the wizard, define color set, etc.
 
 text = <<EOF
- 
-This wizard will guide you through the necessary configuration of the device 
+
+This wizard will guide you through the necessary configuration of the device
 in order to convert it into a redborder node within a redborder cluster.
 
 It will go through the following required steps: network configuration,
@@ -74,7 +75,7 @@ the node mode (the mode determines the minimum group of services that make up
 the node, giving it more or less weight within the cluster).
 
 Would you like to continue?
- 
+
 EOF
 
 dialog = MRDialog.new
@@ -86,11 +87,57 @@ unless yesno # yesno is "yes" -> true
     cancel_wizard
 end
 
-# Conf for network
-netconf = NetConf.new
-netconf.doit # launch wizard
-cancel_wizard if netconf.cancel
-general_conf["network"]["interfaces"] = netconf.conf
+text = <<EOF
+
+Next, you will be able to configure network settings. If you have
+the network configured manually, you can "SKIP" this step and go
+to the next step.
+
+Please, Select an option.
+
+EOF
+
+dialog = MRDialog.new
+dialog.clear = true
+dialog.title = "Configure Network"
+dialog.cancel_label = "SKIP"
+dialog.no_label = "SKIP"
+yesno = dialog.yesno(text,0,0)
+
+if yesno # yesno is "yes" -> true
+
+    # Conf for network
+    netconf = NetConf.new
+    netconf.doit # launch wizard
+    cancel_wizard if netconf.cancel
+    general_conf["network"]["interfaces"] = netconf.conf
+
+    # Conf for DNS
+    text = <<EOF
+
+Do you want to configure DNS servers?
+
+If you have configured the network as Dynamic and
+you get the DNS servers via DHCP, you should say
+'No' to this  question.
+
+EOF
+
+    dialog = MRDialog.new
+    dialog.clear = true
+    dialog.title = "CONFIGURE DNS"
+    yesno = dialog.yesno(text,0,0)
+
+    if yesno # yesno is "yes" -> true
+        # configure dns
+        dnsconf = DNSConf.new
+        dnsconf.doit # launch wizard
+        cancel_wizard if dnsconf.cancel
+        general_conf["network"]["dns"] = dnsconf.conf
+    else
+        general_conf["network"].delete("dns")
+    end
+end
 
 # Conf for hostname and domain
 hostconf = HostConf.new
@@ -99,34 +146,8 @@ cancel_wizard if hostconf.cancel
 general_conf["hostname"] = hostconf.conf[:hostname]
 general_conf["cdomain"] = hostconf.conf[:domainname]
 
-# Conf for DNS
 text = <<EOF
 
-Do you to configure DNS servers?
-
-If you have configured the network as Dynamic and
-you get the DNS servers via DHCP, you should say
-'No' to this  question.
- 
-EOF
-
-dialog = MRDialog.new
-dialog.clear = true
-dialog.title = "CONFIGURE DNS"
-yesno = dialog.yesno(text,0,0)
-
-if yesno # yesno is "yes" -> true
-    # configure dns 
-    dnsconf = DNSConf.new
-    dnsconf.doit # launch wizard
-    cancel_wizard if dnsconf.cancel
-    general_conf["network"]["dns"] = dnsconf.conf
-else
-    general_conf["network"].delete("dns")
-end
-
-text = <<EOF
- 
 Next, you must configure settings for serf service.
 
 Serf service is the service that create the cluster
@@ -137,7 +158,7 @@ formation.
 You will need to provide three parameters for this configuration:
 the synchronism network, the unicast/multicast mode and
 a secret key for encryption of serf network traffic.
- 
+
 EOF
 
 dialog = MRDialog.new
@@ -145,11 +166,54 @@ dialog.clear = true
 dialog.title = "Configure Cluster Service (Serf)"
 dialog.msgbox(text,0, 0)
 
-# Conf synchronization network
-syncconf = SerfSyncConf.new
-syncconf.doit # launch wizard
-cancel_wizard if syncconf.cancel
-general_conf["serf"]["sync_net"] = syncconf.conf
+# Initialize hshnet for using in SerfSync configuration
+hshnet = {}
+listnetdev = Dir.entries("/sys/class/net/").select {|f| !File.directory? f}
+listnetdev.each do |netdev|
+    # loopback and devices with no pci nor mac are not welcome!
+    next if netdev == "lo"
+    general_conf["network"]["interfaces"].each do |i|
+        if i["device"] == netdev
+            # found device!
+            next unless i["mode"] == "static"
+            n = NetAddr::CIDRv4.create("#{i["ip"]}/#{i["netmask"]}") # get network address from device ipaddr
+            hshnet[netdev] = "#{n.network}#{n.netmask}" # format 192.168.1.0/24
+            break
+        end
+    end
+    # this netdev not configured via wizard? ... getting from system
+    if hshnet[netdev].nil?
+        hshnet[netdev] = Config_utils.get_first_route(netdev)[:prefix]
+    end
+    # No setting from wizard nor systems ... strange! better remove from the list.
+    if hshnet[netdev].nil? or hshnet[netdev].empty?
+        hshnet.delete(netdev)
+    end
+end
+
+flag_serfsyncmanual = false
+unless hshnet.empty?
+    # Conf synchronization network
+    syncconf = SerfSyncDevConf.new
+    syncconf.networks = hshnet
+    syncconf.doit # launch wizard
+    cancel_wizard if syncconf.cancel
+    if syncconf.conf == "Manual"
+        flag_serfsyncmanual = true
+    else
+        general_conf["serf"]["sync_net"] = syncconf.conf
+    end
+else
+    flag_serfsyncmanual = true
+end
+
+if flag_serfsyncmanual
+    # Conf synchronization network
+    syncconf = SerfSyncConf.new
+    syncconf.doit # launch wizard
+    cancel_wizard if syncconf.cancel
+    general_conf["serf"]["sync_net"] = syncconf.conf
+end
 
 # Select multicast or unicast
 mcastconf = SerfMcastConf.new
@@ -165,7 +229,7 @@ general_conf["serf"]["encrypt_key"] = cryptconf.conf
 
 # External S3 storage
 text = <<EOF
- 
+
 Do you want to use Amazon S3 Storage service?
 
 EOF
@@ -176,7 +240,7 @@ dialog.title = "Confirm configuration"
 yesno = dialog.yesno(text,0,0)
 
 if yesno # yesno is "yes" -> true
-    # configure dns 
+    # configure dns
     s3conf = S3Conf.new
     s3conf.doit # launch wizard
     cancel_wizard if s3conf.cancel
@@ -187,7 +251,7 @@ end
 
 # External Postgres DataBase
 text = <<EOF
- 
+
 Do you want to use Amazon RDS service or other
 external PostygreSQL DataBase?
 
@@ -199,7 +263,7 @@ dialog.title = "Confirm configuration"
 yesno = dialog.yesno(text,0,0)
 
 if yesno # yesno is "yes" -> true
-    # configure dns 
+    # configure dns
     rdsconf = RDSConf.new
     rdsconf.doit # launch wizard
     cancel_wizard if rdsconf.cancel
@@ -282,11 +346,11 @@ end
 File.open(CONFFILE, 'w') {|f| f.write general_conf.to_yaml } #Store
 
 #exec("#{ENV['RBBIN']}/rb_init_conf.sh")
-command = "#{ENV['RBBIN']}/rb_init_conf.sh"
+command = "#{ENV['RBBIN']}/rb_init_conf"
 
 dialog = MRDialog.new
 dialog.clear = false
 dialog.title = "Applying configuration"
-dialog.prgbox(command,20,100, "Executing rb_init_conf.sh")
+dialog.prgbox(command,20,100, "Executing rb_init_conf")
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
