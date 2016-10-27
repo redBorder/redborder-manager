@@ -241,6 +241,12 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   #zookeeper
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 2181 -j ACCEPT &>/dev/null")
 
+  #kafka
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 9092 -j ACCEPT &>/dev/null")
+
+  #http2k
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 7980 -j ACCEPT &>/dev/null")
+
   # Reload firewalld configuration
   system("firewall-cmd --reload &>/dev/null")
 end
