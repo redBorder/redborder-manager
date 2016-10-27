@@ -12,7 +12,7 @@ if File.exist?(DIALOGRC)
     ENV['DIALOGRC'] = DIALOGRC
 end
 
-def cancel_wizard() 
+def cancel_wizard()
 
     dialog = MRDialog.new
     dialog.clear = true
@@ -23,7 +23,7 @@ def cancel_wizard()
 The setup has been cancelled or stopped.
 
 If you want to complete the setup wizard, please execute it again.
- 
+
 EOF
     result = dialog.msgbox(text, 11, 41)
     exit(1)
@@ -35,7 +35,7 @@ puts "\033]0;redborder - setup wizard\007"
 general_conf = {
     "hostname" => "",
     "cdomain" => "",
-    "cloud" => false, 
+    "cloud" => false,
     "network" => {
         "interfaces" => [],
         "dns" => []
@@ -65,8 +65,8 @@ general_conf = {
 # TODO: intro to the wizard, define color set, etc.
 
 text = <<EOF
- 
-This wizard will guide you through the necessary configuration of the device 
+
+This wizard will guide you through the necessary configuration of the device
 in order to convert it into a redborder node within a redborder cluster.
 
 It will go through the following required steps: network configuration,
@@ -75,7 +75,7 @@ the node mode (the mode determines the minimum group of services that make up
 the node, giving it more or less weight within the cluster).
 
 Would you like to continue?
- 
+
 EOF
 
 dialog = MRDialog.new
@@ -111,7 +111,7 @@ if yesno # yesno is "yes" -> true
     netconf.doit # launch wizard
     cancel_wizard if netconf.cancel
     general_conf["network"]["interfaces"] = netconf.conf
-    
+
     # Conf for DNS
     text = <<EOF
 
@@ -120,16 +120,16 @@ Do you want to configure DNS servers?
 If you have configured the network as Dynamic and
 you get the DNS servers via DHCP, you should say
 'No' to this  question.
- 
+
 EOF
 
     dialog = MRDialog.new
     dialog.clear = true
     dialog.title = "CONFIGURE DNS"
     yesno = dialog.yesno(text,0,0)
-    
+
     if yesno # yesno is "yes" -> true
-        # configure dns 
+        # configure dns
         dnsconf = DNSConf.new
         dnsconf.doit # launch wizard
         cancel_wizard if dnsconf.cancel
@@ -147,7 +147,7 @@ general_conf["hostname"] = hostconf.conf[:hostname]
 general_conf["cdomain"] = hostconf.conf[:domainname]
 
 text = <<EOF
- 
+
 Next, you must configure settings for serf service.
 
 Serf service is the service that create the cluster
@@ -158,7 +158,7 @@ formation.
 You will need to provide three parameters for this configuration:
 the synchronism network, the unicast/multicast mode and
 a secret key for encryption of serf network traffic.
- 
+
 EOF
 
 dialog = MRDialog.new
@@ -229,7 +229,7 @@ general_conf["serf"]["encrypt_key"] = cryptconf.conf
 
 # External S3 storage
 text = <<EOF
- 
+
 Do you want to use Amazon S3 Storage service?
 
 EOF
@@ -240,7 +240,7 @@ dialog.title = "Confirm configuration"
 yesno = dialog.yesno(text,0,0)
 
 if yesno # yesno is "yes" -> true
-    # configure dns 
+    # configure dns
     s3conf = S3Conf.new
     s3conf.doit # launch wizard
     cancel_wizard if s3conf.cancel
@@ -251,7 +251,7 @@ end
 
 # External Postgres DataBase
 text = <<EOF
- 
+
 Do you want to use Amazon RDS service or other
 external PostygreSQL DataBase?
 
@@ -263,7 +263,7 @@ dialog.title = "Confirm configuration"
 yesno = dialog.yesno(text,0,0)
 
 if yesno # yesno is "yes" -> true
-    # configure dns 
+    # configure dns
     rdsconf = RDSConf.new
     rdsconf.doit # launch wizard
     cancel_wizard if rdsconf.cancel
@@ -346,11 +346,11 @@ end
 File.open(CONFFILE, 'w') {|f| f.write general_conf.to_yaml } #Store
 
 #exec("#{ENV['RBBIN']}/rb_init_conf.sh")
-command = "#{ENV['RBBIN']}/rb_init_conf.sh"
+command = "#{ENV['RBBIN']}/rb_init_conf"
 
 dialog = MRDialog.new
 dialog.clear = false
 dialog.title = "Applying configuration"
-dialog.prgbox(command,20,100, "Executing rb_init_conf.sh")
+dialog.prgbox(command,20,100, "Executing rb_init_conf")
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:

@@ -28,7 +28,7 @@ def set_mode(hostname, mode)
     if role.save
       printf "INFO: Node #{hostname} passed to mode #{mode}\n"
     else
-      printf "Usage: rb_set_mode.rb master|custom [manager1] [manager2] [....]\n"
+      printf "Usage: rb_set_mode master|custom [manager1] [manager2] [....]\n"
     end
   end
 
