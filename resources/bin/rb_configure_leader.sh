@@ -148,7 +148,7 @@ _RBEOF_
 }
 
 function create_buckets(){
-
+  echo "create_buckets"
 }
 
 function configure_leader(){
