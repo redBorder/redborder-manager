@@ -26,6 +26,15 @@ network = init_conf['network']
 serf = init_conf['serf']
 mode = init_conf['mode']
 
+# Create file with bash env variables
+open("/etc/redborder/rb_init_conf.conf", "w") { |f|
+  f.puts "#REBORDER ENV VARIABLES"
+  if init_conf.has_key?("elasticache")
+    f.puts "ELASTICACHE_ADDRESS=#{init_conf["elasticache"]["cfg_address"]}" if init_conf["elasticache"].has_key?("cfg_address")
+    f.puts "ELASTICACHE_PORT=#{init_conf["elasticache"]["cfg_port"]}" if init_conf["elasticache"].has_key?("cfg_port")
+  end
+}
+
 # Configure HOSTNAME and CDOMAIN
 if Config_utils.check_hostname(hostname)
   if Config_utils.check_domain(cdomain)
