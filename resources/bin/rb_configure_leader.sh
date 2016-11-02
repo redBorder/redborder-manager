@@ -113,8 +113,8 @@ _RBEOF_
   cat > /var/chef/data/data_bag/rBglobal/elasticache.json <<-_RBEOF_
 {
   "id": "elasticache",
-  "cfg_address": "$ELASTICACHE_ADDRESS"
-  "cfg_port": "$ELASTICACHE_PORT"
+  "cfg_address": "$ELASTICACHE_ADDRESS",
+  "cfg_port": $ELASTICACHE_PORT
 }
 _RBEOF_
 

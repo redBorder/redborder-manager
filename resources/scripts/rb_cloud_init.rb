@@ -130,17 +130,18 @@ def config_s3(config, userdata_config)
 end
 
 def config_elasticache(config, userdata_config)
-    if userdata_config.has_key?("elasticache_cfg_address") or Config_utils.check_elasticache_cfg_address(userdata["elasticache_cfg_address"])
+    if userdata_config.has_key?("elasticache_cfg_address") and Config_utils.check_elasticache_cfg_address(userdata_config["elasticache_cfg_address"])
         puts "INFO: Elasticache configuration provided"
         config["elasticache"] = {}
         config["elasticache"]["cfg_address"] = userdata_config["elasticache_cfg_address"]
-        if userdata_config.has_key?("elasticache_cfg_port") or Config_utils.check_elasticache_cfg_port(userdata["elasticache_cfg_port"])
+        if userdata_config.has_key?("elasticache_cfg_port") and Config_utils.check_elasticache_cfg_port(userdata_config["elasticache_cfg_port"])
             config["elasticache"]["cfg_port"] = userdata_config["elasticache_cfg_port"]
         else
             #Set memcached default port
             config["elasticache"]["cfg_port"] = 11211
         end
     end
+    return config
 end
 
 # MAIN EXECUTION
