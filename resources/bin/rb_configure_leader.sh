@@ -115,8 +115,6 @@ _RBEOF_
   "pass": "$DRUIDDBPASS"
 }
 _RBEOF_
-  rm -f $RBDIR/var/chef/data/data_bag/passwords/db_druid.json
-
 
   # DB redborder passwords
   cat > /var/chef/data/data_bag/passwords/db_redborder.json <<-_RBEOF_
@@ -258,8 +256,8 @@ function configure_leader(){
   if [ "$(ls -A /opt/opscode/service)" ]; then
     e_title "Stopping default private-chef-server services"
     /usr/bin/chef-server-ctl stop &>/dev/null
+    e_title "Starting systemd chef-server services"
     for i in `ls /opt/opscode/service/`;do
-      e_title "Starting systemd chef-server services"
       systemctl enable $i &>/dev/null && systemctl start $i &>/dev/null
       rm -rf /opt/opscode/service/$i &>/dev/null
     done
@@ -374,6 +372,6 @@ rm -f /var/lock/leader-configuring.lock
 # Copy dhclient hook
 cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
-echo "Leader Node configured!"
+e_title "Leader Node configured!"
 
 touch /etc/redborder/cluster-installed.txt
