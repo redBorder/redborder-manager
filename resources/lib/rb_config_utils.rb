@@ -208,6 +208,16 @@ module Config_utils
        return true
    end
 
+   #ELASTICACHE PARAMETER CHECKS
+   #TODO
+   def self.check_elasticache_cfg_address(address)
+       return true
+   end
+   #TODO
+   def self.check_elasticache_cfg_port(port)
+       return true
+   end
+
 end
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:

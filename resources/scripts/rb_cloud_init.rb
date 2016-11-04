@@ -129,6 +129,21 @@ def config_s3(config, userdata_config)
     return config
 end
 
+def config_elasticache(config, userdata_config)
+    if userdata_config.has_key?("elasticache_cfg_address") and Config_utils.check_elasticache_cfg_address(userdata_config["elasticache_cfg_address"])
+        puts "INFO: Elasticache configuration provided"
+        config["elasticache"] = {}
+        config["elasticache"]["cfg_address"] = userdata_config["elasticache_cfg_address"]
+        if userdata_config.has_key?("elasticache_cfg_port") and Config_utils.check_elasticache_cfg_port(userdata_config["elasticache_cfg_port"])
+            config["elasticache"]["cfg_port"] = userdata_config["elasticache_cfg_port"]
+        else
+            #Set memcached default port
+            config["elasticache"]["cfg_port"] = 11211
+        end
+    end
+    return config
+end
+
 # MAIN EXECUTION
 
 userdata_config = readUserData()
@@ -140,6 +155,7 @@ config = config_serf(config, userdata_config)
 config = config_mode(config, userdata_config)
 config = config_postgresql(config, userdata_config)
 config = config_s3(config, userdata_config)
+config = config_elasticache(config, userdata_config)
 
 File.write(@initconf_path, config.to_yaml)
 system("systemctl start rb-init-conf")

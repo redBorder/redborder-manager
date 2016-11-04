@@ -4,6 +4,26 @@
 
 source /etc/profile
 source $RBLIB/rb_manager_functions.sh
+source $RBETC/rb_init_conf.conf
+
+function configure_db(){
+  # Configuring database passwords
+  [ "x$REDBORDERDBPASS" == "x" ] && REDBORDERDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  [ "x$DRUIDDBPASS" == "x" ] && DRUIDDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+
+  # Druid DATABASE
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER druid WITH PASSWORD '$DRUIDDBPASS';"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS druid;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT druid TO $DB_ADMINUSER;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE druid OWNER druid;"
+
+  # redborder DATABASE
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER redborder WITH PASSWORD '$REDBORDERDBPASS';"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS redborder;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT redborder TO $DB_ADMINUSER;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE redborder OWNER redborder;"
+
+}
 
 function configure_db(){
   # Configuring database passwords
@@ -51,7 +71,8 @@ function configure_dataBags(){
   S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
 
   ## Data bags for passwords ##
-  mkdir -p /var/chef/data/data_bag_encrypted/passwords/
+  mkdir -p /var/chef/data/data_bag/passwords/
+  mkdir -p /var/chef/data/data_bag/rBglobal/
 
   ## S3 passwords ## TODO
   sed -i "s/s3.redborder.cluster/s3.$cdomain/" /var/chef/data/data_bag/passwords/s3_secrets.json
@@ -98,7 +119,7 @@ _RBEOF_
 
 
   # DB redborder passwords
-  cat > /var/chef/data/data_bag_encrypted/passwords/db_redborder.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag/passwords/db_redborder.json <<-_RBEOF_
 {
   "id": "db_redborder",
   "username": "redborder",
@@ -108,7 +129,15 @@ _RBEOF_
   "pass": "$REDBORDERDBPASS"
 }
 _RBEOF_
-  rm -f $RBDIR/var/chef/data/data_bag_encrypted/passwords/db_redborder.json
+
+  # Elasticache configuration
+  cat > /var/chef/data/data_bag/rBglobal/elasticache.json <<-_RBEOF_
+{
+  "id": "elasticache",
+  "cfg_address": "$ELASTICACHE_ADDRESS",
+  "cfg_port": $ELASTICACHE_PORT
+}
+_RBEOF_
 
   #rb-webui secret key
 #  RBWEBISECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
