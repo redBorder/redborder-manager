@@ -257,8 +257,8 @@ function configure_leader(){
     e_title "Stopping default private-chef-server services"
     /usr/bin/chef-server-ctl stop &>/dev/null
     e_title "Starting systemd chef-server services"
-    for i in `ls /opt/opscode/service/`;do
-      systemctl enable $i &>/dev/null && systemctl start $i &>/dev/null
+    for i in `ls /opt/opscode/service/ | sed 's/opscode-//g'`;do
+      systemctl enable opscode-$i &>/dev/null && systemctl start opscode-$i &>/dev/null
       rm -rf /opt/opscode/service/$i &>/dev/null
     done
   fi
