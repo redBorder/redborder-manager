@@ -39,7 +39,10 @@ fi
 
 # Get chef validator and admin certificates
 $RBBIN/serf-query-certificate -q certificate-validator > /tmp/cert && mv /tmp/cert /etc/chef/redborder-validator.pem
+[ "x$?" != "x0" ] && error_title "ERROR getting redborder-validator.pem Chef certificate" && exit 1
+
 $RBBIN/serf-query-certificate -q certificate-admin > /tmp/cert && mv /tmp/cert /etc/chef/admin.pem
+[ "x$?" != "x0" ] && error_title "ERROR getting admin.pem Chef certificate" && exit 1
 
 #############################
 # CHEF CLIENT Configuration #
@@ -96,5 +99,5 @@ chef-client #&>/root/.install-chef-client.log
 # Copy dhclient hook
 cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
-echo "Custom Node configured!"
+e_title "Custom Node configured!"
 touch /etc/redborder/cluster-installed.txt
