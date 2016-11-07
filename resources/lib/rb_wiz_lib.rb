@@ -8,7 +8,7 @@ require 'uri'
 require File.join(ENV['RBDIR'].nil? ? '/usr/lib/redborder' : ENV['RBDIR'],'lib/rb_config_utils.rb')
 
 class WizConf
-    
+
     # Read propierties from sysfs for a network devices
     def netdev_property(devname)
         netdev = {}
@@ -30,7 +30,7 @@ class WizConf
 
         netdev
     end
-  
+
 end
 
 # Class to create a Network configuration box
@@ -56,12 +56,12 @@ class NetConf < WizConf
 This is the network device configuration box.
 
 Please, choose a network device to configure. Once you
-have entered and configured all devices, you must select 
+have entered and configured all devices, you must select
 last choise (Finalize) and 'Accept' to continue.
 
 Any device not configured will be set to Dynamic (DHCP)
 mode by default.
- 
+
 EOF
             items = []
             menu_data = Struct.new(:tag, :item)
@@ -127,7 +127,7 @@ EOF
 end
 
 class DevConf < WizConf
-        
+
     attr_accessor :device_name, :conf, :cancel
 
     def initialize(x)
@@ -148,7 +148,7 @@ Dynamic: set dynamic IP/Netmask and Gateway
          via DHCP client.
 Static: You will provide configuration for
         IP/Netmask and Gateway, if needed.
- 
+
 EOF
         items = []
         radiolist_data = Struct.new(:tag, :item, :select)
@@ -187,13 +187,13 @@ EOF
         case exit_code
         when dialog.dialog_ok
             # OK Pressed
-            
+
             # TODO ipv6 support
             if selected_item == "Static"
                 dialog = MRDialog.new
                 dialog.clear = true
                 text = <<EOF
-        
+
 You are about to configure the network device #{@device_name}. It has the following propierties:
 EOF
                 netdevprop = netdev_property(@device_name)
@@ -206,14 +206,14 @@ EOF
                 text += "MODEL: #{netdevprop["ID_MODEL_FROM_DATABASE"]}\n" unless netdevprop["ID_MODEL_FROM_DATABASE"].nil?
                 text += "STATUS: #{netdevprop["STATUS"]}\n" unless netdevprop["STATUS"].nil?
                 text += " \n"
-    
+
                 @conf['IP:'] = Config_utils.get_ipv4_network(@device_name)[:ip] if @conf['IP:'].nil?
                 @conf['Netmask:'] = Config_utils.get_ipv4_network(@device_name)[:netmask] if @conf['Netmask:'].nil?
                 @conf['Gateway:'] = Config_utils.get_ipv4_network(@device_name)[:gateway] if @conf['Gateway:'].nil?
-    
+
                 flen = 20
                 form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen)
-    
+
                 loop do
                     items = []
                     label = "IP:"
@@ -227,7 +227,7 @@ EOF
                     data.flen = flen
                     data.ilen = 0
                     items.push(data.to_a)
-    
+
                     label = "Netmask:"
                     data = form_data.new
                     data.label = label
@@ -239,7 +239,7 @@ EOF
                     data.flen = flen
                     data.ilen = 0
                     items.push(data.to_a)
-    
+
                     label = "Gateway:"
                     data = form_data.new
                     data.label = label
@@ -251,7 +251,7 @@ EOF
                     data.flen = flen
                     data.ilen = 0
                     items.push(data.to_a)
-    
+
                     dialog.title = "Network configuration for #{@device_name}"
                     @conf = dialog.form(text, items, 20, 60, 0)
 
@@ -307,7 +307,7 @@ EOF
             # Escape Pressed
 
         end
-        
+
 
     end
 
@@ -344,11 +344,11 @@ class HostConf < WizConf
             text = <<EOF
 
 Please, set hostname and domain name.
- 
+
 The hostname may only contain ASCII letters 'a'
 through 'z' (in a case-insensitive manner), the
 digits '0' through '9' and the hyphen ('-').
- 
+
 The RFC1123 permits hostname labels to start with digits
 or letters but not to start or end with hyphen.
 Also, the hostname and each label of the domain name
@@ -356,7 +356,7 @@ must be between 1 and 63 characters, and the entire
 hostname has a maximum of 253 ASCII characters.
 
 Please, consult RFC1178 to choose an appropiate hostname.
- 
+
 EOF
             items = []
             form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen, :attr)
@@ -374,7 +374,7 @@ EOF
             data.ilen = 0
             data.attr = 0
             items.push(data.to_a)
-        
+
             label = "Domain name:"
             data = form_data.new
             data.label = label
@@ -390,7 +390,7 @@ EOF
 
             dialog.title = "Hostname and domain name configuration"
             host = dialog.mixedform(text, items, 24, 60, 0)
-            
+
             if host.empty?
                 # Cancel button pushed
                 @cancel = true
@@ -420,7 +420,7 @@ EOF
 
         @conf[:hostname] = host["Hostname:"]
         @conf[:domainname] = host["Domain name:"]
- 
+
     end
 
 end
@@ -450,9 +450,9 @@ class DNSConf < WizConf
             text = <<EOF
 
 Please, set DNS servers.
- 
+
 You can set up to 3 DNS servers, but only one is mandatory. Set DNS values in order, first, second (optional) and then third (optional).
- 
+
 Please, insert each value fo IPv4 address in dot notation.
 
 EOF
@@ -472,7 +472,7 @@ EOF
             data.ilen = 0
             data.attr = 0
             items.push(data.to_a)
-        
+
             label = "DNS2:"
             data = form_data.new
             data.label = label
@@ -501,7 +501,7 @@ EOF
 
             dialog.title = "DNS configuration"
             dns = dialog.mixedform(text, items, 20, 42, 0)
-            
+
             if dns.empty?
                 # Cancel button pushed
                 @cancel = true
@@ -538,7 +538,7 @@ EOF
             dialog.msgbox(text, 12, 41)
 
         end
-        
+
         unless dns.empty?
             @conf << dns["DNS1:"]
             unless dns["DNS2:"].empty?
@@ -629,7 +629,7 @@ class SerfSyncConf < WizConf
     end
 
     def doit
-        
+
         sync = {}
 
         loop do
@@ -637,19 +637,19 @@ class SerfSyncConf < WizConf
             dialog.clear = true
             dialog.insecure = true
             text = <<EOF
- 
+
 Please, set the synchronism network.
- 
+
 You must set a synchronism network in two formats:
 - IPv4 CIDR format: i.e. 192.168.1.0/24
 - IPv4 mask format: i.e. 192.168.1.0/255.255.255.0
- 
+
 This network is needed to connect nodes and build the cluster. Also,
 internal services will use it to communicate between them.
 
 In some cases, this network has no default gateway and it is isolated from
 rest of the networks.
- 
+
 EOF
             items = []
             form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen, :attr)
@@ -695,7 +695,7 @@ We have detected an error in Sync Network configuration.
 Please, review content for Sync Network configuration. Remember, you
 must introduce only IPv4 address in dot notation followed by mask
 length or netmask, i.e. 192.168.100.0./24.
- 
+
 EOF
             dialog.msgbox(text, 15, 41)
 
@@ -704,7 +704,7 @@ EOF
         # normalizing
         sync_netaddr = NetAddr::CIDRv4.create(sync["Sync Network:"])
         @conf = "#{sync_netaddr.network}#{sync_netaddr.netmask}"
- 
+
     end
 
 end
@@ -719,7 +719,7 @@ class SerfMcastConf < WizConf
     end
 
     def doit
-        
+
         dialog = MRDialog.new
         dialog.clear = true
         text = <<EOF
@@ -735,7 +735,7 @@ Unicast:   set Unicast mode of operation for serf agent.
 
 In both cases, the Synchronism network is used to find the correct
 network device and bind to it.
- 
+
 EOF
         items = []
         radiolist_data = Struct.new(:tag, :item, :select)
@@ -786,12 +786,12 @@ class SerfCryptConf < WizConf
 Please, provide a password for encryption of serf network traffic.
 
 This password will avoid not allowed connection from nodes not belonging to the cluster. Any printable character is allowed, and you can use from 6 to 20 characters.
-  
+
 EOF
 
             flen = 20
             form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen)
- 
+
 
             items = []
             label = "Password:"
@@ -805,7 +805,7 @@ EOF
             data.flen = flen
             data.ilen = 0
             items.push(data.to_a)
-    
+
             label = "Enter again:"
             data = form_data.new
             data.label = label
@@ -817,7 +817,7 @@ EOF
             data.flen = flen
             data.ilen = 0
             items.push(data.to_a)
- 
+
 
             result = dialog.passwordform(text, items, 20, 60, 0)
 
@@ -846,10 +846,10 @@ EOF
 We have detected an error in Serf encryption key.
 
 Please, remember that the minimum length is 6 and maximum is 20 characters. Also, both fields must match.
- 
+
 EOF
             dialog.msgbox(text, 15, 41)
-            
+
         end
 
         @conf = Config_utils.get_encrypt_key(result["Password:"])
@@ -867,17 +867,17 @@ class ModeConf < WizConf
     end
 
     def doit
-        
+
         modelist = [
             {"name"=>"custom", "description"=>"Minimum set of services to join into a cluster"},
             {"name"=>"core", "description"=>"Basic set of services to create a cluster"},
             {"name"=>"full", "description"=>"All services running to perform a full cluster experience"}
             ] # default values
 
-        if File.exist?("#{ENV['RBETC']}/mode-list.yml")
-            modelist = YAML.load_file("#{ENV['RBETC']}/mode-list.yml")
+        if File.exist?("#{ENV['RBDIR']}/mode-list.yml")
+            modelist = YAML.load_file("#{ENV['RBDIR']}/mode-list.yml")
         end
-        
+
         dialog = MRDialog.new
         dialog.clear = true
         text = <<EOF
@@ -887,7 +887,7 @@ Please, select mode of operation of the manager node.
 If this is the first installation of a redborder manager, and you are planning to create a cluster based on multiple nodes, you should select 'core' mode. For the rest of nodes, you should select 'custom' mode.
 
 If this is an stand alone manager installation, you should select 'full' mode.
- 
+
 EOF
         items = []
         radiolist_data = Struct.new(:tag, :item, :select)
@@ -933,13 +933,13 @@ class RDSConf < WizConf
         "Host:" => "",
         "Port:" => 5432
         }
-                
+
         loop do
             dialog = MRDialog.new
             dialog.clear = true
             dialog.insecure = true
             text = <<EOF
- 
+
 You need to provide some paratemeters in order to use
 Amazon RDS database Service or external PostgreSQL:
 
@@ -950,7 +950,7 @@ Host: IP address or hostname of the database service.
 Port: Port of the database service (default: 5432).
 
 Please, set these PostgreSQL parameters:
- 
+
 EOF
             items = []
             form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen, :attr)
@@ -968,7 +968,7 @@ EOF
             data.ilen = 0
             data.attr = 0
             items.push(data.to_a)
-        
+
             label = "Password:"
             data = form_data.new
             data.label = label
@@ -1010,7 +1010,7 @@ EOF
 
             dialog.title = "RDS or PostgreSQL configuration"
             rdsconf = dialog.mixedform(text, items, 0, 0, 0)
-            
+
             if dialog.exit_code == dialog.dialog_ok
                 unless rdsconf["Superuser:"].empty? or rdsconf["Password:"].empty? or rdsconf["Host:"].empty? or rdsconf["Port:"].empty?
                     @conf['superuser'] = rdsconf["Superuser:"]
@@ -1023,7 +1023,7 @@ EOF
                 @cancel = true
                 break
             end
-           
+
             # error, do another loop
             dialog = MRDialog.new
             dialog.clear = true
@@ -1033,7 +1033,7 @@ EOF
 We have detected an error in S3 configuration.
 
 Please, provide correct values for the parameters.
- 
+
 EOF
             dialog.msgbox(text, 12, 41)
 
@@ -1056,13 +1056,13 @@ class S3Conf < WizConf
     def doit
 
         s3conf = { "AWS access key:" => "", "AWS secret key:" => "" }
-                
+
         loop do
             dialog = MRDialog.new
             dialog.clear = true
             dialog.insecure = true
             text = <<EOF
- 
+
 You need to provide two paratemeters in order to use
 Amazon S3 Storage Service:
 
@@ -1076,7 +1076,7 @@ Bucket: This is a logical unit of storage created in AWS S3
 Endpoint: URL that is the entry point for a web service.
 
 Please, set these S3 parameters:
- 
+
 EOF
             items = []
             form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen, :attr)
@@ -1094,7 +1094,7 @@ EOF
             data.ilen = 0
             data.attr = 0
             items.push(data.to_a)
-        
+
             label = "AWS secret key:"
             data = form_data.new
             data.label = label
@@ -1136,7 +1136,7 @@ EOF
 
             dialog.title = "S3 configuration"
             s3conf = dialog.mixedform(text, items, 0, 0, 0)
-            
+
             if dialog.exit_code == dialog.dialog_ok
                 unless s3conf["AWS access key:"].empty? or s3conf["AWS secret key:"].empty? or s3conf["Bucket:"].empty? or s3conf["Endpoint:"].empty?
                     @conf['access_key'] = s3conf["AWS access key:"]
@@ -1149,7 +1149,7 @@ EOF
                 @cancel = true
                 break
             end
-           
+
             # error, do another loop
             dialog = MRDialog.new
             dialog.clear = true
@@ -1159,7 +1159,7 @@ EOF
 We have detected an error in S3 configuration.
 
 Please, provide correct values for the parameters.
- 
+
 EOF
             dialog.msgbox(text, 12, 41)
 
