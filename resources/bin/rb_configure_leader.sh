@@ -25,31 +25,16 @@ function configure_db(){
 
 }
 
-function configure_db(){
-  # Configuring database passwords
-  [ "x$REDBORDERDBPASS" == "x" ] && REDBORDERDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-  [ "x$DRUIDDBPASS" == "x" ] && DRUIDDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-
-  # Druid DATABASE
-  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER druid WITH PASSWORD '$DRUIDDBPASS';"
-  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS druid;"
-  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT druid TO $DB_ADMINUSER;"
-  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE druid OWNER druid;"
-
-  # redborder DATABASE
-  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER redborder WITH PASSWORD '$REDBORDERDBPASS';"
-  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS redborder;"
-  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT redborder TO $DB_ADMINUSER;"
-  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE redborder OWNER redborder;"
-
-}
-
 function configure_dataBags(){
+
+  # Chef server configuration file
+  ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config"
 
   # Data bag encrypted key
   [ "x$DATABAGKEY" == "x" ] && DATABAGKEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   echo $DATABAGKEY > /etc/chef/encrypted_data_bag_secret
 
+  # Chef middleware configurations
   OCID_DBCFG="/var/opt/opscode/oc_id/config/database.yml"
   OCBIFROST_DBCFG="/var/opt/opscode/oc_bifrost/sys.config"
   CHEFMOVER_DBCFG="/var/opt/opscode/opscode-chef-mover/sys.config"
@@ -66,6 +51,7 @@ function configure_dataBags(){
   # Obtaining chef cookbook storage current configuration
   S3KEY="`grep s3_access_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   S3SECRET="`grep s3_secret_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+  S3HOST="`cat /etc/redborder/rb_init_conf.yml | grep endpoint | awk {'print $2'}`" #CHECK If bookshelf enabled, this value will be empty
   S3URL="`grep s3_url, $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`" #CHECK when {s3_external_url, host_header},
   S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
@@ -73,9 +59,6 @@ function configure_dataBags(){
   ## Data bags for passwords ##
   mkdir -p /var/chef/data/data_bag/passwords/
   mkdir -p /var/chef/data/data_bag/rBglobal/
-
-  ## S3 passwords ## TODO
-  sed -i "s/s3.redborder.cluster/s3.$cdomain/" /var/chef/data/data_bag/passwords/s3_secrets.json
 
   ## DB opscode (chef) passwords
   cat > /var/chef/data/data_bag/passwords/db_opscode_chef.json <<-_RBEOF_
@@ -98,6 +81,7 @@ _RBEOF_
   "id": "s3",
   "s3_access_key_id": "$S3KEY",
   "s3_secret_key_id": "$S3SECRET",
+  "s3_host": "$S3HOST",
   "s3_url": "$S3URL",
   "s3_external_url": "$S3EXTERNALURL",
   "s3_bucket": "$S3BUCKET"
@@ -185,9 +169,6 @@ function configure_leader(){
     exit 0
   fi
   touch /var/lock/leader-configuring.lock
-
-  # Chef server configuration
-  ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config"
 
   # Create specific role for this node
   e_title "Creating custom chef role"
