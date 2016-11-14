@@ -121,14 +121,14 @@ _RBEOF_
 }
 _RBEOF_
 
-  #rb-webui secret key
-#  RBWEBISECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-#  cat > /var/chef/data/data_bag_encrypted/passwords/rb-webui_secret_token.json <<-_RBEOF_
-#{
-#  "id": "rb-webui_secret_token",
-#  "secret": "$RBWEBISECRET"
-#}
-#_RBEOF_
+  #webui secret token
+  WEBISECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  cat > /var/chef/data/data_bag/passwords/webui_secret.json <<-_RBEOF_
+{
+  "id": "webui_secret",
+  "secret": "$WEBISECRET"
+}
+_RBEOF_
 
   ## Domain
   cat > /var/chef/data/data_bag/rBglobal/domain.json <<-_RBEOF_
