@@ -291,6 +291,7 @@ fi
 
 # Set chef-server internal nginx port to 4443
 echo "nginx['ssl_port'] = 4443" >> /etc/opscode/chef-server.rb
+echo "nginx['non_ssl_port'] = 4480" >> /etc/opscode/chef-server.rb
 
 # Chef server initial configuration
 e_title "Configuring Chef-Server"
