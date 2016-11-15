@@ -59,6 +59,7 @@ function configure_dataBags(){
   ## Data bags for passwords ##
   mkdir -p /var/chef/data/data_bag/passwords/
   mkdir -p /var/chef/data/data_bag/rBglobal/
+  mkdir -p /var/chef/data/data_bag/certs/
 
   ## DB opscode (chef) passwords
   cat > /var/chef/data/data_bag/passwords/db_opscode_chef.json <<-_RBEOF_
@@ -155,6 +156,9 @@ _RBEOF_
   "uuid": "$(cat /proc/sys/kernel/random/uuid)"
 }
 _RBEOF_
+
+  ## Initial certificate for certs data bag
+  env CDOMAIN=$cdomain rb_create_nginx_certs > /var/chef/data/data_bag/certs/nginx.json
 
 }
 
