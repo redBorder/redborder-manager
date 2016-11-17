@@ -56,10 +56,11 @@ function configure_dataBags(){
   S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`" #CHECK when {s3_external_url, host_header},
   S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
 
-  ## Data bags for passwords ##
+  ## Data bags ##
   mkdir -p /var/chef/data/data_bag/passwords/
   mkdir -p /var/chef/data/data_bag/rBglobal/
   mkdir -p /var/chef/data/data_bag/certs/
+  mkdir -p /var/chef/data/data_bag/backend/
 
   ## DB opscode (chef) passwords
   cat > /var/chef/data/data_bag/passwords/db_opscode_chef.json <<-_RBEOF_
@@ -128,6 +129,25 @@ _RBEOF_
 {
   "id": "webui_secret",
   "secret": "$WEBISECRET"
+}
+_RBEOF_
+
+  #kafka topics #TODO
+  cat > /var/chef/data/data_bag/backend/kafka_topics.json <<-_RBEOF_
+{
+  "id": "kafka_topics",
+  "topics": {
+    "rb_flow": {
+      "partitions": 1,
+      "replication_factor": 1,
+      "log_compaction": false
+    },
+    "rb_event": {
+      "partitions": 1,
+      "replication_factor": 1,
+      "log_compaction": false
+    }
+  }
 }
 _RBEOF_
 
