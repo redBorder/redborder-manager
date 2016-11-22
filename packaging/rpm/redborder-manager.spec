@@ -8,7 +8,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash ntp dialog rvm postgresql s3cmd dmidecode rsync redborder-serf redborder-common redborder-chef-client redborder-cookbooks
+Requires: bash ntp dialog postgresql s3cmd dmidecode rsync redborder-serf redborder-common redborder-chef-client redborder-cookbooks redborder-rubyrvm
 
 %description
 %{summary}
@@ -73,21 +73,24 @@ firewall-cmd --reload
 %doc
 
 %changelog
-* Wed Oct 26 2016 Juan J. Prieto <jjprieto@redborder.com> - 1.0.0-1
+* Tue Nov 22 2016 Juan J. Prieto <jjprieto@redborder.com> - 0.0.10-1
+- Change rvm require and fix pack versioning.
+
+* Wed Oct 26 2016 Juan J. Prieto <jjprieto@redborder.com> - 0.0.6-1
 - Add directory scripts and support for wrapper on ruby.
 
-* Tue Sep 06 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
+* Tue Sep 06 2016 Carlos J. Mateos <cjmateos@redborder.com> - 0.0.5-1
 - Add rb-init-conf service and remove chef package installation
 - Remove rb_manager_functions.rb from spec
 
-* Fri Sep 02 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
+* Fri Sep 02 2016 Carlos J. Mateos <cjmateos@redborder.com> - 0.0.4-1
 - Add YML config files
 
-* Tue Aug 30 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
+* Tue Aug 30 2016 Carlos J. Mateos <cjmateos@redborder.com> - 0.0.3-1
 - Change chef packages
 
-* Thu Jul 07 2016 Carlos J. Mateos <cjmateos@redborder.com> - 1.0.0-1
+* Thu Jul 07 2016 Carlos J. Mateos <cjmateos@redborder.com> - 0.0.2-1
 - Added various rb scripts and chef data
 
-* Thu Jun 23 2016 Juan J. Prieto <jjprieto@redborder.com> - 1.0.0-1
+* Thu Jun 23 2016 Juan J. Prieto <jjprieto@redborder.com> - 0.0.1-1
 - first spec version
