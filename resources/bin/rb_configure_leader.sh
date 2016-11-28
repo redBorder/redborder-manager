@@ -169,8 +169,8 @@ _RBEOF_
 _RBEOF_
 
   ## Generating cluster uuid
-  mkdir -p /var/chef/data/data_bag_encrypted/rBglobal
-  cat > /var/chef/data/data_bag_encrypted/rBglobal/cluster.json <<-_RBEOF_
+  mkdir -p /var/chef/data/data_bag/rBglobal
+  cat > /var/chef/data/data_bag/rBglobal/cluster.json <<-_RBEOF_
 {
   "id": "cluster",
   "uuid": "$(cat /proc/sys/kernel/random/uuid)"

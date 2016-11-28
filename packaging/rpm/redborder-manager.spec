@@ -26,9 +26,7 @@ mkdir -p %{buildroot}/usr/lib/redborder/lib
 mkdir -p %{buildroot}/etc/profile.d
 mkdir -p %{buildroot}/var/chef/cookbooks
 mkdir -p %{buildroot}/var/chef/data/role
-mkdir -p %{buildroot}/var/chef/data/data_bag/passwords
-mkdir -p %{buildroot}/var/chef/data/data_bag/rBglobal
-mkdir -p %{buildroot}/var/chef/data/data_bag_encrypted/passwords
+mkdir -p %{buildroot}/var/chef/data/data_bag
 install -D -m 0644 resources/redborder-manager.sh %{buildroot}/etc/profile.d
 install -D -m 0644 resources/dialogrc %{buildroot}/etc/redborder
 cp resources/bin/* %{buildroot}/usr/lib/redborder/bin
