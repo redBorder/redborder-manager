@@ -164,7 +164,7 @@ function upload_pem() {
 }
 _RBEOF_
         $KNIFE data bag delete certs ${NAMECERT}_pem -c $KNIFECFG -y &>/dev/null
-        $KNIFE data bag -c $KNIFECFG from file certs $JSON --secret-file /etc/chef/encrypted_data_bag_secret &>/dev/null
+        $KNIFE data bag -c $KNIFECFG from file certs $JSON &>/dev/null
         if [ $? -eq 0 ]; then
             ret=0
             e_ok
