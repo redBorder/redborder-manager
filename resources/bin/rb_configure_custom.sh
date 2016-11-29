@@ -100,4 +100,4 @@ chef-client #&>/root/.install-chef-client.log
 cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
 e_title "Custom Node configured!"
-touch /etc/redborder/cluster-installed.txt
+date > /etc/redborder/cluster-installed.txt

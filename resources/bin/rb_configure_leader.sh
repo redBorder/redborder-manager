@@ -380,4 +380,4 @@ cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
 e_title "Leader Node configured!"
 
-touch /etc/redborder/cluster-installed.txt
+date > /etc/redborder/cluster-installed.txt
