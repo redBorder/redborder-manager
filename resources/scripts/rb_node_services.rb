@@ -9,10 +9,11 @@ def usage
   printf("  -h         -> print this help\n")
   printf("  -l         -> Get all services enabled in the current node\n")
   printf("  -s service -> Check if the service is enabled in the current node\n")
+  printf("  -n service -> Get all nodes with the specified service enabled\n")
   exit 1
 end
 
-opt = Getopt::Std.getopts("hs:l")
+opt = Getopt::Std.getopts("hs:ln:")
 usage if opt["h"]
 
 if !opt["s"].nil? or !opt["l"].nil?
@@ -58,6 +59,14 @@ if !opt["s"].nil? or !opt["l"].nil?
       exit 0
     end
   end
+elsif !opt["n"].nil?
+  nodes = []
+  service = opt["n"]
+  consul_response = JSON.parse(`curl http://localhost:8500/v1/catalog/service/#{service} 2>/dev/null`)
+  consul_response.each_with_index do |n,i|
+    nodes[i] = n["Node"]
+  end
+  puts nodes
 else
   usage
 end
