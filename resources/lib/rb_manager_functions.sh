@@ -1,43 +1,13 @@
 #!/bin/bash
-#######################################################################
-# Copyright (c) 2014 ENEO Tecnología S.L.
-# This file is part of redBorder.
-# redBorder is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# redBorder is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License License for more details.
-# You should have received a copy of the GNU Affero General Public License License
-# along with redBorder. If not, see <http://www.gnu.org/licenses/>.
-#######################################################################
 
-KNIFE="/usr/bin/knife"
-
-if [ "x$UID" == "x0" ]; then
-  KNIFECFG="/root/.chef/knife.rb"
-else
-  KNIFECFG="/var/www/rb-rails/config/knife.rb"
-fi
+KNIFECFG="/root/.chef/knife.rb"
 
 HOME="/root"
 DEBUG=0
 RES_COL=60
 MOVE_TO_COL="echo -en \\033[${RES_COL}G"
 
-CERT="/etc/chef-server/chef-webui.pem"
-CERTUSER="chef-webui"
-
-if [ ! -f $CERT ]; then
-  CERT="/root/.chef/root.pem"
-  CERTUSER="root"
-  if [ ! -f $CERT ]; then
-    CERT="/var/www/rb-rails/config/rb-chef-webui.pem"
-    CERTUSER="rb-chef-webui"
-  fi
-fi
+CERT="/etc/chef/client.pem"
 
 function valid_ip() {
     local ip=$1
@@ -163,8 +133,8 @@ function upload_pem() {
     "private_rsa": "`cat ${LOCATIONCERT} | tr '\n' '|' | sed 's/|/\\\\n/g'`"
 }
 _RBEOF_
-        $KNIFE data bag delete certs ${NAMECERT}_pem -c $KNIFECFG -y &>/dev/null
-        $KNIFE data bag -c $KNIFECFG from file certs $JSON &>/dev/null
+        knife data bag delete certs ${NAMECERT}_pem -y &>/dev/null
+        knife data bag from file certs $JSON &>/dev/null
         if [ $? -eq 0 ]; then
             ret=0
             e_ok
