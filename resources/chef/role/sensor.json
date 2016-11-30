@@ -1,0 +1,34 @@
+{
+  "name": "sensor",
+  "description": "redborder sensor role",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+  },
+  "override_attributes": {
+    "redborder": {
+      "ntp": {
+        "is_server": false
+      },
+      "snmp": {
+        "full_systemview": true
+      },
+      "proxy": {
+        "enabled": false
+      },
+      "rsyslog": {
+        "is_server": false,
+        "mode": "extended",
+        "servers": [],
+       	"protocol": "udp"
+      },
+      "smtp": {
+        "relayhost": ""
+      }
+    }
+  },
+  "chef_type": "role",
+  "run_list": [
+  ],
+  "env_run_lists": {
+  }
+}
