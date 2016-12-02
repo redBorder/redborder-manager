@@ -14,8 +14,8 @@
   name: 'kafka'
   description: 'Kafka server node'
 -
-  name: 'druid'
-  description: 'Druid full server node'
+  name: 'webui'
+  description: 'Web node'
 -
   name: 'middlemanager'
   description: 'Druid middlemanager node'
