@@ -104,6 +104,12 @@ end
 # TODO: check network connectivity. Try to resolve repo.redborder.com
 
 ####################
+# Set UTC timezone #
+####################
+
+system("timedatectl set-timezone UTC")
+
+####################
 # S3 configuration #
 ####################
 
