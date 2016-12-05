@@ -28,3 +28,6 @@
 -
   name: 'http2k'
   description: 'Http2k node'
+-
+  name: 'samza'
+  description: 'Samza node'
