@@ -108,6 +108,7 @@ end
 ####################
 
 system("timedatectl set-timezone UTC")
+system("ntpdate pool.ntp.org")
 
 ####################
 # S3 configuration #
