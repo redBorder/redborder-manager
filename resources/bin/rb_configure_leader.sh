@@ -272,6 +272,9 @@ function configure_leader(){
   chef-client #&>/root/.install-chef-client.log
   e_title "redborder install run (3/3) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
+
+  #Add client to admins group
+  knife group add client `hostname -s` admins &>/dev/null
 }
 
 ########
