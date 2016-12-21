@@ -231,6 +231,8 @@ function configure_leader(){
   # Adding chef role to node
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[$CLIENTNAME]"
+  # Set client.pem as readable
+  chmod a+r /etc/chef/client.pem
 
   # MANAGER MODES
   e_title "Configuring manager mode"

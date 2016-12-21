@@ -95,6 +95,8 @@ yum clean all
 e_title "Configuring Chef-Client. Please wait...  "
 e_title "redborder install run $(date)" #>>/root/.install-chef-client.log
 chef-client #&>/root/.install-chef-client.log
+# Set client.pem as readable
+chmod a+r /etc/chef/client.pem
 
 #Add client to admins group
 knife group add client `hostname -s` admins &>/dev/null
