@@ -219,7 +219,7 @@ function configure_leader(){
   # Save into cache directory
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid http2k cron memcached chef-server consul hadoop samza nginx geoip webui rb-manager" # The order matters!
+  listCookbooks="zookeeper kafka druid http2k cron memcached chef-server consul hadoop samza nginx geoip webui snmp rbmonitor rb-manager" # The order matters!
   for n in $listCookbooks; do # cookbooks
     rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
