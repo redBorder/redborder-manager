@@ -267,6 +267,9 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   system("firewall-cmd --reload &>/dev/null")
 end
 
+# Upgrade system
+system('yum update -y')
+
 # Enable and start SERF
 system('systemctl enable serf &> /dev/null')
 system('systemctl enable serf-join &> /dev/null')
