@@ -268,7 +268,7 @@ if !network.nil? #Firewall rules are not needed in cloud environments
 end
 
 # Upgrade system
-system('yum update -y')
+system('yum install systemd -y')
 
 # Enable and start SERF
 system('systemctl enable serf &> /dev/null')
