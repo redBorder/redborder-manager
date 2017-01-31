@@ -6,18 +6,10 @@
 function candidateModes() {
   SERVICE=$1
 
-  s3_modes=(s3 full)
-  postgresql_modes=(postgresql full)
+  s3_modes="s3|full"
+  postgresql_modes="postgresql|full"
 
-  SERVICE_MODES=$(eval echo \$${SERVICE}_modes)
-}
-
-# Usage function
-function usage() {
-    echo
-    echo "$(basename $0) <OPTIONS>"
-    echo "  h) usage"
-    echo
+  CANDIDATE_MODES=$(eval echo \$${SERVICE}_modes)
 }
 
 ##################################################
@@ -33,14 +25,7 @@ s3_TAG="s3_required=true"
 postgresql_TAG="postgresql_required=true"
 S3_CANDIDATES_TAG="mode=s3|full"
 PG_CANDIDATES_TAG="mode=postgres|full"
-SERVICE_MODES=""
-
-#Getting options
-while getopts "h" opt ; do
-  case $opt in
-    h) usage; exit 0;;
-  esac
-done
+CANDIDATE_MODES=""
 
 leader_tag_key=$(echo $LEADER_TAG | cut -d '=' -f 1)
 
@@ -74,8 +59,10 @@ if [ "x$?" == "x0" ] ; then
       #Check if any service is required is required
       serf members -tag $(eval echo \$${service}_TAG)=true | grep -q $(eval echo \$${service}_TAG)=true
       if [ "x$?" == "x0" ] ; then
+        #Get candidate modes
+        candidateModes $service
         #Call choose-leader and set service tag to ready
-        serf-choose-leader -r leader=inprogress -t $service=inprogress -c mode=$service|full -l rb_configure_initial_$service.sh
+        serf-choose-leader -r leader=inprogress -t $service=inprogress -c mode=$CANDIDATE_MODES -l rb_configure_initial_$service.sh
       fi
     done
   fi
