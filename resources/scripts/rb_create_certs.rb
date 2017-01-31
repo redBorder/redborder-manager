@@ -3,6 +3,15 @@
 require 'json'
 require 'openssl'
 require 'base64'
+require 'getopt/std'
+
+def usage
+  printf("rb_create_certs [-h] -a <application> [-c cdomain]\n")
+  printf("  -h  -> print this help\n")
+	printf("  -a application  -> application for this certificate \n")
+	printf("  -c cdomain  -> cluster domain \n")
+  exit 0
+end
 
 def create_cert(cn)
 	key = OpenSSL::PKey::RSA.new 4096
@@ -23,17 +32,23 @@ def create_cert(cn)
   	{ :key => key, :crt => cert}
 end
 
-cdomain = (ENV["CDOMAIN"].nil?) ? "redborder.cluster" : ENV["CDOMAIN"].to_s
+opt = Getopt::Std.getopts("ha:c:")
 
-ret_json = { "id" => "nginx" }
-[ "webui" ].each do |service|
-	cert_hash = create_cert("redborder.#{cdomain}")
-	ret_json["#{service}_crt"] = Base64.urlsafe_encode64(cert_hash[:crt].to_pem)
-	ret_json["#{service}_key"] = Base64.urlsafe_encode64(cert_hash[:key].to_pem)
+usage if opt["h"]
+
+if !opt["a"].nil? or !opt["c"].nil?
+	cdomain = opt["c"]
+  ret_json = { "id" => opt["a"] }
+  cert_hash = create_cert("redborder.#{opt["a"]}.#{cdomain}")
+  ret_json["#{opt["a"]}_crt"] = Base64.urlsafe_encode64(cert_hash[:crt].to_pem)
+  ret_json["#{opt["a"]}_key"] = Base64.urlsafe_encode64(cert_hash[:key].to_pem)
+
+  #open "/tmp/redborder.#{cdomain}.crt", 'w' do |io|
+  #	io.write cert_hash[:crt].to_pem
+  #end
+
+  printf JSON.pretty_generate(ret_json)+"\n"
+else
+	printf("ERROR: You must specificate server and application name  \n")
+	usage
 end
-
-#open "/tmp/redborder.#{cdomain}.crt", 'w' do |io|
-#	io.write cert_hash[:crt].to_pem
-#end
-
-printf JSON.pretty_generate(ret_json)+"\n"

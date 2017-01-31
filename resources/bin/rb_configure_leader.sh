@@ -181,8 +181,7 @@ _RBEOF_
 _RBEOF_
 
   ## Initial certificate for certs data bag
-  env CDOMAIN=$cdomain rb_create_nginx_certs > /var/chef/data/data_bag/certs/nginx.json
-
+  rb_create_certs -a webui -c $cdomain > /var/chef/data/data_bag/certs/nginx.json
 }
 
 function create_buckets(){
