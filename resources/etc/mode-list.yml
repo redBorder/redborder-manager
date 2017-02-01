@@ -34,3 +34,9 @@
 -
   name: 'f2k'
   description: 'f2k flow collector node'
+-
+  name: 's3'
+  description: 'S3 (riak) node'
+-
+  name: 'postgresql'
+  description: 'postgresql node'
