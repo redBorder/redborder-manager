@@ -302,8 +302,11 @@ cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
 e_title "Installing Chef-Server from repository"
 yum install -y redborder-chef-server
 
+# Read S3 & Postgresql configuration
+rb_init_chef
+
 # Set chef-server.rb configuration file (S3)
-[ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb && rm -f /etc/redborder/chef-server-s3.rb
+[ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb #&& rm -f /etc/redborder/chef-server-s3.rb
 
 # Set chef-server.rb configuration file (postgresql) and obtain database credentials
 if [ -f /etc/redborder/chef-server-postgresql.rb ]; then
@@ -311,7 +314,7 @@ if [ -f /etc/redborder/chef-server-postgresql.rb ]; then
   DB_ADMINUSER=$(cat /etc/redborder/chef-server-postgresql.rb | grep "db_superuser.]" | awk {'print $3'} | tr -d "\"")
   DB_ADMINPASS=$(cat /etc/redborder/chef-server-postgresql.rb | grep "db_superuser_password.]" | awk {'print $3'}| tr -d "\"")
   DB_HOST=$(cat /etc/redborder/chef-server-postgresql.rb | grep "vip.]" | awk {'print $3'}| tr -d "\"")
-  rm -f /etc/redborder/chef-server-postgresql.rb
+  #rm -f /etc/redborder/chef-server-postgresql.rb
 else
   DB_ADMINUSER="opscode-pgsql"
   DB_ADMINPASS="" #TODO
