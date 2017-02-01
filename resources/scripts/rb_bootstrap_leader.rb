@@ -19,7 +19,7 @@ else
 	external_services.each { |service|
 		if initconf.key? service
 			required_services << service
-		end		
+		end
 	}
 end
 
@@ -28,9 +28,9 @@ required_services.each { |service|
 	system("serf tags -set #{service}_required=true")
 }
 
-#Execution of rb_common_bootstrap
-puts "INFO: execute common bootstrap script"
-IO.popen("rb_common_bootstrap.sh").readlines
+#Execution of rb_bootstrap_common
+puts "INFO: execute bootstrap common script"
+IO.popen("rb_bootstrap_common.sh").readlines
 
 #Wait for external services tags
 required_services.each { |service|
@@ -46,7 +46,7 @@ required_services.each { |service|
 puts "INFO: setting leader tag to inprogress"
 system("serf tags -set leader=inprogress")
 #Clean required tags
-required_services.each { |service| 
+required_services.each { |service|
 	system("serf tags -delete #{service}_required")
 }
 
@@ -58,4 +58,3 @@ IO.popen("rb_configure_leader.sh").readlines
 #Set tag leader=ready
 puts "INFO: setting leader tag to ready"
 system("serf tags -set leader=ready")
-
