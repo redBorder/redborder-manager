@@ -10,5 +10,14 @@ cat > /etc/serf/s3_query.json <<-_RBEOF_
     ]
 }
 _RBEOF_
-systemd reload serf
+
+echo "INFO: Wait until tag s3 is ready"
 serf tags -set s3=ready
+while [ "x$?" != "x0" ]; do
+  sleep 2
+  serf tags -set s3=ready
+done
+
+#Mandatory to load the new handler
+echo "INFO: Restarting serf. Loading new handlers"
+systemctl restart serf

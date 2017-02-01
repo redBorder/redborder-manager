@@ -115,6 +115,7 @@ system("ntpdate pool.ntp.org")
 ######################
 SERFJSON="/etc/serf/00first.json"
 TAGSJSON="/etc/serf/tags"
+SERFSNAPSHOT="/etc/serf/snapshot"
 
 serf_conf = {}
 serf_tags = {}
@@ -149,6 +150,8 @@ end
 
 serf_conf["tags_file"] = TAGSJSON
 serf_conf["node_name"] = hostname
+serf_conf["snapshot_path"] = SERFSNAPSHOT
+serf_conf["rejoin_after_leave"] = true
 
 # defined role in tags
 serf_tags["mode"] = mode

@@ -5,7 +5,7 @@ require 'yaml'
 RBETC = ENV['RBETC'].nil? ? '/etc/redborder' : ENV['RBETC']
 INITCONF="#{RBETC}/rb_init_conf.yml"
 S3INITCONF="#{RBETC}/s3_init_conf.yml"
-PGINITCONF="#{RBETC}/pg_init_conf.yml"
+PGINITCONF="#{RBETC}/postgresql_init_conf.yml"
 
 ####################
 # S3 configuration #
