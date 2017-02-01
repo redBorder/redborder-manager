@@ -9,5 +9,5 @@ serf-choose-leader 				\
 	-c 	mode=chef|full			\
 	-r 	consul=ready			\
 	-t 	leader=wait				\
-	-l 	rb_bootstrap_leader.sh  \
+	-l 	rb_bootstrap_leader		\
 	-f  rb_bootstrap_common.sh
