@@ -38,9 +38,10 @@ install -D -m 0644 resources/lib/rb_config_utils.rb %{buildroot}/usr/lib/redbord
 install -D -m 0644 resources/lib/rb_manager_functions.sh %{buildroot}/usr/lib/redborder/lib
 cp -r resources/chef/* %{buildroot}/var/chef/data
 chmod -R 0644 %{buildroot}/var/chef/data
-install -D -m 0644 resources/mode-list.yml %{buildroot}/usr/lib/redborder
+install -D -m 0644 resources/etc/mode-list.yml %{buildroot}/usr/lib/redborder
 install -D -m 0644 resources/systemd/rb-init-conf.service %{buildroot}/usr/lib/systemd/system/rb-init-conf.service
 install -D -m 0755 resources/lib/dhclient-enter-hooks %{buildroot}/usr/lib/redborder/lib/dhclient-enter-hooks
+install -D -m 0644 resources/etc/01default_handlers.json %{buildroot}/etc/serf/01default_handlers.json
 
 %pre
 
@@ -67,7 +68,7 @@ firewall-cmd --reload
 /usr/lib/redborder/lib/rb_wiz_lib.rb
 /usr/lib/redborder/lib/rb_config_utils.rb
 /usr/lib/redborder/lib/rb_manager_functions.sh
-
+/etc/serf/01default_handlers.json
 %doc
 
 %changelog

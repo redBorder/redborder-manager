@@ -38,10 +38,10 @@ if [ "x$ret" == "xnull" -o "x$ret" == "x" ]; then #If not chef-server registered
 fi
 
 # Get chef validator and admin certificates
-$RBBIN/serf-query-certificate -q certificate-validator > /tmp/cert && mv /tmp/cert /etc/chef/redborder-validator.pem
+$RBBIN/serf-query-file -q certificate-validator > /tmp/cert && mv /tmp/cert /etc/chef/redborder-validator.pem
 [ "x$?" != "x0" ] && error_title "ERROR getting redborder-validator.pem Chef certificate" && exit 1
 
-$RBBIN/serf-query-certificate -q certificate-admin > /tmp/cert && mv /tmp/cert /etc/chef/admin.pem
+$RBBIN/serf-query-file -q certificate-admin > /tmp/cert && mv /tmp/cert /etc/chef/admin.pem
 [ "x$?" != "x0" ] && error_title "ERROR getting admin.pem Chef certificate" && exit 1
 
 #############################
