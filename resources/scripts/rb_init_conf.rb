@@ -208,8 +208,6 @@ system('yum install systemd -y')
 
 # Enable and start SERF
 system('systemctl enable serf &> /dev/null')
-# Enable serf-join for rejoining on node restart. First time will be executed by redborder-bootstrap
-system('systemctl enable serf-join &> /dev/null')
 system('systemctl start serf &> /dev/null')
 # wait a moment before start serf-join to ensure connectivity
 sleep(3)
