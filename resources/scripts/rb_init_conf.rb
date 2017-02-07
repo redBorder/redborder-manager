@@ -115,6 +115,7 @@ system("ntpdate pool.ntp.org")
 ######################
 SERFJSON="/etc/serf/00first.json"
 TAGSJSON="/etc/serf/tags"
+SERFSNAPSHOT="/etc/serf/snapshot"
 
 serf_conf = {}
 serf_tags = {}
@@ -149,6 +150,8 @@ end
 
 serf_conf["tags_file"] = TAGSJSON
 serf_conf["node_name"] = hostname
+serf_conf["snapshot_path"] = SERFSNAPSHOT
+serf_conf["rejoin_after_leave"] = true
 
 # defined role in tags
 serf_tags["mode"] = mode
@@ -205,8 +208,7 @@ system('yum install systemd -y')
 
 # Enable and start SERF
 system('systemctl enable serf &> /dev/null')
-system('systemctl enable serf-join &> /dev/null')
 system('systemctl start serf &> /dev/null')
 # wait a moment before start serf-join to ensure connectivity
 sleep(3)
-system('systemctl start serf-join &> /dev/null')
+system('systemctl start rb-bootstrap &> /dev/null')

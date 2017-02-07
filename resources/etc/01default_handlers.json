@@ -1,0 +1,7 @@
+{
+    "event_handlers" : [
+        "query:certificate-validator=/usr/lib/redborder/bin/serf-response-file.sh /etc/chef/redborder-validator.pem",
+        "query:certificate-admin=/usr/lib/redborder/bin/serf-response-file.sh /etc/chef/admin.pem",
+        "query:wakeup-chef=/usr/lib/redborder/bin/rb_wakeup_chef.sh"
+    ]
+}
