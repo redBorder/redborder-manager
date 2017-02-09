@@ -11,13 +11,13 @@ cat > /etc/serf/postgresql_query.json <<-_RBEOF_
 }
 _RBEOF_
 
+#Mandatory to load the new handler
+echo "INFO: Restarting serf. Loading new handlers"
+systemctl restart serf
+
 echo "INFO: Wait until tag postgresql is ready"
 serf tags -set postgresql=ready
 while [ "x$?" != "x0" ]; do
   sleep 2
   serf tags -set postgresql=ready
 done
-
-#Mandatory to load the new handler
-echo "INFO: Restarting serf. Loading new handlers"
-systemctl restart serf
