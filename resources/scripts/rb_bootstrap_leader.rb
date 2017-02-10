@@ -40,8 +40,12 @@ required_services.each { |service|
 		count = count + 1
 		sleep 5
 	end
-	if !system("serf-query-file -q #{service}_conf > /etc/redborder/#{service}_init_conf.yml")
-		puts "ERROR: can't obtain #{service} configuration"
+	if !File.exists?("/etc/redborder/#{service}_init_conf.yml")
+	  if !system("serf-query-file -q #{service}_conf > /etc/redborder/#{service}_init_conf.yml")
+	  	puts "ERROR: can't obtain #{service} configuration"
+	  end
+  else
+    puts "WARNING: File /etc/redborder/#{service}_init_conf.yml already exits. Serf query won't be executed"
 	end
 }
 

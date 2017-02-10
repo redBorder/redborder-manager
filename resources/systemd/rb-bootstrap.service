@@ -1,6 +1,6 @@
 [Unit]
 Description=redborder bootstrap service
-Requires=serf.service
+#Requires=serf.service
 After=serf.service
 
 [Service]
@@ -10,4 +10,3 @@ User=root
 
 [Install]
 WantedBy=multi-user.target
-
