@@ -24,6 +24,12 @@ def create_cert(cn)
 	cert.public_key = key.public_key
 	cert.subject = name
 	cert.issuer = name
+  if cn.start_with?("s3.")
+    extension_factory = OpenSSL::X509::ExtensionFactory.new nil, cert
+    cert.add_extension extension_factory.create_extension("subjectAltName","DNS:redborder.#{cn}",false)
+    cert.add_extension extension_factory.create_extension("subjectAltName","DNS:rbookshelf.#{cn}",false)
+    cert.add_extension extension_factory.create_extension("subjectAltName","DNS:#{cn}",false)
+  end
 	cert.sign key, OpenSSL::Digest::SHA1.new
   	{ :key => key, :crt => cert}
 end
