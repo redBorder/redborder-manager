@@ -23,10 +23,10 @@ def create_cert(cn)
 	cert.not_after = Time.now + (3600 *24 *365 *10)
 	cert.public_key = key.public_key
 	cert.subject = name
-	extension_factory = OpenSSL::X509::ExtensionFactory.new nil, cert
-	cert.add_extension extension_factory.create_extension('basicConstraints', 'CA:FALSE', true)
-	cert.add_extension extension_factory.create_extension('keyUsage', 'keyEncipherment,dataEncipherment,digitalSignature')
-	cert.add_extension extension_factory.create_extension('subjectKeyIdentifier', 'hash')
+	#extension_factory = OpenSSL::X509::ExtensionFactory.new nil, cert
+	#cert.add_extension extension_factory.create_extension('basicConstraints', 'CA:FALSE', true)
+	#cert.add_extension extension_factory.create_extension('keyUsage', 'keyEncipherment,dataEncipherment,digitalSignature')
+	#cert.add_extension extension_factory.create_extension('subjectKeyIdentifier', 'hash')
 	cert.issuer = name
 	cert.sign key, OpenSSL::Digest::SHA1.new
   	{ :key => key, :crt => cert}
@@ -39,7 +39,8 @@ usage if opt["h"]
 if !opt["a"].nil? or !opt["c"].nil?
 	cdomain = opt["c"]
   ret_json = { "id" => opt["a"] }
-  cert_hash = create_cert("redborder.#{opt["a"]}.#{cdomain}")
+  #cert_hash = create_cert("redborder.#{opt["a"]}.#{cdomain}")
+  cert_hash = create_cert("#{opt["a"]}.#{cdomain}")
   ret_json["#{opt["a"]}_crt"] = Base64.urlsafe_encode64(cert_hash[:crt].to_pem)
   ret_json["#{opt["a"]}_key"] = Base64.urlsafe_encode64(cert_hash[:key].to_pem)
 

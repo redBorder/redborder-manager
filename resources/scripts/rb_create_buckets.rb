@@ -5,7 +5,7 @@ require 'json'
 require 'yaml'
 
 CDOMAIN=File.open("/etc/redborder/cdomain").first.chomp
-DBNAME="rBglobal"
+ENV="SSL_CERT_FILE=/etc/nginx/ssl/s3.crt"
 
 buckets=["redborder", "rbookshelf"]
 
@@ -19,13 +19,21 @@ node = Chef::Node.load(hostname)
 ret=0
 
 buckets.each do |b|
-  dbiname="#{b}-bucket"
-  data = nil
-  begin
-    data = Chef::DataBagItem.load(DBNAME, dbiname)
-  rescue Errno::ECONNREFUSED
-    printf "ERROR: cannot contact erchef #{Chef::Config[:chef_server_url]}\n"
-    data = nil
+  # Check if bucket is created
+  bucket_found=`#{ENV} s3cmd ls 2>/dev/null| grep -q "s3://#{b}$"; [ $? -eq 0 ] && echo -n 1`
+  # Create new bucket if not created yet
+  out=`#{ENV} s3cmd -c /root/.s3cfg mb s3://#{b}`.strip if bucket_found!="1"
+
+  # If bucket created successfully...
+  if out=="Bucket 's3://#{b}/' created" or bucket_found=="1"
+    # Create an account for the user
+    `curl -H 'Content-Type: application/json' -X POST http://s3.#{CDOMAIN}:8088/riak-cs/user --data '{"email":"#{b}@#{CDOMAIN}", "name":"#{b}"}'`
+    # Grant privileges
+    `#{ENV} s3cmd --config /root/.s3cfg --acl-grant=all:#{b}@#{CDOMAIN} setacl s3://#{b}`
+
+    printf "INFO: #{b} bucket created successfully\n"
+  else
+    printf "ERROR: #{out}\n"
     ret=1
   rescue Net::HTTPServerException
     printf "WARNING: the databag rBglobal-#{b}-bucket doesn't exist!!!\n"
