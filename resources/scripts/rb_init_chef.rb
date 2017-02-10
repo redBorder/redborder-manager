@@ -3,9 +3,10 @@
 require 'yaml'
 
 RBETC = ENV['RBETC'].nil? ? '/etc/redborder' : ENV['RBETC']
-INITCONF="#{RBETC}/rb_init_conf.yml"
-S3INITCONF="#{RBETC}/s3_init_conf.yml"
-PGINITCONF="#{RBETC}/postgresql_init_conf.yml"
+INITCONF = "#{RBETC}/rb_init_conf.yml"
+S3INITCONF = "#{RBETC}/s3_init_conf.yml"
+PGINITCONF = "#{RBETC}/postgresql_init_conf.yml"
+ret = 0
 
 ####################
 # S3 configuration #
@@ -30,15 +31,17 @@ unless s3_conf.nil?
       f.puts "[default]"
       f.puts "access_key = #{s3_access}"
       f.puts "secret_key = #{s3_secret}"
+      f.puts "host_base = #{s3_endpoint}"
+      f.puts "host_bucket = %(bucket)s.#{s3_endpoint}"
     }
     out = system("/usr/bin/s3cmd -c /root/.s3cfg-test ls s3://#{s3_bucket} &>/dev/null")
-    File.delete("/root/.s3cfg-test")
+    #File.delete("/root/.s3cfg-test")
   else
     out = system("/usr/bin/s3cmd ls s3://#{s3_bucket} &>/dev/null")
   end
   unless out
-    p err_msg = "Impossible connect to S3. Please review #{INITCONF} file"
-    exit 1
+    p err_msg = "ERROR: Impossible connect to S3. Please review #{INITCONF} file"
+    ret = 1
   end
 
   # Create chef-server configuration file for S3
@@ -72,8 +75,8 @@ unless db_conf.nil?
   # Check database connectivity
   out = system("env PGPASSWORD='#{db_password}' psql -U #{db_superuser} -h #{db_host} -d template1 -c '\\q' &>/dev/null")
   unless out
-     p err_msg = "Impossible connect to database. Please review #{INITCONF} file"
-    exit 1
+    p err_msg = "ERROR: Impossible connect to database. Please review #{INITCONF} file"
+    ret = 1
   end
 
   # Create chef-server configuration file for postgresql
@@ -85,3 +88,5 @@ unless db_conf.nil?
     f.puts "postgresql['vip'] = \"#{db_host}\""
   }
 end
+
+exit ret
