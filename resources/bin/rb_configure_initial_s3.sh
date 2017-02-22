@@ -11,6 +11,14 @@ else
   exit 1
 fi
 
+S3_IP=$(serf members -tag s3=inprogress | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
+grep -q s3.${cdomain} /etc/hosts
+[ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  s3.${cdomain}" >> /etc/hosts
+#grep -q rbookshelf.s3.service.${cdomain} /etc/hosts
+#[ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  rbookshelf.s3.service.${cdomain}" >> /etc/hosts
+grep -q redborder.s3.${cdomain} /etc/hosts
+[ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  redborder.s3.${cdomain}" >> /etc/hosts
+
 # Configure Riak using chef-solo
 echo "INFO: Executing riak cookbook (1)"
 chef-solo -c /var/chef/cookbooks/riak/solo/riak_solo.rb -j /var/chef/cookbooks/riak/solo/riak_solo1.json
@@ -37,7 +45,7 @@ cat > /etc/redborder/s3_init_conf.yml <<-_RBEOF_
 s3:
   access_key: $access_key
   secret_key: $secret_key
-  bucket: rbookshelf
+  bucket: redborder
   endpoint: s3.$cdomain
 _RBEOF_
 
