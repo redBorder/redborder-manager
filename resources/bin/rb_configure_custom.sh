@@ -46,8 +46,8 @@ if [ "x$s3_ret" == "xnull" -o "x$s3_ret" == "x" ]; then #If not s3 registered
   IP_S3=$(serf members -tag s3=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
   grep -q s3.${cdomain} /etc/hosts
   [ $? -ne 0 ] && echo "$IP_S3   s3.${cdomain}" >> /etc/hosts
-  #grep -q rbookshelf.s3.service.${cdomain} /etc/hosts
-  #[ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  rbookshelf.s3.service.${cdomain}" >> /etc/hosts
+  grep -q rbookshelf.s3.${cdomain} /etc/hosts
+  [ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  rbookshelf.s3.${cdomain}" >> /etc/hosts
   grep -q redborder.s3.${cdomain} /etc/hosts
   [ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  redborder.s3.${cdomain}" >> /etc/hosts
 fi

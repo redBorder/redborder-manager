@@ -285,8 +285,8 @@ function set_external_service_names {
   S3_IP=$(serf members -tag s3=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
   grep -q s3.${cdomain} /etc/hosts
   [ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  s3.${cdomain}" >> /etc/hosts
-  #grep -q rbookshelf.s3.service.${cdomain} /etc/hosts
-  #[ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  rbookshelf.s3.service.${cdomain}" >> /etc/hosts
+  grep -q rbookshelf.s3.${cdomain} /etc/hosts
+  [ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  rbookshelf.s3.${cdomain}" >> /etc/hosts
   grep -q redborder.s3.${cdomain} /etc/hosts
   [ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  redborder.s3.${cdomain}" >> /etc/hosts
 

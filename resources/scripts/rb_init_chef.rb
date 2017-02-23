@@ -50,7 +50,7 @@ unless s3_conf.nil?
   # Create chef-server configuration file for S3
   open("/etc/redborder/chef-server-s3.rb", "w") { |f|
     f.puts "bookshelf['enable'] = false"
-    if s3_bucket == "redborder"
+    if s3_bucket == "rbookshelf"
       f.puts "bookshelf['vip'] = \"#{s3_bucket}.#{s3_endpoint}\""
       f.puts "bookshelf['external_url'] = \"https://#{s3_bucket}.#{s3_endpoint}\""
     else
