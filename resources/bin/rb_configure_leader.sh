@@ -56,6 +56,9 @@ function configure_dataBags(){
   S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`" #CHECK when {s3_external_url, host_header},
   S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
 
+  # IF S3HOST not found, set default: s3.service.$cdomain
+  [ "x$S3HOST" = "x" ] && S3HOST="s3.service.${cdomain}"
+
   ## Data bags ##
   mkdir -p /var/chef/data/data_bag/passwords/
   mkdir -p /var/chef/data/data_bag/rBglobal/
@@ -279,6 +282,16 @@ function configure_leader(){
   knife group add client `hostname -s` admins &>/dev/null
 }
 
+function set_external_service_names {
+  S3_IP=$(serf members -tag s3=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
+  grep -q s3.service.${cdomain} /etc/hosts
+  [ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  s3.service.${cdomain}" >> /etc/hosts
+
+  PSQL_IP=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
+  grep -q postgresql.service.${cdomain} /etc/hosts
+  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  postgresql.service.${cdomain}" >> /etc/hosts
+}
+
 ########
 # MAIN #
 ########
@@ -359,6 +372,7 @@ sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
 # Add erchef domain /etc/hosts (consul is not ready at this moment)
 grep -q erchef.${cdomain} /etc/hosts
 [ $? -ne 0 ] && echo "$IPLEADER   erchef.service.${cdomain}" >> /etc/hosts
+set_external_service_names
 
 # Modifying some default chef parameters (rabbitmq, postgresql) ## Check
 # Rabbitmq # CHECK CHECK CHECK
