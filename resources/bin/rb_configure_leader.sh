@@ -30,11 +30,11 @@ function configure_dataBags(){
   # Chef server configuration file
   ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config"
 
-  # Data bag encrypted key
+  # Data bag encrypted key ## Not used for the moment
   [ "x$DATABAGKEY" == "x" ] && DATABAGKEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   echo $DATABAGKEY > /etc/chef/encrypted_data_bag_secret
 
-  # Chef middleware configurations
+  # Chef middleware configuration files
   OCID_DBCFG="/var/opt/opscode/oc_id/config/database.yml"
   OCBIFROST_DBCFG="/var/opt/opscode/oc_bifrost/sys.config"
   CHEFMOVER_DBCFG="/var/opt/opscode/opscode-chef-mover/sys.config"
@@ -43,6 +43,8 @@ function configure_dataBags(){
   OPSCODE_DBHOST="`grep {db_host $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   [ "x$OPSCODE_DBHOST" == "x127.0.0.1" ] && OPSCODE_DBHOST=$IPLEADER
   OPSCODE_DBPORT="`grep {db_port $ERCHEFCFG |sed 's/.*{db_port, //' | sed 's/},//'`"
+
+  # Database Passwords
   OPSCODE_DBPASS="`grep {db_pass $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   OPSCODE_OCID_PASS="`grep password $OCID_DBCFG | sed 's/ password: //' | tr -d ' '`"
   OPSCODE_OCBIFROST_PASS="`grep db_pass $OCBIFROST_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
@@ -51,13 +53,13 @@ function configure_dataBags(){
   # Obtaining chef cookbook storage current configuration
   S3KEY="`grep s3_access_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   S3SECRET="`grep s3_secret_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
-  S3HOST="`cat /etc/redborder/rb_init_conf.yml | grep endpoint | awk {'print $2'}`" #CHECK If bookshelf enabled, this value will be empty
   S3URL="`grep s3_url, $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`" #CHECK when {s3_external_url, host_header},
   S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
 
-  # IF S3HOST not found, set default: s3.service.$cdomain
-  [ "x$S3HOST" = "x" ] && S3HOST="s3.service.${cdomain}"
+  S3HOST="`cat /etc/redborder/rb_init_conf.yml | grep endpoint | awk {'print $2'}`"
+  # IF S3HOST not found, set default: s3.$cdomain
+  [ "x$S3HOST" = "x" ] && S3HOST="s3.${cdomain}"
 
   ## Data bags ##
   mkdir -p /var/chef/data/data_bag/passwords/
@@ -180,12 +182,8 @@ _RBEOF_
 }
 _RBEOF_
 
-  ## Initial certificate for certs data bag
-  rb_create_certs -a webui -c $cdomain > /var/chef/data/data_bag/certs/nginx.json
-}
-
-function create_buckets(){
-  echo "create_buckets"
+  ## Webui certs
+  rb_create_certs -a webui -c $cdomain > /var/chef/data/data_bag/certs/webui.json
 }
 
 function configure_leader(){
@@ -221,7 +219,7 @@ function configure_leader(){
   # Save into cache directory
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid http2k cron memcached chef-server consul hadoop samza nginx geoip webui snmp rbmonitor ntp f2k rb-manager" # The order matters!
+  listCookbooks="zookeeper kafka druid http2k cron memcached chef-server consul hadoop samza nginx geoip webui snmp rbmonitor ntp f2k riak rb-manager" # The order matters!
   for n in $listCookbooks; do # cookbooks
     rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
