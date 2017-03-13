@@ -45,18 +45,18 @@ if [ "x$s3_ret" == "xnull" -o "x$s3_ret" == "x" ]; then #If not s3 registered
   # Get IP s3 as a s3 service IP and Add s3 IP to /etc/hosts
   IP_S3=$(serf members -tag s3=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
   grep -q s3.${cdomain} /etc/hosts
-  [ $? -ne 0 ] && echo "$IP_S3   s3.${cdomain}" >> /etc/hosts
+  [ $? -ne 0 -a "x$IP_S3" != "x" ] && echo "$IP_S3   s3.${cdomain}" >> /etc/hosts
   grep -q rbookshelf.s3.${cdomain} /etc/hosts
-  [ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  rbookshelf.s3.${cdomain}" >> /etc/hosts
+  [ $? -ne 0 -a "x$IP_S3" != "x" ] && echo "$IP_S3   rbookshelf.s3.${cdomain}" >> /etc/hosts
   grep -q redborder.s3.${cdomain} /etc/hosts
-  [ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  redborder.s3.${cdomain}" >> /etc/hosts
+  [ $? -ne 0 -a "x$IP_S3" != "x" ] && echo "$IP_S3   redborder.s3.${cdomain}" >> /etc/hosts
 fi
 
 if [ "x$pg_ret" == "xnull" -o "x$pg_ret" == "x" ]; then #If not postgresql registered
   # Get IP pg as a pg service IP and Add pg IP to /etc/hosts
   IP_PG=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
   grep -q postgresql.service.${cdomain} /etc/hosts
-  [ $? -ne 0 ] && echo "$IP_PG   postgresql.service.${cdomain}" >> /etc/hosts
+  [ $? -ne 0 -a "x$IP_PG" != "x" ] && echo "$IP_PG   postgresql.service.${cdomain}" >> /etc/hosts
 fi
 
 # Get chef validator and admin certificates
