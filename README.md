@@ -8,7 +8,7 @@ Main package to install redborder manager in Centos7
 
 #### Installation
 
-1. yum install epel-release && rpm -ivh http://repo.redborder.com/redborder-repo-1.0.0-1.el7.rb.noarch.rpm
+1. yum install epel-release && rpm -ivh http://repo.redborder.com/redborder-repo-0.0.3-1.el7.rb.noarch.rpm
 
 2. yum install redborder-manager
 
