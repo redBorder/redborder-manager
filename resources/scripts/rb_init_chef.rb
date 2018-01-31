@@ -24,22 +24,22 @@ unless s3_conf.nil?
   s3_endpoint = s3_conf['endpoint']
   s3_bucket = s3_conf['bucket']
 
-  unless s3_access.nil? or s3_secret.nil?
-    # Check S3 connectivity
-    open("/root/.s3cfg-test", "w") { |f|
-      f.puts "[default]"
-      f.puts "access_key = #{s3_access}"
-      f.puts "secret_key = #{s3_secret}"
-    }
-    out = system("/usr/bin/s3cmd -c /root/.s3cfg-test ls s3://#{s3_bucket} &>/dev/null")
-    File.delete("/root/.s3cfg-test")
-  else
-    out = system("/usr/bin/s3cmd ls s3://#{s3_bucket} &>/dev/null")
-  end
-  unless out
-    p err_msg = "Impossible connect to S3. Please review #{INITCONF} file"
-    exit 1
-  end
+  #unless s3_access.nil? or s3_secret.nil?
+  #  # Check S3 connectivity
+  #  open("/root/.s3cfg-test", "w") { |f|
+  #    f.puts "[default]"
+  #    f.puts "access_key = #{s3_access}"
+  #    f.puts "secret_key = #{s3_secret}"
+  #  }
+  #  out = system("/usr/bin/s3cmd -c /root/.s3cfg-test ls s3://#{s3_bucket} &>/dev/null")
+  #  File.delete("/root/.s3cfg-test")
+  #else
+  #  out = system("/usr/bin/s3cmd ls s3://#{s3_bucket} &>/dev/null")
+  #end
+  #unless out
+  #  p err_msg = "Impossible connect to S3. Please review #{INITCONF} file"
+  #  exit 1
+  #end
 
   # Create chef-server configuration file for S3
   open("/etc/redborder/chef-server-s3.rb", "w") { |f|

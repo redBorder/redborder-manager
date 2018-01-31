@@ -338,6 +338,11 @@ fi
 echo "nginx['ssl_port'] = 4443" >> /etc/opscode/chef-server.rb
 echo "nginx['non_ssl_port'] = 4480" >> /etc/opscode/chef-server.rb
 
+# Add erchef domain /etc/hosts (consul is not ready at this moment)
+grep -q erchef.${cdomain} /etc/hosts
+[ $? -ne 0 ] && echo "$IPLEADER   erchef.service.${cdomain}" >> /etc/hosts
+set_external_service_names
+
 # Chef server initial configuration
 e_title "Configuring Chef-Server"
 /usr/bin/chef-server-ctl reconfigure #&>> /root/.install-chef-server.log
@@ -368,11 +373,6 @@ sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.service.$cdomain
 sed -i "s/\HOSTNAME/admin/g" /root/.chef/knife.rb
 sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.service.$cdomain:4443/organizations/$CHEFORG\"|" /root/.chef/knife.rb
 sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
-
-# Add erchef domain /etc/hosts (consul is not ready at this moment)
-grep -q erchef.${cdomain} /etc/hosts
-[ $? -ne 0 ] && echo "$IPLEADER   erchef.service.${cdomain}" >> /etc/hosts
-set_external_service_names
 
 # Modifying some default chef parameters (rabbitmq, postgresql) ## Check
 # Rabbitmq # CHECK CHECK CHECK
