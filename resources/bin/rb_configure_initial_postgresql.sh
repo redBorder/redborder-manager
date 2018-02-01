@@ -15,6 +15,10 @@ _RBEOF_
 echo "INFO: Restarting serf. Loading new handlers"
 systemctl restart serf
 
+#Configure postgresql service using chef-solo
+echo "INFO: Configure PostgreSQL service using chef-solo"
+chef-solo -c /var/chef/data/solo/postgresql-solo.rb -j /var/chef/data/solo/postgresql-attributes.json
+
 echo "INFO: Wait until tag postgresql is ready"
 serf tags -set postgresql=ready
 while [ "x$?" != "x0" ]; do
