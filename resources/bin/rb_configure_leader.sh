@@ -284,12 +284,12 @@ function configure_leader(){
 
 function set_external_service_names {
   S3_IP=$(serf members -tag s3=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
-  grep -q s3.service.${cdomain} /etc/hosts
-  [ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  s3.service.${cdomain}" >> /etc/hosts
+  grep -q s3.service /etc/hosts
+  [ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  s3.service s3.service.${cdomain}" >> /etc/hosts
 
   PSQL_IP=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
-  grep -q postgresql.service.${cdomain} /etc/hosts
-  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  postgresql.service.${cdomain}" >> /etc/hosts
+  grep -q postgresql.service /etc/hosts
+  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  postgresql.service postgresql.service.${cdomain}" >> /etc/hosts
 }
 
 ########
@@ -310,6 +310,11 @@ cdomain=$(head -n 1 /etc/redborder/cdomain | tr '\n' ' ' | awk '{print $1}')
 ############################################
 # CHEF SERVER Installation & Configuration #
 ############################################
+
+# Add erchef domain /etc/hosts (consul is not ready at this moment)
+grep -q erchef.${cdomain} /etc/hosts
+[ $? -ne 0 ] && echo "$IPLEADER  erchef.service.${cdomain}" >> /etc/hosts
+set_external_service_names
 
 # Chef server Installation
 e_title "Installing Chef-Server from repository"
@@ -337,11 +342,6 @@ fi
 # Set chef-server internal nginx port to 4443
 echo "nginx['ssl_port'] = 4443" >> /etc/opscode/chef-server.rb
 echo "nginx['non_ssl_port'] = 4480" >> /etc/opscode/chef-server.rb
-
-# Add erchef domain /etc/hosts (consul is not ready at this moment)
-grep -q erchef.${cdomain} /etc/hosts
-[ $? -ne 0 ] && echo "$IPLEADER   erchef.service.${cdomain}" >> /etc/hosts
-set_external_service_names
 
 # Chef server initial configuration
 e_title "Configuring Chef-Server"
