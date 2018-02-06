@@ -126,6 +126,19 @@ _RBEOF_
 }
 _RBEOF_
 
+  # External services
+  MODE_PG="external"
+  MODE_S3="external"
+  [ -f /etc/redborder/postgresql_init_conf.yml ] && MODE_PG="onpremise"
+  [ -f /etc/redborder/s3_init_conf.yml ] && MODE_S3="onpremise"
+  cat > /var/chef/data/data_bag/rBglobal/external_services.json <<-_RBEOF_
+{
+  "id": "external_services",
+  "postgresql": "$MODE_PG",
+  "s3": "$MODE_S3"
+}
+_RBEOF_
+
   #webui secret token
   WEBISECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   cat > /var/chef/data/data_bag/passwords/webui_secret.json <<-_RBEOF_
@@ -222,9 +235,9 @@ function configure_leader(){
   # Save into cache directory
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid http2k memcached chef-server consul hadoop samza nginx geoip webui snmp rbmonitor ntp f2k rb-manager logstash minio" # The order matters!
+  listCookbooks="zookeeper kafka druid http2k memcached chef-server consul hadoop samza nginx geoip webui snmp rbmonitor ntp f2k logstash minio postgresql rb-manager " # The order matters!
   for n in $listCookbooks; do # cookbooks
-    rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
+    # rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
     knife cookbook upload $n
   done
@@ -380,16 +393,6 @@ sed -i "s/rabbit@localhost/rabbit@$CLIENTNAME/" /opt/opscode/embedded/cookbooks/
 mkdir -p /var/opt/opscode/rabbitmq/db
 rm -f /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
 ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
-
-# Permit all source IP address connecting to postgresql (if using chef local postgresql)
-cat /etc/redborder/rb_init_conf.yml | grep postgresql &>/dev/null
-if [ "x$?" != "x0" ]; then
-  sed -i "s/^listen_addresses.*/listen_addresses = '*'/" /var/opt/opscode/postgresql/*/data/postgresql.conf
-  cat > /var/opt/opscode/postgresql/9.2/data/pg_hba.conf <<-_RBEOF_
-#TYPE   DATABASE        USER            CIDR-ADDRESS            METHOD
-host  all  all 0.0.0.0/0 md5
-_RBEOF_
-fi
 
 # Configure LEADER
 configure_leader
