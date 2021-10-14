@@ -197,11 +197,11 @@ _RBEOF_
   env CDOMAIN=$cdomain rb_create_nginx_certs > /var/chef/data/data_bag/certs/nginx.json
 
   ## Create root pem from the chef server admin.pem
-  mkdir -p /var/chef/data/data_bag_encrypted/rBglobal
-  cat > /var/chef/data/data_bag_encrypted/rBglobal/root.json <<-_RBEOF_
+  mkdir -p /var/chef/data/data_bag_encrypted/certs
+  cat > /var/chef/data/data_bag_encrypted/certs/root.json <<-_RBEOF_
 {
-  "id": "root_pem",
-  "certname": "root_pem",
+  "id": "root",
+  "certname": "root",
   "private_rsa": "`cat /etc/chef/admin.pem | tr '\n' '|' | sed 's/|/\\\\n/g'`"
 }
 _RBEOF_
