@@ -204,7 +204,7 @@ _RBEOF_
   "certname": "root_pem",
   "private_rsa": "`cat /etc/chef/admin.pem | tr '\n' '|' | sed 's/|/\\\\n/g'`"
 }
-
+_RBEOF_
 }
 
 function create_buckets(){
