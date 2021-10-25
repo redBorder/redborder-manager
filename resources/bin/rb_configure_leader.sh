@@ -193,6 +193,19 @@ _RBEOF_
 }
 _RBEOF_
 
+LICMODE=$(head -n 1 /etc/licmode 2>/dev/null)
+  if [ "x$LICMODE" != "xglobal" -a "x$LICMODE" != "xorganization" ]; then
+    LICMODE="global"
+    echo -n $LICMODE > /etc/licmode
+  fi
+
+  cat > /var/chef/data/data_bag_encrypted/rBglobal/licmode.json <<- _RBEOF2_
+{
+  "id": "licmode",
+  "mode": "$LICMODE"
+}
+_RBEOF2_
+
   ## Initial certificate for certs data bag
   env CDOMAIN=$cdomain rb_create_nginx_certs > /var/chef/data/data_bag/certs/nginx.json
 
@@ -244,7 +257,7 @@ function configure_leader(){
   # Save into cache directory
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid http2k memcached chef-server consul hadoop samza nginx geoip webui snmp rbmonitor ntp f2k logstash pmacct minio postgresql dswatcher events-counter rb-manager " # The order matters!
+  listCookbooks="zookeeper kafka druid http2k memcached chef-server consul hadoop samza nginx geoip webui snmp rbmonitor ntp f2k logstash pmacct minio postgresql dswatcher events-counter iptables rb-manager " # The order matters!
   for n in $listCookbooks; do # cookbooks
     # rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
