@@ -198,7 +198,8 @@ LICMODE=$(head -n 1 /etc/licmode 2>/dev/null)
     LICMODE="global"
     echo -n $LICMODE > /etc/licmode
   fi
-
+  
+  mkdir -p /var/chef/data/data_bag_encrypted/rBglobal/
   cat > /var/chef/data/data_bag_encrypted/rBglobal/licmode.json <<- _RBEOF2_
 {
   "id": "licmode",
