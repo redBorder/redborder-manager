@@ -316,6 +316,8 @@ function configure_leader(){
   chef-client #&>/root/.install-chef-client.log
   e_title "redborder install run (3/3) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
+  e_title "Creating kafka topics $(date)" #>>/root/.install-chef-client.log
+  rb_create_topics
 }
 
 function set_external_service_names {
