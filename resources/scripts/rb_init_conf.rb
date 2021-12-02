@@ -80,8 +80,8 @@ unless network.nil? # network will not be defined in cloud deployments
     iface_mode = iface['mode']
     open("/etc/sysconfig/network-scripts/ifcfg-#{dev}", 'w') { |f|
       if iface_mode != 'dhcp'
-        if Config_utils.check_ipv4({:ip => iface['ipaddr'], :netmask => iface['netmask']})  and Config_utils.check_ipv4(:ip => iface['gateway'])
-          f.puts "IPADDR=#{iface['ipaddr']}"
+        if Config_utils.check_ipv4({:ip => iface['ip'], :netmask => iface['netmask']})  and Config_utils.check_ipv4(:ip => iface['gateway'])
+          f.puts "IPADDR=#{iface['ip']}"
           f.puts "NETMASK=#{iface['netmask']}"
           f.puts "GATEWAY=#{iface['gateway']}" unless iface['gateway'].nil?
         else
