@@ -326,8 +326,9 @@ function configure_leader(){
   e_title "redborder install run (3/3) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
 
-  e_title "Creating database structure: "
-  chef-solo -c /var/chef/solo/webui-solo.rb -j var/chef/solo/webui-attributes.json
+  e_title "Creating database structure $(date)"
+  chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
+  systemctl restart webui &>/dev/nul
 
   e_title "Creating kafka topics $(date)" #>>/root/.install-chef-client.log
   rb_create_topics
