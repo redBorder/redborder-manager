@@ -327,7 +327,7 @@ function configure_leader(){
   chef-client #&>/root/.install-chef-client.log
 
   e_title "Creating database structure $(date)"
-  chef-solo -c /var/chef/solo/webui-solo.rb -j var/chef/solo/webui-attributes.json
+  chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
   systemctl restart webui &>/dev/nul
 
   e_title "Creating kafka topics $(date)" #>>/root/.install-chef-client.log
