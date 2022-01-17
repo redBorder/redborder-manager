@@ -10,6 +10,7 @@ function configure_db(){
   # Configuring database passwords
   [ "x$REDBORDERDBPASS" == "x" ] && REDBORDERDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   [ "x$DRUIDDBPASS" == "x" ] && DRUIDDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  [ "x$RADIUSPASS" == "x" ] && RADIUSPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
 
   # Druid DATABASE
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER druid WITH PASSWORD '$DRUIDDBPASS';"
@@ -22,6 +23,12 @@ function configure_db(){
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS redborder;"
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT redborder TO $DB_ADMINUSER;"
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE redborder OWNER redborder;"
+
+  # radius DATABASE
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER radius WITH PASSWORD '$RADIUSPASS';"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS radius;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT radius TO $DB_ADMINUSER;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE radius OWNER radius;"
 
 }
 
@@ -116,6 +123,18 @@ _RBEOF_
   "pass": "$REDBORDERDBPASS"
 }
 _RBEOF_
+
+  #radius passwords
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_radius.json <<- _RBEOF2_
+{
+  "id": "db_radius",
+  "username": "radius",
+  "database": "radius",
+  "hostname": "$OPSCODE_DBHOST",
+  "port": "$OPSCODE_DBPORT",
+  "pass": "$RADIUSPASS"
+}
+_RBEOF2_
 
   # Elasticache configuration
   cat > /var/chef/data/data_bag/rBglobal/elasticache.json <<-_RBEOF_
