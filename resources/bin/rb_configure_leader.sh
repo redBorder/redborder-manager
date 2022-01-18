@@ -125,7 +125,7 @@ _RBEOF_
 _RBEOF_
 
   #radius passwords
-  cat > /var/chef/data/data_bag_encrypted/passwords/db_radius.json <<- _RBEOF2_
+  cat > /var/chef/data/data_bag/passwords/db_radius.json <<- _RBEOF2_
 {
   "id": "db_radius",
   "username": "radius",
