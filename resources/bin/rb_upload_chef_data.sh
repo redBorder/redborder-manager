@@ -41,6 +41,7 @@ function upload_data_bag(){
     if [ "x$files" != "x" ]; then
 			for n2 in `ls $files 2>/dev/null`; do
         n1=$(dirname $n2|sed 's|.*/||')
+		VAR="y"
 				if [ $ANSWERYES -eq 0 ]; then
 					echo -n "    Would you like to upload $n1/`basename $n2` $X? (y/N) "
 					read VAR
