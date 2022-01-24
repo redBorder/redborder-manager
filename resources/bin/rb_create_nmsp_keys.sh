@@ -39,7 +39,7 @@ if [ "x$OVR" == "xy" -o "x$OVR" == "xY" ]; then
     rm -f /var/chef/cookbooks/rb-nmsp/files/default/aes.keystore
     rm -f /var/chef/data/data_bag/passwords/nmspd-key-hashes.json
     mkdir -p /var/chef/cookbooks/rb-nmsp/files/default/
-    java -cp /usr/lib/redborder-nmsp/deps/*:/usr/lib/redborder-nmsp/rb-nmsp.jar net.redborder.nmsp.NmspConsumer config-gen /var/chef/cookbooks/rb-nmsp/files/default/ /var/chef/data/data_bag/passwords/ $NMSPMAC
+    java -cp /usr/lib/redborder-nmsp/deps/*:/usr/lib/redborder-nmsp/rb-nmsp.jar net.redborder.nmsp.NmspConsumer config-gen /var/chef/cookbooks/rb-nmsp/files/default/ /var/chef/data/data_bag/passwords/ $NMSPMAC &>/dev/null
     
     if [ $? -eq 0 ]; then
         UPLOAD=1
@@ -48,5 +48,7 @@ if [ "x$OVR" == "xy" -o "x$OVR" == "xY" ]; then
 fi
 
 if [ $UPLOAD -eq 1 -a -f /var/chef/data/data_bag/passwords/nmspd-key-hashes.json ]; then
+  rvm gemset use default 
+  env knife cookbook upload rbnmsp
   /usr/lib/redborder/bin/rb_upload_chef_data.sh -y -f /var/chef/data/data_bag/passwords/nmspd-key-hashes.json
 fi
