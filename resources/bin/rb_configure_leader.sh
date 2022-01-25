@@ -59,6 +59,11 @@ function configure_dataBags(){
   # IF S3HOST not found, set default: s3.service.$cdomain
   [ "x$S3HOST" = "x" ] && S3HOST="s3.service.${cdomain}"
 
+  # Vault data bag configuration
+  HASH_KEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  #HASH_KEY="yourenterprisekey"
+  HASH_FUNCTION="SHA256"
+
   ## Data bags ##
   mkdir -p /var/chef/data/data_bag/passwords/
   mkdir -p /var/chef/data/data_bag/rBglobal/
@@ -116,6 +121,16 @@ _RBEOF_
   "pass": "$REDBORDERDBPASS"
 }
 _RBEOF_
+
+  # Vault passwords
+  cat > /var/chef/data/data_bag/passwords/vault.json <<-_RBEOF_
+{
+  "id": "vault",
+  "hash_key": "$HASH_KEY",
+  "hash_function": "$HASH_FUNCTION"
+}
+_RBEOF_
+
 
   # Elasticache configuration
   cat > /var/chef/data/data_bag/rBglobal/elasticache.json <<-_RBEOF_
