@@ -39,16 +39,16 @@ if [ $? -ne 0 ] ; then
 fi
 
 # Checking minio config
-echo "Waiting for /etc/minio/config.json..."
+echo "Waiting for /var/minio/data/.minio.sys/config/config.json..."
 count=0
 flag=0
 while [ $count -lt 30 ] ; do
-  [ -f /etc/minio/config.json ] && flag=1 && break
+  [ -f /var/minio/data/.minio.sys/config/config.json ] && flag=1 && break
   let count=count+1
   sleep 1
 done
 if [ $flag -eq 0 ] ; then
-  echo "ERROR: /etc/minio/config.json not found, exiting..."
+  echo "ERROR: /var/minio/data/.minio.sys/config/config.json not found, exiting..."
   exit 1
 fi
 
