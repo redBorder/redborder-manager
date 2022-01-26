@@ -60,8 +60,7 @@ function configure_dataBags(){
   [ "x$S3HOST" = "x" ] && S3HOST="s3.service.${cdomain}"
 
   # Vault data bag configuration
-  HASH_KEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-  #HASH_KEY="yourenterprisekey"
+  HASH_KEY="yourenterprisekey"
   HASH_FUNCTION="SHA256"
 
   ## Data bags ##
