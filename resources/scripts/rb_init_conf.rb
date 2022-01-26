@@ -204,6 +204,10 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   #druid
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8080 -j ACCEPT &>/dev/null")
 
+  #minio
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 9000 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 9001 -j ACCEPT &>/dev/null")
+
   # Reload firewalld configuration
   system("firewall-cmd --reload &>/dev/null")
 
