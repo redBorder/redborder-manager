@@ -77,6 +77,9 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Fri Jan 28 2022 Eduardo Reyes <eareyes@redborder.com> -
+- Add rb_synthetic_producer.rb
+
 * Wed Jan 31 2018 Alberto Rodriguez <arodriguez@redborder.com> - 0.0.11-1
 - Add chef-solo files
 
