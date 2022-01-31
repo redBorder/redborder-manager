@@ -18,6 +18,18 @@ _RBEOF_
 echo "INFO: Restarting serf. Loading new handlers"
 systemctl restart serf
 
+# Generating random key and secret for minio.. 
+MINIO_ACCESS_KEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c20 | sed 's/ //g'`"
+MINIO_SECRET_KEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c40 | sed 's/ //g'`"
+
+#Configure Environment Variables for minio in /etc/default/minio (used by systemd unit minio.service)
+cat > /etc/default/minio <<-_RBEOF_
+MINIO_OPTS="--address :9000 --console-address :9001 --config-dir /etc/minio"
+MINIO_VOLUMES=/var/minio/data
+MINIO_ROOT_USER=$MINIO_ACCESS_KEY
+MINIO_ROOT_PASSWORD=$MINIO_SECRET_KEY
+_RBEOF_
+
 #Configure s3 service using chef-solo
 echo "INFO: Configure Minio service using chef-solo"
 chef-solo -c /var/chef/solo/s3-solo.rb -j /var/chef/solo/s3-attributes.json
@@ -27,23 +39,21 @@ if [ $? -ne 0 ] ; then
 fi
 
 # Checking minio config
-echo "Waiting for /etc/minio/config.json..."
+echo "Waiting for /var/minio/data/.minio.sys/config/config.json..."
 count=0
 flag=0
 while [ $count -lt 30 ] ; do
-  [ -f /etc/minio/config.json ] && flag=1 && break
+  [ -f /var/minio/data/.minio.sys/config/config.json ] && flag=1 && break
   let count=count+1
   sleep 1
 done
 if [ $flag -eq 0 ] ; then
-  echo "ERROR: /etc/minio/config.json not found, exiting..."
+  echo "ERROR: /var/minio/data/.minio.sys/config/config.json not found, exiting..."
   exit 1
 fi
 
 #Obtain s3 information for leader
 echo "INFO: Generate /etc/redborder/s3_init_conf.yml using Minio configuration"
-MINIO_ACCESS_KEY=$(cat /etc/minio/config.json | jq -r .credential.accessKey)
-MINIO_SECRET_KEY=$(cat /etc/minio/config.json | jq -r .credential.secretKey)
 MINIO_IP=$(serf members -tag s3=inprogress | tr ':' ' ' | awk '{print $2}')
 
 if [ "x$MINIO_ACCESS_KEY" != "x" -a "x$MINIO_ACCESS_KEY" != "xnull" -a \
