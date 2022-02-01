@@ -43,6 +43,13 @@ def implemented_topics(topic)
   exit 0
 end
 
+begin
+  raise("Synthetic Producer is not installed") if (!File.exist?("/usr/share/synthetic-producer/synthetic-producer.jar"))
+rescue RuntimeError => e
+  puts "[ERROR] " + e.message
+  exit 0
+end
+
 
 usage if opt["h"] || (opt["t"].nil? && opt["c"].nil?) || opt["p"].nil? || opt["r"].nil?
 
