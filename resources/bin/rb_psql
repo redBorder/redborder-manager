@@ -6,7 +6,7 @@ source $RBETC/rb_init_conf.conf
 [ "x$DOMAIN" == "x" ] && DOMAIN="redborder.cluster"
 
 function usage() {
-  echo "$0 [druid|redborder|opscode_chef]"
+  echo "$0 [druid|redborder|opscode_chef|radius]"
 }
 
 USER="$*"
@@ -20,25 +20,32 @@ elif [ "x$USER" == "xo" -o "x$USER" == "xop" -o "x$USER" == "xops" -o "x$USER" =
     USER="opscode_chef"
 #elif [ "x$USER" == "xoo" -o "x$USER" == "xooz" -o "x$USER" == "xoozi" -o "x$USER" == "xoozie" ]; then
 #    USER="oozie"
-#elif [ "x$USER" == "xra" -o "x$USER" == "xrad" -o "x$USER" == "xradi" -o "x$USER" == "xradiu" -o "x$USER" == "xradius" ]; then
-#    USER="radius"
+elif [ "x$USER" == "xra" -o "x$USER" == "xrad" -o "x$USER" == "xradi" -o "x$USER" == "xradiu" -o "x$USER" == "xradius" ]; then
+    USER="radius"
 fi
 
-if [ "x$USER" == "xdruid" -o "x$USER" == "xredborder" -o "x$USER" == "xopscode_chef" ]; then
+if [ "x$USER" == "xdruid" -o "x$USER" == "xredborder" -o "x$USER" == "xopscode_chef" -o "x$USER" == "xradius" ]; then
     if [ "x$USER" == "xredborder" -a -f /var/www/rb-rails/config/database.yml ]; then
-        PGPASSWORD=$(cat /var/www/rb-rails/config/database.yml |grep "password: " | head -n 1 | awk '{print $2}')
-        PGHOSTNAME=$(cat /var/www/rb-rails/config/database.yml |grep "host: " | head -n 1 | awk '{print $2}')
-        PGPORT=$(cat /var/www/rb-rails/config/database.yml |grep "port: " | head -n 1 | awk '{print $2}')
-    elif [ "x$USER" == "xdruid" -a -f /etc/druid/_common/common.runtime.properties ]; then
-        PGPASSWORD=$(grep password /etc/druid/_common/common.runtime.properties | awk -F "=" '{print $2}')
-        DRUID_DB_URI=$(grep connectURI /etc/druid/_common/common.runtime.properties | awk -F "=" '{print $2}')
-        PGHOSTNAME="$(echo $DRUID_DB_URI | sed 's|jdbc:postgresql://||' | sed 's/:.*//')"
-        PGPORT="$(echo $DRUID_DB_URI | sed 's|jdbc:postgresql://||' | sed 's/.*://' | sed 's|/.*||')"
+        line=$(awk '/redborder/{ print NR; exit }' /var/www/rb-rails/config/database.yml)
+        PGPASSWORD=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "password: " | head -n 1 | awk '{print $2}')
+        PGHOSTNAME=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "host: " | head -n 1 | awk '{print $2}')
+        PGPORT=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "port: " | head -n 1 | awk '{print $2}')
+    elif [ "x$USER" == "xdruid" -a -f /var/www/rb-rails/config/database.yml ]; then
+        line=$(awk '/druid/{ print NR; exit }' /var/www/rb-rails/config/database.yml)
+        PGPASSWORD=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "password: " | head -n 1 | awk '{print $2}')
+        PGHOSTNAME=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "host: " | head -n 1 | awk '{print $2}')
+        PGPORT=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "port: " | head -n 1 | awk '{print $2}')
     elif [ "x$USER" == "xopscode_chef" -a -f /var/opt/opscode/opscode-erchef/sys.config ]; then
         PGPASSWORD=$(grep '{db_pass' /var/opt/opscode/opscode-erchef/sys.config |awk '{print $2}' | sed 's/^"//'|sed 's/"},$//')
         PGHOSTNAME=$(grep '{db_host' /var/opt/opscode/opscode-erchef/sys.config |awk '{print $2}' | sed 's/^"//'|sed 's/"},$//')
         PGPORT=$(grep '{db_port' /var/opt/opscode/opscode-erchef/sys.config |awk '{print $2}' | sed 's/^"//'|sed 's/"},$//' |sed 's/}.*//')
+    elif [ "x$USER" == "xradius" -a -f /var/www/rb-rails/config/database.yml ]; then
+        line=$(awk '/radius/{ print NR; exit }' /var/www/rb-rails/config/database.yml)
+        PGPASSWORD=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "password: " | head -n 1 | awk '{print $2}')
+        PGHOSTNAME=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "host: " | head -n 1 | awk '{print $2}')
+        PGPORT=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "port: " | head -n 1 | awk '{print $2}')
     fi
+
 
     [ "x$PGPORT" == "x" ] && PGPORT=5432
     [ "x$PGHOSTNAME" == "x" ] && PGHOSTNAME="postgresql.service.${DOMAIN}"

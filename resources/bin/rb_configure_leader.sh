@@ -10,6 +10,7 @@ function configure_db(){
   # Configuring database passwords
   [ "x$REDBORDERDBPASS" == "x" ] && REDBORDERDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   [ "x$DRUIDDBPASS" == "x" ] && DRUIDDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  [ "x$RADIUSPASS" == "x" ] && RADIUSPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
 
   # Druid DATABASE
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER druid WITH PASSWORD '$DRUIDDBPASS';"
@@ -22,6 +23,12 @@ function configure_db(){
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS redborder;"
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT redborder TO $DB_ADMINUSER;"
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE redborder OWNER redborder;"
+
+  # radius DATABASE
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER radius WITH PASSWORD '$RADIUSPASS';"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS radius;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT radius TO $DB_ADMINUSER;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE radius OWNER radius;"
 
 }
 
@@ -121,6 +128,18 @@ _RBEOF_
 }
 _RBEOF_
 
+  # DB radius passwords
+  cat > /var/chef/data/data_bag/passwords/db_radius.json <<- _RBEOF2_
+{
+  "id": "db_radius",
+  "username": "radius",
+  "database": "radius",
+  "hostname": "$OPSCODE_DBHOST",
+  "port": "$OPSCODE_DBPORT",
+  "pass": "$RADIUSPASS"
+}
+_RBEOF2_
+
   # Vault passwords
   cat > /var/chef/data/data_bag/passwords/vault.json <<-_RBEOF_
 {
@@ -129,7 +148,6 @@ _RBEOF_
   "hash_function": "$HASH_FUNCTION"
 }
 _RBEOF_
-
 
   # Elasticache configuration
   cat > /var/chef/data/data_bag/rBglobal/elasticache.json <<-_RBEOF_
@@ -281,7 +299,7 @@ function configure_leader(){
   # Save into cache directory
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid http2k memcached chef-server consul hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner ntp f2k logstash pmacct minio postgresql dswatcher events-counter rsyslog rbsocial rbnmsp n2klocd rbale rb-manager" # The order matters!
+  listCookbooks="zookeeper kafka druid http2k memcached chef-server consul hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner ntp f2k logstash pmacct minio postgresql dswatcher events-counter rsyslog rbsocial freeradius rbnmsp n2klocd rbale rb-manager" # The order matters!
   for n in $listCookbooks; do # cookbooks
     # rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
