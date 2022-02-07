@@ -8,7 +8,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash ntp dialog postgresql s3cmd dmidecode rsync nc telnet redborder-serf redborder-common redborder-chef-client redborder-cookbooks redborder-rubyrvm redborder-cli
+Requires: bash ntp dialog postgresql s3cmd dmidecode rsync nc telnet redborder-serf redborder-common redborder-chef-client redborder-cookbooks redborder-rubyrvm redborder-cli synthetic-producer
 
 %description
 %{summary}
@@ -77,6 +77,9 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Fri Jan 28 2022 Eduardo Reyes <eareyes@redborder.com> -
+- Add rb_synthetic_producer.rb
+
 * Wed Jan 31 2018 Alberto Rodriguez <arodriguez@redborder.com> - 0.0.11-1
 - Add chef-solo files
 
