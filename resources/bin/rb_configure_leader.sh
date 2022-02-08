@@ -63,8 +63,8 @@ function configure_dataBags(){
   S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`" #CHECK when {s3_external_url, host_header},
   S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
 
-  # IF S3HOST not found, set default: s3.service.$cdomain
-  [ "x$S3HOST" = "x" ] && S3HOST="s3.service.${cdomain}"
+  # IF S3HOST not found, set default: s3.service
+  [ "x$S3HOST" = "x" ] && S3HOST="s3.service"
 
   # Vault data bag configuration
   HASH_KEY="yourenterprisekey"
