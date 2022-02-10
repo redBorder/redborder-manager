@@ -354,8 +354,8 @@ function set_external_service_names {
   [ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  s3.service s3.service.${cdomain}" >> /etc/hosts
 
   PSQL_IP=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
-  grep -q postgresql.service /etc/hosts
-  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  postgresql.service postgresql.service.${cdomain}" >> /etc/hosts
+  grep -q master.postgresql.service /etc/hosts
+  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  master.postgresql.service master.postgresql.service.${cdomain}" >> /etc/hosts
 }
 
 ########

@@ -51,8 +51,8 @@ fi
 if [ "x$pg_ret" == "xnull" -o "x$pg_ret" == "x" ]; then #If not postgresql registered
   # Get IP pg as a pg service IP and Add pg IP to /etc/hosts
   IP_PG=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
-  grep -q postgresql.service.${cdomain} /etc/hosts
-  [ $? -ne 0 ] && echo "$IP_PG   postgresql.service.${cdomain}" >> /etc/hosts
+  grep -q master.postgresql.service.${cdomain} /etc/hosts
+  [ $? -ne 0 ] && echo "$IP_PG   master.postgresql.service.${cdomain}" >> /etc/hosts
 fi
 
 # Get chef validator and admin certificates
