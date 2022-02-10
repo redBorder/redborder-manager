@@ -30,6 +30,9 @@ function configure_db(){
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT radius TO $DB_ADMINUSER;"
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE radius OWNER radius;"
 
+  # Replication User
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER rep REPLICATION LOGIN CONNECTION LIMIT 100;"
+
 }
 
 function configure_dataBags(){
