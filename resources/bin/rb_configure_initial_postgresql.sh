@@ -26,7 +26,7 @@ cat > /etc/redborder/postgresql_init_conf.yml <<-_RBEOF_
 postgresql:
   superuser: postgres
   password: ''
-  host: postgresql.service
+  host: master.postgresql.service
   port: '5432'
 _RBEOF_
 

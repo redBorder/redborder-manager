@@ -30,6 +30,9 @@ function configure_db(){
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT radius TO $DB_ADMINUSER;"
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE radius OWNER radius;"
 
+  # Replication User
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER rep REPLICATION LOGIN CONNECTION LIMIT 100;"
+
 }
 
 function configure_dataBags(){
@@ -372,8 +375,8 @@ function set_external_service_names {
   [ $? -ne 0 -a "x$S3_IP" != "x" ] && echo "$S3_IP  s3.service s3.service.${cdomain}" >> /etc/hosts
 
   PSQL_IP=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
-  grep -q postgresql.service /etc/hosts
-  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  postgresql.service postgresql.service.${cdomain}" >> /etc/hosts
+  grep -q master.postgresql.service /etc/hosts
+  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  master.postgresql.service master.postgresql.service.${cdomain}" >> /etc/hosts
 }
 
 ########
