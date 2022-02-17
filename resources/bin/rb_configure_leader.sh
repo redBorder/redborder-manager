@@ -365,8 +365,6 @@ function configure_leader(){
   chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
   systemctl restart webui &>/dev/nul
 
-  e_title "Creating kafka topics $(date)" #>>/root/.install-chef-client.log
-  rb_create_topics
 }
 
 function set_external_service_names {
