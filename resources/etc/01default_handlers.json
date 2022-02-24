@@ -2,6 +2,7 @@
     "event_handlers" : [
         "query:certificate-validator=/usr/lib/redborder/bin/serf-response-file.sh /etc/chef/redborder-validator.pem",
         "query:certificate-admin=/usr/lib/redborder/bin/serf-response-file.sh /etc/chef/admin.pem",
+        "query:databag-secret=/usr/lib/redborder/bin/serf-response-file.sh /etc/chef/encrypted_data_bag_secret",
         "query:wakeup-chef=/usr/lib/redborder/bin/rb_wakeup_chef.sh"
     ]
 }
