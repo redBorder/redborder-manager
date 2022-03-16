@@ -331,7 +331,8 @@ function configure_leader(){
   # Save into cache directory
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
-  listCookbooks="zookeeper kafka druid http2k memcached chef-server consul hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner ntp f2k logstash pmacct minio postgresql dswatcher events-counter rsyslog rbsocial freeradius rbnmsp n2klocd rbale rbcep rb-manager" # The order matters!
+
+  listCookbooks="zookeeper kafka druid http2k memcached chef-server consul hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner ntp f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter rsyslog rbsocial freeradius rbnmsp n2klocd rbale rbcep rb-manager" # The order matters!
   for n in $listCookbooks; do # cookbooks
     # rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
@@ -394,8 +395,6 @@ function configure_leader(){
   chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
   systemctl restart webui &>/dev/nul
 
-  e_title "Creating kafka topics $(date)" #>>/root/.install-chef-client.log
-  rb_create_topics
 }
 
 function set_external_service_names {
@@ -459,6 +458,13 @@ fi
 echo "nginx['ssl_port'] = 4443" >> /etc/opscode/chef-server.rb
 echo "nginx['non_ssl_port'] = 4480" >> /etc/opscode/chef-server.rb
 
+# Modifying some default chef parameters (rabbitmq, postgresql) ## Check
+# Rabbitmq # CHECK CHECK CHECK
+sed -i "s/rabbit@localhost/rabbit@$CLIENTNAME/" /opt/opscode/embedded/cookbooks/private-chef/attributes/default.rb
+mkdir -p /var/opt/opscode/rabbitmq/db
+rm -f /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
+ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
+
 # Chef server initial configuration
 e_title "Configuring Chef-Server"
 /usr/bin/chef-server-ctl reconfigure #&>> /root/.install-chef-server.log
@@ -489,13 +495,6 @@ sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.service.$cdomain
 sed -i "s/\HOSTNAME/admin/g" /root/.chef/knife.rb
 sed -i "s|^chef_server_url .*|chef_server_url  \"https://erchef.service.$cdomain:4443/organizations/$CHEFORG\"|" /root/.chef/knife.rb
 sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
-
-# Modifying some default chef parameters (rabbitmq, postgresql) ## Check
-# Rabbitmq # CHECK CHECK CHECK
-sed -i "s/rabbit@localhost/rabbit@$CLIENTNAME/" /opt/opscode/embedded/cookbooks/private-chef/attributes/default.rb
-mkdir -p /var/opt/opscode/rabbitmq/db
-rm -f /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
-ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
 
 # Configure LEADER
 configure_leader

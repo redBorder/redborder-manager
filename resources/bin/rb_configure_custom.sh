@@ -62,6 +62,9 @@ $RBBIN/serf-query-file -q certificate-validator > /tmp/cert && mv /tmp/cert /etc
 $RBBIN/serf-query-file -q certificate-admin > /tmp/cert && mv /tmp/cert /etc/chef/admin.pem
 [ "x$?" != "x0" ] && error_title "ERROR getting admin.pem Chef certificate" && exit 1
 
+$RBBIN/serf-query-file -q databag-secret > /tmp/encrypted_data_bag_secret && mv /tmp/encrypted_data_bag_secret /etc/chef/encrypted_data_bag_secret
+[ "x$?" != "x0" ] && error_title "ERROR getting encrypted_data_bag_secret Chef data bag secret" && exit 1
+
 #############################
 # CHEF CLIENT Configuration #
 #############################
