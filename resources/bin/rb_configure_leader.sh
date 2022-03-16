@@ -35,6 +35,31 @@ function configure_db(){
 
 }
 
+function configure_sensor_nodes(){
+  # CEP sensor
+  mkdir -p /var/chef/data/node/
+  cat > /var/chef/data/node/cep.json <<- _RBEOF2_
+{
+  "name": "cep",
+  "chef_environment": "_default",
+  "run_list": [
+    "role[cep-sensor]"
+  ],
+  "normal": {
+    "ipaddress": "127.0.0.1",
+    "rbname": "CEP",
+    "rbversion": null,
+    "redborder": {
+      "ipaddress": "127.0.0.1",
+      "observation_id": "",
+      "parent_id": null,
+      "sensor_uuid": "$(cat /proc/sys/kernel/random/uuid)"
+    }
+  }
+}
+_RBEOF2_
+}
+
 function configure_dataBags(){
 
   # Chef server configuration file
@@ -287,6 +312,10 @@ function configure_leader(){
   e_title "Configuring DataBases"
   configure_db
 
+  # Configure Sensors nodes
+  e_title "Configuring Sensor nodes"
+  configure_sensor_nodes
+
   # Configure DataBags
   e_title "Configuring Data bags"
   configure_dataBags
@@ -302,8 +331,8 @@ function configure_leader(){
   # Save into cache directory
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
-  
-  listCookbooks="zookeeper kafka druid http2k memcached chef-server consul hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner ntp f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter rsyslog rbsocial freeradius rbnmsp n2klocd rbale rb-manager" # The order matters!
+
+  listCookbooks="zookeeper kafka druid http2k memcached chef-server consul hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner ntp f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter rsyslog rbsocial freeradius rbnmsp n2klocd rbale rbcep rb-manager" # The order matters!
   for n in $listCookbooks; do # cookbooks
     # rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
