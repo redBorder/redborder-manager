@@ -1,0 +1,21 @@
+{
+  "name": "cisco-cloudproxy",
+  "description": "cisco cloudproxy role",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+  },
+  "override_attributes": {
+    "redborder": {
+    }
+  },
+  "chef_type": "role",
+  "run_list": [
+    "recipe[ohai]",
+    "recipe[snmp]",
+    "recipe[ntp]",
+    "recipe[geodb]",
+    "recipe[cisco-cloudproxy]"
+  ],
+  "env_run_lists": {
+  }
+}

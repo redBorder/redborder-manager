@@ -1,0 +1,25 @@
+{
+  "name": "proxy-sensor",
+  "description": "redBorder proxy to cloud role",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+  },
+  "override_attributes": {
+    "redborder": {
+      "cloud": true,
+      "sshd": {
+        "addkeys": false
+      }
+    }
+  },
+  "chef_type": "role",
+  "run_list": [
+    "recipe[ohai]",
+    "recipe[snmp]",
+    "recipe[ntp]",
+    "recipe[geodb]",
+    "recipe[redborder-proxy]"
+  ],
+  "env_run_lists": {
+  }
+}

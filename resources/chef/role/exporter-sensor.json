@@ -1,0 +1,24 @@
+{
+  "name": "exporter-sensor",
+  "description": "Exporter in a docker",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+
+  },
+  "override_attributes": {
+    "redborder": {
+      "cloud": true,
+      "sshd": {
+        "addkeys": false
+      }
+    }
+  },
+  "chef_type": "role",
+  "run_list": [
+    "recipe[ohai]",
+    "recipe[redborder-exporter]"
+  ],
+  "env_run_lists": {
+
+  }
+}
