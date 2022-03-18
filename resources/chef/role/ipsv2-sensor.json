@@ -1,0 +1,22 @@
+{
+  "name": "ipsv2-sensor",
+  "description": "redBorder sensor role for IPSv2 sensors",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+  },
+  "override_attributes": {
+  },
+  "chef_type": "role",
+  "run_list": [
+    "recipe[ohai]",
+    "recipe[snmp]",
+    "recipe[ntp]",
+    "recipe[rsyslog]",
+    "recipe[redborder-IPSv2-sensor::common_v2]",
+    "recipe[geodb]",
+    "recipe[redborder-IPSv2-sensor]"
+  ],
+  "env_run_lists": {
+  }
+}
+
