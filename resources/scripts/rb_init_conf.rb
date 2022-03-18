@@ -214,7 +214,7 @@ if !network.nil? #Firewall rules are not needed in cloud environments
 
   #rsyslogd 
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 514 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m tcp --dport 514 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 514 -j ACCEPT &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=514/tcp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=514/udp &>/dev/null")
  
