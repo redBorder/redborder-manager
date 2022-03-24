@@ -14,11 +14,7 @@
   },
   "chef_type": "role",
   "run_list": [
-    "recipe[ohai]",
-    "recipe[snmp]",
-    "recipe[ntp]",
-    "recipe[geodb]",
-    "recipe[redborder-proxy]"
+    "recipe[rb-proxy]"
   ],
   "env_run_lists": {
   }
