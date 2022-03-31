@@ -1,6 +1,6 @@
 {
   "name": "sensor",
-  "description": "redborder sensor role",
+  "description": "redBorder sensor role",
   "json_class": "Chef::Role",
   "default_attributes": {
   },
@@ -19,10 +19,155 @@
         "is_server": false,
         "mode": "extended",
         "servers": [],
-       	"protocol": "udp"
+	"protocol": "udp"
       },
       "smtp": {
         "relayhost": ""
+      }, 
+      "snort": {
+        "default": {
+          "autobypass": false,
+          "save_pcap": false,
+          "pfring_clustermode": 2,
+          "pfring_watermark": 16, 
+          "pfring_sbypass_profile": 0,
+          "pfring_sbypass": 0,
+          "pfring_sbypass_upperthreshold": 90,
+          "pfring_sbypass_lowerthreshold": 10,
+          "pfring_sbypass_samplingrate": 1000,
+          "mode": "IDS_FWD",
+          "threshold_count": 5,
+          "threshold_seconds": 60,
+          "ipvars": { 
+            "HOME_NET": "192.168.0.0/16,10.0.0.0/8,172.16.0.0/12",
+            "EXTERNAL_NET": "!$HOME_NET",
+            "HTTP_SERVERS": "$HOME_NET",
+            "SMTP_SERVERS": "$HOME_NET", 
+            "SQL_SERVERS": "$HOME_NET",
+            "DNS_SERVERS": "$HOME_NET",
+            "TELNET_SERVERS": "$HOME_NET",
+            "AIM_SERVERS": "64.12.24.0/23,64.12.28.0/23,64.12.161.0/24,64.12.163.0/24,64.12.200.0/24,205.188.3.0/24,205.188.5.0/24,205.188.7.0/24,205.188.9.0/24,205.188.153.0/24,205.188.179.0/24,205.188.248.0/24",
+            "SIP_SERVERS": "$HOME_NET",
+            "DNP3_SERVER": "$HOME_NET",
+            "DNP3_CLIENT": "$HOME_NET",
+            "MODBUS_CLIENT": "$HOME_NET",
+            "MODBUS_SERVER": "$HOME_NET",
+            "ENIP_CLIENT": "$HOME_NET",
+            "ENIP_SERVER": "$HOME_NET"
+          },
+          "portvars": { 
+            "HTTP_PORTS": "80,81,311,591,593,901,1220,1414,1830,2301,2381,2809,3128,3702,4343,5250,7001,7145,7510,7777,7779,8000,8008,8014,8028,8080,8088,8118,8123,8180,8181,8243,8280,8800,8888,8899,9080,9090,9091,9443,9999,11371,55555",
+            "ORACLE_PORTS": "1024:",
+            "SHELLCODE_PORTS": "!80",
+            "SSH_PORTS": "22",
+            "FILE_DATA_PORTS": "80,81,311,591,593,901,1220,1414,1830,2301,2381,2809,3128,3702,4343,5250,7001,7145,7510,7777,7779,8000,8008,8014,8028,8080,8088,8118,8123,8180,8181,8243,8280,8800,8888,8899,9080,9090,9091,9443,9999,11371,55555,110,143",
+            "FTP_PORTS": "21,2100,3535",
+            "SIP_PORTS": "5060,5061,5600",
+            "DNP3_PORTS": "20000"
+          },
+          "preprocessors": {
+            "back_orifice": {
+              "mode": true,
+              "description": "Back Orifice detection",
+              "editable": true	
+            },
+            "dcerpc2": {
+              "mode": true,
+              "description": "SMB / DCE-RPC normalization and anomaly detection",
+              "editable": true
+            },
+            "dnp3": {
+              "mode": true,
+              "description": "Decode DNP3 protocol for SCADA",
+              "editable": true
+            },
+            "dns": {
+              "mode": true,
+              "description": "DNS anomaly detection",
+              "editable": true
+            },
+            "frag3": {
+              "mode": true,
+              "description": "Target-based IP defragmentation",
+              "editable": false
+            },
+            "ftp_telnet": {
+              "mode": true,
+              "description": "FTP / Telnet normalization and anomaly detection",
+              "editable": true
+            },
+            "http_inspect": {
+              "mode": true,
+              "description": "HTTP normalization and anomaly detection",
+              "editable": true
+            },
+            "imap": {
+              "mode": true,
+              "description": "IMAP preprocessor",
+              "editable": true
+            },
+            "modbus": {
+              "mode": true,
+              "description": "Modbus protocol (SCADA) decoder",
+              "editable": true
+            },
+            "normalize": {
+              "mode": true,
+              "description": "Inline packet normalization",
+              "editable": true
+            },
+            "perfmonitor": {
+              "mode": true,
+              "description": "Performance monitor",
+              "editable": true
+            },
+            "pop": {
+              "mode": true,
+              "description": "POP preprocessor",
+              "editable": true
+            },
+            "reputation": {
+              "mode": true,
+              "description": "IP blacklist/whitelist capabilities",
+              "editable": true
+            }, 
+            "rpc_decode": {
+              "mode": true,
+              "description": "ONC-RPC normalization and anomaly detection",
+              "editable": true
+            },
+            "sfportscan": {
+              "mode": true,
+              "description": "Portscan detection",
+              "editable": true
+            },
+            "sensitive": {
+              "mode": true,
+              "description": "Detection of Personally Identifiable Information (PII)",
+              "editable": true
+            },
+            "sip": {
+              "mode": true,
+              "description": "SIP Session Initiation Protocol preprocessor",
+              "editable": true
+            },
+            "smtp": {
+              "mode": true,
+              "description": "SMTP normalization and anomaly detection",
+              "editable": true
+            },
+            "ssh": {
+              "mode": true,
+              "description": "Secure SHell preprocessor",
+              "editable": true
+            },
+            "ssl": {
+              "mode": true,
+              "description": "SSL anomaly detection and traffic bypass",
+              "editable": true
+            }
+          }
+        }
       }
     }
   },
