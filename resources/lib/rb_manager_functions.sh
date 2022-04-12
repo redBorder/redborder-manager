@@ -242,11 +242,25 @@ function wait_port(){
 
 function executeToAll(){
   local script=$1
-  nodes=$(serf members -status alive -format=json | jq -r .members[].name | cut -d ":" -f 1)
+  nodes=$(/bin/serf members -status alive -format=json | /bin/jq -r .members[].name | /bin/cut -d ":" -f 1)
 
   for n in $nodes
   do
     execute $n $script
+  done
+}
+
+function copyToAll(){
+  local path=$1
+  nodes=$(/bin/serf members -status alive -format=json | /bin/jq -r .members[].name | /bin/cut -d ":" -f 1)
+
+  IFS='.' read -r -a hostname <<< $(/usr/bin/hostname)
+
+  for n in $nodes
+  do
+    if [ "$n" != "${hostname[0]}" ]; then
+      copy_files $n $path
+    fi
   done
 }
 

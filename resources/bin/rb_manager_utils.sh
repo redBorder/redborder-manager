@@ -72,7 +72,11 @@ elif [ $copy_flag -eq 1 ]; then
   if [ "x$NODE" == "x" ] || [ "x$PATH" == "x" ]; then
     echo "Node [-n] and Script [-p] parameters are needed"
   else
-    copy_files $NODE $PATH
+     if [ $NODE == "all" ]; then
+      copyToAll $PATH
+    else
+      copy_files $NODE $PATH
+    fi
   fi
 else
   usage
