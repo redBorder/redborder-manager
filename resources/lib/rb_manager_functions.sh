@@ -254,11 +254,11 @@ function copyToAll(){
   local path=$1
   nodes=$(/bin/serf members -status alive -format=json | /bin/jq -r .members[].name | /bin/cut -d ":" -f 1)
 
-  IFS='.' read -r -a hostname <<< $(/usr/bin/hostname)
+  host=$(/usr/bin/hostname -s)
 
   for n in $nodes
   do
-    if [ "$n" != "${hostname[0]}" ]; then
+    if [ "$n" != "$host" ]; then
       copy_files $n $path
     fi
   done
