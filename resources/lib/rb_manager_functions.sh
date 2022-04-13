@@ -8,6 +8,7 @@ RES_COL=60
 MOVE_TO_COL="echo -en \\033[${RES_COL}G"
 
 CERT="/etc/chef/client.pem"
+RSA="/var/www/rb-rails/config/rsa"
 
 function valid_ip() {
     local ip=$1
@@ -237,4 +238,43 @@ function wait_port(){
       sleep 1
     done
   fi
+}
+
+function executeToAll(){
+  local script=$1
+  nodes=$(/bin/serf members -status alive -format=json | /bin/jq -r .members[].name | /bin/cut -d ":" -f 1)
+
+  for n in $nodes
+  do
+    execute $n $script
+  done
+}
+
+function copyToAll(){
+  local path=$1
+  nodes=$(/bin/serf members -status alive -format=json | /bin/jq -r .members[].name | /bin/cut -d ":" -f 1)
+
+  host=$(/usr/bin/hostname -s)
+
+  for n in $nodes
+  do
+    if [ "$n" != "$host" ]; then
+      copy_files $n $path
+    fi
+  done
+}
+
+function execute(){
+  local node=$1
+  local script=$2
+  echo "Executing $script in $node"
+  ssh -o ConnectTimeout=5 -o LogLevel=quiet -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no -o StrictHostKeyChecking=no -i $RSA root@$node $script
+}
+
+function copy_files(){
+  local node=$1
+  local path=$2
+  target="${path%/*}/"
+  echo "Copying $path -> $1:$target"
+  /usr/bin/scp -r -i $RSA -o StrictHostKeyChecking=no -o PasswordAuthentication=no $path root@$node:$target
 }
