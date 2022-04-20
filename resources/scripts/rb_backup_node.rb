@@ -190,7 +190,7 @@ if opt['b']
     manager_info.close
 
     # Make database backup
-    check_oper("nice -n 19 ionice -c2 -n7 su - opscode-pgsql -m -s /bin/bash -c \"/opt/chef-server/embedded/bin/pg_dumpall -c | gzip --fast > /tmp/#{hostname}-postgresql-dump-#{date}.gz\"; sync", verbose, type, "Database backup in progress ... ")      # Make important data backup
+    check_oper("nice -n 19 ionice -c2 -n7 su - opscode-pgsql -m -s /bin/bash -c \"/opt/opscode/embedded/bin/pg_dumpall -c | gzip --fast > /tmp/#{hostname}-postgresql-dump-#{date}.gz\"; sync", verbose, type, "Database backup in progress ... ")      # Make important data backup
     if opt['m']
       tarcmd = "nice -n 19 ionice -c2 -n7 #{tar} #{file_path} --exclude=/var/opt/chef-server/nginx/html --exclude=/opt/rb/root/.chef/syntax_check_cache --exclude=/opt/rb/var/chef/cookbooks --exclude=/opt/rb/var/chef/backup --exclude=/opt/rb/var/chef/data --exclude=/opt/rb/var/chef/backups --exclude=/var/opt/chef-server/rabbitmq/db --exclude=/var/opt/chef-server/bookshelf/data /opt/rb/root/.chef /etc/chef-server /opt/rb/etc/chef /opt/rb/var/chef /opt/rb/var/www/rb-rails/config /opt/rb/etc/mode /etc/hosts /opt/rb/etc/keepalived/keepalived.conf /opt/rb/var/pgdata/pg_hba.conf /var/opt/chef-server/nginx/ca /var/opt/chef-server/erchef/etc /var/opt/chef-server/chef-solr/etc /var/opt/chef-server/chef-expander/etc /var/opt/chef-server/rabbitmq/etc /opt/rb/etc/manager_index /tmp/#{hostname}-postgresql-dump-#{date}.gz /tmp/#{hostname}-backup-#{date}.txt"
     else

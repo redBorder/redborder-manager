@@ -24,7 +24,9 @@ end
 # Initialize vars
 opt["b"].nil? ? bucket="bucket" : bucket=opt["b"]
 datasource=opt["d"]
-s3cfg_file="/root/.s3cfg-redborder"
+s3cfg_file="/root/.s3cfg_initial"
+# s3cfg_file="/root/.s3cfg-redborder"
+
 tmpdir = "/tmp/segment_rules"
 opt["g"].nil? ? filter = "" : filter="| grep #{opt["g"]}"
 
@@ -40,7 +42,7 @@ printf "============================================================\n\n"
 
 `s3cmd ls s3://#{bucket}/rbdata/#{datasource}/ 2>/dev/null | awk '{print $2}' | cut -d "/" -f 6 #{filter}`.split("\n").each do |segment|
 
-  created_date = `s3cmd ls s3://#{bucket}/rbdata/#{datasource}/#{segment}/ 2>/dev/null | awk '{print $2}' | cut -d "/" -f 7`.chomp
+  created_date = `s3cmd -c #{s3cfg_file} ls s3://#{bucket}/rbdata/#{datasource}/#{segment}/ 2>/dev/null | awk '{print $2}' | cut -d "/" -f 7`.chomp
 
   # get descriptor.json from segment
   system("s3cmd -c #{s3cfg_file} get s3://#{bucket}/rbdata/#{datasource}/#{segment}/#{created_date}/0/descriptor.json #{tmpdir} &>/dev/null")
