@@ -29,7 +29,7 @@ require "pathname"
 def usage()
   printf "rb_create_bulkstats_columns.rb [-h] [-b <bucket>]\n"
   printf "   -h               : print this help\n"
-  printf "   -b <bucket>      : Set bucket. Use redborder bucket if not set\n"
+  printf "   -b <bucket>      : Set bucket. Use \"bucket\" bucket if not set\n"
   #printf "   -f <schema-file> : schema file to process\n"
 end
 
@@ -66,7 +66,7 @@ end
 def update_rbwebui_tabs_with_dimensions(dimensions = [])
   custom_tabs = build_custom_tabs(dimensions)
 
-  http = Net::HTTP.new("rb-webui.#{get_domain}", 443)
+  http = Net::HTTP.new("webui.service", 443)
   http.use_ssl = true
   http.verify_mode = OpenSSL::SSL::VERIFY_NONE
   path = '/api/v1/custom_tabs/import'
@@ -141,7 +141,7 @@ tmpdir = "/tmp/bulkstats_columns"
 outdir = "/tmp/bulkstats-#{Time.now.to_i}/"
 bulkstats_columns_tar_gz="/share/bulkstats.tar.gz"
 
-opt["b"].nil? ? bucket="redborder" : bucket=opt["b"]
+opt["b"].nil? ? bucket="bucket" : bucket=opt["b"]
 opt["f"].nil? ? s3file = "" : s3file = opt["f"]
 
 if opt["h"]
@@ -177,7 +177,7 @@ end
 system("tar -C #{outdir} -cvzf #{bulkstats_columns_tar_gz} .")
 
 #copy the processed schema files to all nodes
-system("rb_manager_scp.sh all #{bulkstats_columns_tar_gz}")
+system("rb_manager_utils -c -n all -p #{bulkstats_columns_tar_gz}")
 
 # send all new dimensions used to the platform to add them in the rails part
 puts @dimensions_used.sort.uniq.to_s
