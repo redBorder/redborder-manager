@@ -1,0 +1,411 @@
+#!/bin/bash
+
+#######################################################################
+# Copyright (c) 2014 ENEO Tecnología S.L.
+# This file is part of redBorder.
+# redBorder is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# redBorder is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License License for more details.
+# You should have received a copy of the GNU Affero General Public License License
+# along with redBorder. If not, see <http://www.gnu.org/licenses/>.
+#######################################################################
+
+source /etc/profile
+source /usr/lib/redborder/lib/rb_manager_functions.sh
+source /etc/manager.conf
+
+# Check functions
+if [ -d /etc/rb_check.d ]; then
+  for n in $(ls /etc/rb_check.d/*.sh 2>/dev/null); do
+    source $n
+  done
+fi
+
+EXITRET=0
+RES_COL=120
+SAMZA=0
+MOVE_TO_COL="echo -en \\033[${RES_COL}G"
+SCRIPTS_PATH="/etc/rb_check.d"
+
+rmfile=0
+output_file=""
+colors=1
+quiet=0
+keep=0
+upload=""
+extended=0
+waitfinish=0
+s=""
+
+grep -q samza /etc/topicmode/*
+[ $? -eq 0 ] && SAMZA=1
+
+# Auxiliar functions to check if exists another rb_check process launched
+LOCKFILE="/tmp/rb_check.lock"
+function f_trap_exit() {   
+    rm -f $LOCKFILE 
+    [ $rmfile -eq 1 -a "x$output_file" != "x" ] && rm -f $output_file
+    exit $EXITRET
+}
+
+function check_rb_check_process() {
+  if [ -f $LOCKFILE ]; then
+    creatorpid=$(head -n 1 $LOCKFILE)
+    if [ "x$creatorpid" != "x" -a -f /proc/$creatorpid/cmdline ]; then
+      strings /proc/$creatorpid/cmdline |grep -q rb_check
+      if [ $? -eq 0 ]; then
+        [ $quiet -eq 0 ] && echo "INFO: this rb_check is locked ($LOCKFILE - pid: $creatorpid)"
+        return 255
+      fi
+    fi
+  fi
+  return 0
+}
+
+# Help function
+function usage(){
+  echo "$0 [-s <service_name>][-h][-o <output_file>][-u <s3path>][-k <X>[-c][-q][-e]"
+  echo "  * -s <service_name> : show only information about this service name"
+  echo "  * -o <output_file>  : stdout to this file instead of stdout"
+  echo "  * -u <s3path>       : upload output to this s3 path"
+  echo "  * -k <X>            : keep last X files into s3"
+  echo "  * -c                : do not use colors" 
+  echo "  * -e                : show extende cluster information"
+  echo "  * -w                : wait until other instance finish if it exists"
+  echo "  * -q                : be quiet"
+  exit 0
+}
+
+# Auxiliar functions
+function set_color() {
+  if [ "x$BOOTUP" != "xnone" -a $colors -eq 1 ]; then
+    green="echo -en \\033[1;32m"
+    red="echo -en \\033[1;31m"
+    yellow="echo -en \\033[1;33m"
+    orange="echo -en \\033[0;33m"
+    blue="echo -en \\033[1;34m"
+    black="echo -en \\033[1;30m"
+    white="echo -en \\033[255m"
+    cyan="echo -en \\033[0;36m"
+    purple="echo -en \\033[0;35m"
+    browm="echo -en \\033[0;33m"
+    gray="echo -en \\033[0;37m"
+    norm="echo -en \\033[1;0m"
+    eval \$$1
+  fi
+}
+
+function e_ok() {
+  if [ $colors -eq 0 ]; then
+    echo -n "      "
+  else
+    $MOVE_TO_COL
+  fi
+  echo -n "["
+  set_color green
+  echo -n $"  OK  "
+  set_color norm
+  echo -n "]"
+  echo -ne "\r"
+  echo
+  return 0
+}
+
+function e_fail() {
+  EXITRET=1
+  if [ $colors -eq 0 ]; then
+    echo -n "      "
+  else
+    $MOVE_TO_COL
+  fi
+  echo -n "["
+  set_color red
+  echo -n $"FAILED"
+  set_color norm
+  echo -n "]"
+  echo -ne "\r"
+  echo
+  return 1
+}
+
+function print_result_output(){
+  local ret=1
+  if [ "x$*" == "x" ]; then
+    e_fail
+  else
+    ret=0
+    e_ok
+  fi
+  return $ret
+}
+
+function print_result_output_opposite(){
+  local ret=1
+  if [ "x$*" == "x" ]; then
+    ret=0
+    e_ok
+  else
+    e_fail
+  fi
+  return $ret
+}
+
+function print_result(){
+  if [ "x$1" == "x0" ]; then
+    e_ok
+  else
+    e_fail
+    shift
+    [ "x$*" != "x" ] && plog $*
+  fi
+}
+
+function print_result_opposite(){
+  if [ "x$1" == "x0" ]; then
+    e_fail
+    shift
+    [ "x$*" != "x" ] && plog $*
+  else
+    e_ok
+  fi
+}
+
+function plog() {
+  logger -t rb_check "$*"
+}
+
+function service_up(){
+  local service="$1"
+  [ ! -f /etc/$service.list ] && echo "Detecting where $service is running ..."
+  local node=$(rb_nodes_with_service.rb $service|tr '\n' ' ')
+  if [ "x$node" != "x" ]; then
+    echo -n "Service "
+    set_color blue
+    echo -n "$service "
+    set_color norm
+    echo    "running on"
+    for n in ${node}; do
+      printf "  - %-85s " $n
+      out=$(rb_manager_ssh.sh $n "service $service status &>/dev/null; echo \$?")
+      if [ "x$out" == "x0" ]; then
+        print_result 0
+      else
+        print_result 1 "ERROR: Service $service is not running on $n and it should"
+      fi
+    done
+    ret=0
+  else
+    printf "%-90s" "Service $service not enabled anywhere"
+    print_result 0
+    ret=1
+  fi
+  return $ret
+}
+
+function check_command() {
+  printf "Command: %-80s " "$*"
+  eval $* &>/dev/null
+  print_result $? "ERROR command: $*"
+}
+
+function check_command_opposite() {
+  printf "Command: %-80s " "$*"
+  eval $* &>/dev/null
+  print_result_opposite $? "ERROR command: $*"
+}
+
+function check_output_command() {
+  printf "Command: %-80s " "$*"
+  out=$(eval $*)
+  if [ "x$out" == "x" ]; then
+    print_result 1 "ERROR command: $*"
+  else
+    print_result 0
+  fi
+}
+
+function check_nginx(){
+  e_title "nginx"
+  service_up "nginx"
+
+  local node=$(rb_nodes_with_service.rb nginx|tr '\n' ' ')
+  if [ "x$node" != "x" ] ; then
+    for n in ${node}; do
+      echo "Checking functionality of nginx at $n"
+      check_command "rb_manager_ssh.sh $n \"curl http://erchef.$DOMAIN/nginx_stub_status\""
+      check_command "rb_manager_ssh.sh $n \"curl -k https://erchef.$DOMAIN/nginx_status\""
+    done
+  fi
+}
+
+########
+# MAIN #
+########
+
+while getopts "s:ho:u:cqk:ew" name; do
+  case $name in
+    s) s=$OPTARG;;
+    o) output_file=$OPTARG;;
+    u) upload=$OPTARG;;
+    c) colors=0;;
+    q) quiet=1;;
+    k) keep=$OPTARG;;
+    e) extended=1;;
+    w) waitfinish=1;;
+    h) usage;;
+  esac
+done
+
+check_rb_check_process
+CHECK_PROCESS=$?
+COUNTER=1
+while [ $CHECK_PROCESS -ne 0 ] ; do
+  if [ $waitfinish -eq 1 -a $COUNTER -le 30 ] ; then
+    echo "Waiting 10 seconds for rb_check to be unlocked... ($COUNTER/30)"
+    let COUNTER=COUNTER+1
+    sleep 10
+    check_rb_check_process
+    CHECK_PROCESS=$?
+  else
+    exit 255
+  fi
+done
+
+trap 'f_trap_exit' 0 15
+echo $$ > $LOCKFILE
+
+isnum $keep
+if [ $? -ne 0 ]; then
+  echo "ERROR: -k should have a numeric value as an option"
+  upload=""
+  exit 1
+fi
+
+if [ "x$upload" != "x" ]; then
+  if [ -f /var/www/rb-rails/config/aws.yml ]; then
+    echo $upload |grep -q "^s3://"
+    if [ $? -ne 0 ]; then
+      s3bucket=$(cat /var/www/rb-rails/config/aws.yml |grep bucket|head -n 1|awk '{print $2}')
+      if [ "x$s3bucket" == "x" ]; then
+        echo "ERROR: $upload is not valid. It should start with s3://"
+        upload=""
+        exit 1
+      else
+        upload="s3://$s3bucket/$(echo $upload | sed 's/[/]*//')"
+      fi
+    fi
+    upload=$(echo "$upload"|sed "s/%t/$(date '+%s')/")
+  else
+    exit 0
+  fi
+fi
+
+if [ "x$upload" != "x" -a "x$output_file" == "x" ]; then
+  rmfile=1
+  output_file="/tmp/rb_check-$$.tmp"
+  [ $quiet -eq 0 ] && echo "INFO: the output has been redirected to $output_file"
+fi
+
+[ $quiet -eq 1 -a "x$output_file" == "x" ] && output_file="/dev/null"
+if [ $colors -eq 0 ]; then
+  CMDBEGIN="BOOTUP=none"
+  BOOTUP="none"
+fi
+
+if [ "x$output_file" != "x" ]; then
+  rm -f $output_file
+  exec 1<&-
+  exec 2<&-
+  exec 1<>$output_file
+  exec 2>&1
+fi
+
+#renice -n 19 $$ &>/dev/null
+
+e_title "          DATE: $(date)    "
+
+# Common tests
+[ "x$s" == "x" -o "x$s" == "xlicense" ] && check_license
+[ "x$s" == "xinstall" ] && check_install # install errors are not shown as default
+[ "x$s" == "x" -o "x$s" == "xhd" -o "x$s" == "xharddisk" -o "x$s" == "xdisk" ] && check_hd 
+[ "x$s" == "x" -o "x$s" == "xmem" -o "x$s" == "xmemory" -o "x$s" == "xm" ] && check_memory
+[ "x$s" == "x" -o "x$s" == "xkill" ] && check_kill
+[ "x$s" == "x" -o "x$s" == "xio" ] && check_io
+
+# Services tests
+
+[ -f ${SCRIPTS_PATH}/*zookeeper* ] && [ "x$s" == "x" -o "x$s" == "xzookeeper" -o "x$s" == "xz" ] && check_zookeeper
+[ -f ${SCRIPTS_PATH}/*nprobe* ] && [ "x$s" == "x" -o "x$s" == "xnprobe" -o "x$s" == "xnetflow" ] && check_nprobe
+[ -f ${SCRIPTS_PATH}/*kafka* ] && [ "x$s" == "x" -o "x$s" == "xkafka" -o "x$s" == "xqueue" -o "x$s" == "xk" ] && check_kafka
+[ -f ${SCRIPTS_PATH}/*kafka* ] && [ "x$s" == "x" -o "x$s" == "xkafka_topics" -o "x$s" == "xtopics" ] && check_kafka_topics
+[ -f ${SCRIPTS_PATH}/*memcached* ] && [ "x$s" == "x" -o "x$s" == "xmemcached" ] && check_memcached
+[ -f ${SCRIPTS_PATH}/*discover* ] && [ "x$s" == "x" -o "x$s" == "xrb-discover" -o "x$s" == "xrb_discover" ] && check_rb_discover
+[ -f ${SCRIPTS_PATH}/*monitor* ] && [ "x$s" == "x" -o "x$s" == "xrb-monitor" -o "x$s" == "xrb_monitor" -o "x$s" == "xmonitor" ] && check_rb_monitor
+[ -f ${SCRIPTS_PATH}/*nginx* ] && [ "x$s" == "x" -o "x$s" == "xnginx" ] && check_nginx
+[ -f ${SCRIPTS_PATH}/*postgresql* ] && [ "x$s" == "x" -o "x$s" == "xpostgresql" ] && check_postgresql
+[ -f ${SCRIPTS_PATH}/*chef* ] && [ "x$s" == "x" -o "x$s" == "xerchef" -o "x$s" == "xchef" ] && check_erchef
+[ -f ${SCRIPTS_PATH}/*chef* ] && [ "x$s" == "x" -o "x$s" == "xrabbitmq" ] && check_rabbitmq
+[ -f ${SCRIPTS_PATH}/*riak* ] && [ "x$s" == "x" -o "x$s" == "xriak" -o "x$s" == "xs3" ] && check_riak
+[ -f ${SCRIPTS_PATH}/*riak* ] && [ "x$s" == "x" -o "x$s" == "xriak_segments" ] && check_riak_segments
+[ -f ${SCRIPTS_PATH}/*druid* ] && [ "x$s" == "x" -o "x$s" == "xdruid" -o "x$s" == "xcoordinator" -o "x$s" == "xdruid_coordinator" ] && check_druid_coordinator
+[ -f ${SCRIPTS_PATH}/*druid* ] && [ "x$s" == "x" -o "x$s" == "xdruid" -o "x$s" == "xoverlord" -o "x$s" == "xdruid_overlord" ] && check_druid_overlord
+[ -f ${SCRIPTS_PATH}/*druid* ] && [ "x$s" == "x" -o "x$s" == "xdruid" -o "x$s" == "xmiddleManager" -o "x$s" == "xdruid_middleManager" ] && check_druid_middleManager
+[ -f ${SCRIPTS_PATH}/*druid* ] && [ "x$s" == "x" -o "x$s" == "xdruid" -o "x$s" == "xrealtime" -o "x$s" == "xdruid_realtime" ] && check_druid_realtime
+[ -f ${SCRIPTS_PATH}/*druid* ] && [ "x$s" == "x" -o "x$s" == "xdruid" -o "x$s" == "xhistorical" -o "x$s" == "xdruid_historical" ] && check_druid_historical
+[ -f ${SCRIPTS_PATH}/*druid* ] && [ "x$s" == "x" -o "x$s" == "xdruid" -o "x$s" == "xbroker" -o "x$s" == "xdruid_broker" ] && check_druid_broker
+[ -f ${SCRIPTS_PATH}/*webui* ] && [ "x$s" == "x" -o "x$s" == "xrb_webui" -o "x$s" == "xwebui" -o "x$s" == "xrb-webui" ] && check_webui
+[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xresourcemanager" -o "x$s" == "xhadoop_resourcemanager" ] && check_hadoop_resourcemanager
+[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xnodemanager" -o "x$s" == "xhadoop_nodemanager" ] && check_hadoop_nodemanager
+[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xnamenode" -o "x$s" == "xhadoop_namenode" ] && check_hadoop_namenode
+[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xjournalnode" -o "x$s" == "xhadoop_journalnode" ] && check_hadoop_journalnode
+[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xdatanode" -o "x$s" == "xhadoop_datanode" ] && check_hadoop_datanode
+[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xhistoryserver" -o "x$s" == "xhadoop_historyserver" ] && check_hadoop_historyserver
+[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xzkfc" -o "x$s" == "xhadoop_zkfc" ] && check_hadoop_zkfc
+[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xhdfs" -o "x$s" == "xhadoop_hdfs" ] && check_hadoop_hdfs 
+[ -f ${SCRIPTS_PATH}/*keepalived* ] && [ "x$s" == "x" -o "x$s" == "xkeepalived" ] && check_keepalived
+[ -f ${SCRIPTS_PATH}/*aerospike* ] && [ "x$s" == "x" -o "x$s" == "xaerospike" ] && check_aerospike
+[ -f ${SCRIPTS_PATH}/*drill* ] && [ "x$s" == "x" -o "x$s" == "xdrill" ] && check_drill
+[ -f ${SCRIPTS_PATH}/*cuckoo* ] && [ "x$s" == "x" -o "x$s" == "xcuckoo" ] && check_cuckoo
+[ -f ${SCRIPTS_PATH}/*dead* ] && [ "x$s" == "x" -o "x$s" == "xdead_tasks" ] && check_dead_tasks
+
+if [ $extended -eq 1 ]; then
+  e_title "Extended INFO: rb_get_managers.rb"
+#  eval $CMDBEGIN /usr/lib/redborder/scripts/rb_get_managers.rb
+  eval $CMDBEGIN /usr/lib/redborder/scripts/red.rb node list
+
+  e_title "Extended INFO: rb_get_services.sh all"
+#  eval $CMDBEGIN /usr/lib/redborder/bin/rb_get_services.sh all
+  eval $CMDBEGIN /usr/lib/redborder/scripts/red.rb service
+
+  e_title "Extended INFO: rb_get_topics.rb"
+  eval $CMDBEGIN /usr/lib/redborder/scripts/rb_get_topics.rb
+
+  if [ $SAMZA -eq 1 ]; then
+    e_title "Extended INFO: rb_get_topics.rb"
+    timeout 30 /usr/lib/redborder/bin/rb_samza.sh -l
+  fi
+fi
+
+if [ "x$upload" != "x" ]; then
+  echo
+  s3cfg=""
+  [ -f /root/.s3cfg-redborder ] && s3cfg="-c /root/.s3cfg-redborder"
+  s3cmd $s3cfg sync $output_file $upload &>/dev/null
+  s3cmd $s3cfg cp $upload $(dirname $upload)/data-last
+
+  if [ "x$keep" != "x0" ]; then
+    elements=$(s3cmd $s3cfg ls $(dirname $upload)/ | grep -v last | wc -l)
+    if [ $elements -gt $keep ]; then
+      for n in $(s3cmd $s3cfg ls $(dirname $upload)/ | awk '{print $4}'|sort -r| sed "1,${keep}d"); do
+        s3cmd $s3cfg rm $n &>/dev/null
+      done
+    fi
+  fi
+fi
+
+exit $EXITRET
