@@ -17,5 +17,5 @@
 
 source /etc/profile
 
-/usr/lib/redborder/bin/rb_create_bulkstats_columns.rb $*
+/usr/lib/redborder/scripts/rb_create_bulkstats_columns.rb $*
 
