@@ -332,11 +332,11 @@ function configure_leader(){
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
 
-  listCookbooks="ohai zookeeper kafka druid http2k memcached chef-server consul
+  listCookbooks="cron ohai zookeeper kafka druid http2k memcached chef-server consul
                 hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner
                 ntp f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
                 rsyslog rbsocial freeradius rbnmsp n2klocd rbale rbcep k2http rb-proxy
-                snort barnyard2 cron rb-ips rb-manager" # The order matters!
+                snort barnyard2 rb-ips rb-manager" # The order matters!
   for n in $listCookbooks; do # cookbooks
     # rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
