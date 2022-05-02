@@ -24,10 +24,10 @@ if [ -f $DARK_LIST_FILE ]; then
 fi
 
 cp $TMP_FILE $DARKLIST_FILE >> $LOG_FILE
-rb_manager_utils.sh -c -n all -p $DARKLIST_FILE >> $LOG_FILE
-rb_refresh_darklist_memcached_keys &>/dev/null
+/usr/lib/redborder/bin/rb_manager_utils.sh -c -n all -p $DARKLIST_FILE >> $LOG_FILE
+/usr/lib/redborder/bin/rb_refresh_darklist_memcached_keys &>/dev/null
 
-PID=$(pidof memcached)
+PID=$(/usr/sbin/pidof memcached)
 if [ $? -eq 0 ]; then
   echo $PID > /tmp/memcached_pid
 fi
