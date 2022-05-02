@@ -11,6 +11,6 @@ PID=$(/usr/sbin/pidof memcached)
 OLD_PID=$(</tmp/memcached_pid)
 if [ $PID -ne $OLD_PID ];then
   echo $PID > /tmp/memcached_pid
-  rb_refresh_darklist_memcached_keys &>/dev/null
+  /usr/lib/redborder/bin/rb_refresh_darklist_memcached_keys &>/dev/null
 fi
 exit 0;
