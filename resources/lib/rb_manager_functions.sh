@@ -267,7 +267,7 @@ function copyToAll(){
 function execute(){
   local node=$1
   local script=$2
-  echo "Executing $script in $node"
+  #echo "Executing $script in $node"
   ssh -o ConnectTimeout=5 -o LogLevel=quiet -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no -o StrictHostKeyChecking=no -i $RSA root@$node $script
 }
 
