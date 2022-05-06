@@ -6,7 +6,7 @@ source /etc/profile.d/rvm.sh
 LOG_FILE="/var/log/rb_update_darklist.log"
 TMP_FILE="/tmp/darklist.json"
 DARK_LIST_FILE="/usr/share/darklist.json"
-q
+
 #Download the /tmp/darklist.json file
 java -cp /usr/lib/darklist-updated/darklist-updated.jar \
       net.redborder.darklistupdate.DarklistService $TMP_FILE >> $LOG_FILE &> /dev/null

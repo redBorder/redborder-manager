@@ -25,7 +25,7 @@ def servers
   servers = []
   if File.exist?(MEMCACHED_CONFIG_FILE)
     production_config = YAML.load_file(MEMCACHED_CONFIG_FILE)
-    servers.push(production_config["production"]["servers"])
+    servers = production_config["production"]["servers"]
   end
   servers.push("localhost:11211") if servers.empty?
   return servers
