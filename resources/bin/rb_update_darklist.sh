@@ -6,13 +6,13 @@ source /etc/profile.d/rvm.sh
 LOG_FILE="/var/log/rb_update_darklist.log"
 TMP_FILE="/tmp/darklist.json"
 DARK_LIST_FILE="/usr/share/darklist.json"
-
+q
 #Download the /tmp/darklist.json file
 java -cp /usr/lib/darklist-updated/darklist-updated.jar \
       net.redborder.darklistupdate.DarklistService $TMP_FILE >> $LOG_FILE &> /dev/null
 
 # If the file was not download.. we exit
-if [ ! -f $TMP_FILE ]; then exit 0; fi
+if [ ! -f $TMP_FILE ]; then echo "The file was not downloaded" >> $LOG_FILE; exit 1; fi
 
 # If there is a previous file..
 if [ -f $DARK_LIST_FILE ]; then

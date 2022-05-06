@@ -3,7 +3,15 @@
 
 source /etc/profile.d/rvm.sh
 
+DARK_LIST_FILE="/usr/share/darklist.json"
+
+if [ ! -f DARK_LIST_FILE ]; then
+  /usr/lib/redborder/bin/rb_update_darklist.sh
+fi
+
 entries=$(/usr/lib/redborder/scripts/red.rb memcached keys dark | grep -c darklist)
+
+
 
 if [ "$entries" -eq 0 ];then
   /usr/lib/redborder/scripts/rb_refresh_darklist_memcached_keys.rb > /dev/null
