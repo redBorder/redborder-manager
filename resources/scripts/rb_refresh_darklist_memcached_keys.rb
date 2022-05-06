@@ -65,11 +65,9 @@ begin
       JSON.parse(File.read(@darklist_path)).map { |n| @memcached.set("darklist-#{n['ip']}", n['enrich_with']) }
       puts "OK."
     rescue
-      puts "Darklist load failed"
+      STDERR.puts "Darklist load failed"
     end
   end
 rescue StandardError => e
-  puts e.message
-  puts e.backtrace.inspect
-  puts "Error deleting darklist memcached keys"
+  STDERR.puts e.message
 end
