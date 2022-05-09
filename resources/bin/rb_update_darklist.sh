@@ -12,13 +12,17 @@ java -cp /usr/lib/darklist-updated/darklist-updated.jar \
       net.redborder.darklistupdate.DarklistService $TMP_FILE >> $LOG_FILE &> /dev/null
 
 # If the file was not download.. we exit
-if [ ! -f $TMP_FILE ]; then echo "The file was not downloaded" >> $LOG_FILE; exit 1; fi
+if [ ! -f $TMP_FILE ]
+then
+  echo "The file was not downloaded" >> $LOG_FILE
+  exit 1
+fi
 
 # If there is a previous file..
 if [ -f $DARK_LIST_FILE ]; then
   #Check if the md5 changes..
   #If didnt change, dont do anything.. exit
-  if [[ $(cmp --silent "$TMP_FILE" "$DARK_LIST_FILE") && "$1" != "-f" ]]; #Flag -f force to update
+  if [[ $(cmp --silent "$TMP_FILE" "$DARK_LIST_FILE") && "$1" != "-f" ]] #Flag -f force to update
   then
     echo 'nothing to do!' >> $LOG_FILE
     exit 0;
