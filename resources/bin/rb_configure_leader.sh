@@ -509,8 +509,6 @@ rm -f /var/lock/leader-configuring.lock
 # Copy dhclient hook
 cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
-# Populate memcached darklist keys
-rb_update_darklist.sh
 
 e_title "Leader Node configured!"
 
