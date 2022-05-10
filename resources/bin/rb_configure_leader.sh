@@ -375,7 +375,7 @@ function configure_leader(){
 
   # Multiple runs of chef-client
   e_title "Configuring Chef-Client. Please wait...  "
-  e_title "redborder install run (1/3) $(date)" #>>/root/.install-chef-client.log
+  e_title "redborder install run (1/4) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
 
   # Replace chef-server SV init scripts by systemd scripts
@@ -390,15 +390,17 @@ function configure_leader(){
     done
   fi
 
-  e_title "redborder install run (2/3) $(date)" #>>/root/.install-chef-client.log
+  e_title "redborder install run (2/4) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
-  e_title "redborder install run (3/3) $(date)" #>>/root/.install-chef-client.log
+  
+  e_title "redborder install run (3/4) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
 
   e_title "Creating database structure $(date)"
   chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
-  systemctl restart webui &>/dev/nul
-
+  
+  e_title "redborder install run (4/4) $(date)" #>>/root/.install-chef-client.log
+  chef-client #&>/root/.install-chef-client.log
 }
 
 function set_external_service_names {
