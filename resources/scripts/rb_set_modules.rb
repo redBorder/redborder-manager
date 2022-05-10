@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 
 #######################################################################
 ## Copyright (c) 2014 ENEO Tecnología S.L.
@@ -27,7 +27,7 @@ end
 
 Chef::Config.from_file("/etc/chef/client.rb")
 Chef::Config[:node_name]  = "admin"
-Chef::Config[:client_key] = "/etc/chef-server/admin.pem"
+Chef::Config[:client_key] = "/etc/chef/admin.pem"
 Chef::Config[:http_retry_count] = 5
 
 if ARGV.length >= 1 
