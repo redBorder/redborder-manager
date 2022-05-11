@@ -1,3 +1,5 @@
+require 'chef'
+
 def logit(text)
   printf("%s\n", text)
 end
@@ -56,21 +58,41 @@ def title_error(text, colorless, quiet)
   end
 end
 
+def execute_command_on_node(node, command)
+  `/usr/lib/redborder/bin/rb_manager_utils.sh -e -n #{node} -s "#{command}"`
+end
+
+def get_consul_members
+  nodes = []
+  uri = URI.parse("http://localhost:8500/v1/agent/members")
+  response = Net::HTTP.get_response(uri)
+  if response.code == "200"
+    ret = JSON.parse(response.body)
+    ret.map { |member| nodes << member["Name"]}
+  end
+  nodes
+end
+
+def get_node(node_name)
+  Chef::Config.from_file("/etc/chef/client.rb")
+  Chef::Config[:client_key] = "/etc/chef/client.pem"
+  Chef::Config[:http_retry_count] = 5
+  node = Chef::Node.load(node_name)
+end
+
 def get_nodes_with_service(service=nil)
-  utils = Utils.instance
-  members = utils.get_consul_members
+  members = get_consul_members
   nodes = []
 
-  if services.nil?
+  if service.nil?
     nodes = members
   else
     members.each do |node|
-      node_info = utils.get_node(node)
+      node_info = get_node(node)
       node_services = node_info.attributes.redborder.services
       nodes.push(service) if node_services.include? service
     end
   end
-
   nodes
 end
 
@@ -80,7 +102,7 @@ def get_service_status(service,node)
   if ["barnyard","snort"].include? service
     #TODO
   else
-    service_state = `/usr/lib/redborder/bin/rb_manager_utils.sh -e -n #{node} -s "systemctl show #{service} -p ActiveState"`
+    service_state = execute_command_on_node(node,"systemctl show #{service} -p ActiveState")
     service_state = service_state.gsub("ActiveState=","").gsub("\n","")
     service_status = 0 if service_state == "active"
   end
@@ -98,7 +120,7 @@ end
 
 def print_command_output(output, return_value, colorless, quiet)
   if return_value == 0
-    print_ok(text=output, colorless, quiet)
+    print_ok(text="  " + output, colorless, quiet)
   else
     print_error(text=output, colorless, quiet)
   end

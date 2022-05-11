@@ -1,4 +1,4 @@
-require_relative '/usr/lib/redborder/lib/check_functions.rb'
+require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
 
 def check_license(colorless, quiet=false)
   nodes = get_nodes_with_service
@@ -18,7 +18,7 @@ def check_io(colorless, quiet=false)
 
   nodes.each do |node|
     errors = 0
-    io_errors = `/usr/lib/redborder/bin/rb_manager_utils.sh -e -n #{node} -s "dmesg |grep end_request |grep I/O |grep error"`.split("\n")
+    io_errors = execute_command_on_node(node,"dmesg |grep end_request |grep I/O |grep error").split("\n")
 
     io_errors.each do |entry|
       print_error(node + ": " + entry, colorless)
@@ -36,14 +36,14 @@ def check_install(colorless, quiet=false)
   nodes.each do |node|
     %w[.install-chef-server.log  .install-ks-post.log  .install-redborder-boot.log
        .install-redborder-cloud.log .install-redborder-db.log .restore-manager.log].each do |log_file|
-      printf("Checking #{log_file} error on #{node}\n") unless quiet
+      logit("Checking #{log_file} error on #{node}\n") unless quiet
       p "TODO"
     end
   end
 
   title_ok("Install time",colorless, quiet)
   nodes.each do |node|
-    printf("Checking install time on #{node}\n") unless quiet
+    logit("Checking install time on #{node}\n") unless quiet
     p "TODO" unless quiet
   end
 end
@@ -55,7 +55,7 @@ def check_memory(colorless, quiet=false)
   title_ok("Memory",colorless, quiet)
 
   nodes.each do |node|
-    mem = `/usr/lib/redborder/bin/rb_manager_utils.sh -e -n #{node} -s "free |grep "^Mem:""`.split()
+    mem = execute_command_on_node(node,"free |grep Mem:").split()
     memtotal = mem[1].to_i
     memfree = mem[5].to_i
     percent = 100 * (memtotal - memfree) / memtotal
@@ -79,7 +79,7 @@ def check_hd(colorless, quiet=false)
 
   nodes.each do |node|
     errors = 0
-    disk_space = `/usr/lib/redborder/bin/rb_manager_utils.sh -e -n #{node} -s "df --output=source,pcent"`.split("\n")
+    disk_space = execute_command_on_node(node,"df --output=source,pcent").split("\n")
     disk_space.each do |entry|
       source, pcent = entry.split()
       if pcent.chomp('%').to_i >= 90
@@ -98,7 +98,7 @@ def check_killed(colorless, quiet=false)
 
   nodes.each do |node|
     errors = 0
-    killed = `/usr/lib/redborder/bin/rb_manager_utils.sh -e -n #{node} -s "dmesg |grep killed |grep Task"`.split("\n")
+    killed = execute_command_on_node(node,"dmesg |grep killed |grep Task").split("\n")
 
     killed.each do |entry|
       print_error(node + ": " + entry, colorless, quiet)

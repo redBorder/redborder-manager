@@ -1,5 +1,3 @@
-require_relative '/usr/lib/redborder/lib/check_functions.rb'
-
 def check_topic(topic)
   command = `timeout 60s /usr/lib/redborder/bin/rb_consumer.sh -t #{topic} -c 1 2>&1 | grep -q -F '1 messages'`
   command_return = $?.to_s.split(" ")[3].to_i

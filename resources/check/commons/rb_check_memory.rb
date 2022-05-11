@@ -14,7 +14,6 @@
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
 require 'getopt/std'
-require_relative '/usr/lib/redborder/lib/check_functions.rb'
 require_relative 'rb_check_commons_functions.rb'
 
 

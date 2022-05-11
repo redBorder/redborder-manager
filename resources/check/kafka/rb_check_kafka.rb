@@ -14,8 +14,8 @@
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
 require 'getopt/std'
-require_relative '/usr/lib/redborder/lib/check_functions.rb'
-require_relative 'rb_check_kafka-messages_functions.rb'
+require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
+require_relative 'rb_check_kafka_functions.rb'
 
 opt = Getopt::Std.getopts("cq")
 
@@ -33,22 +33,21 @@ nodes.each do |node|
   print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
-
-    #brokers status
+    logit("Brokers status")
     output = `timeout 10s /usr/lib/redborder/scripts/rb_get_brokers.rb | grep 9092`.gsub("\n","")
     return_value = $?.to_s.split(" ")[3].to_i
     print_command_output(output, return_value, colorless, quiet)
 
-    #topics creation
+    logit("Topics creation")
     %w[rb_monitor rb_flow rb_event rb_loc rb_social].each do | topic |
       command = `timeout 10s /usr/lib/redborder/scripts/rb_get_topics.rb -t #{topic} | grep #{topic}`
       return_value = $?.to_s.split(" ")[3].to_i
 
       if return_value == 0
-        output = "  Topic " + topic
+        output = "Topic " + topic
       else
         has_errors = true
-        output = "   Topic " + topic + " did not found"
+        output = "Topic " + topic + " did not found"
       end
 
       print_command_output(output, return_value, colorless, quiet)
@@ -58,4 +57,4 @@ nodes.each do |node|
   end
 end
 
-return 1 if has_errors
+exit 1 if has_errors

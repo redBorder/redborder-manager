@@ -14,7 +14,7 @@
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
 require 'getopt/std'
-require_relative '/usr/lib/redborder/lib/check_functions.rb'
+require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
 require_relative 'rb_check_kafka-messages_functions.rb'
 
 opt = Getopt::Std.getopts("cq")
@@ -30,7 +30,8 @@ title_ok("Kafka-Messages",colorless, quiet)
 
 nodes.each do |node|
   %w[rb_monitor rb_flow rb_event rb_loc rb_social].each do | topic |
-    output, return_value = `/usr/lib/redborder/bin/rb_manager_utils.sh -e -n #{node} -s "/usr/lib/redborder/scripts/rb_check_topic.rb -t #{topic} -q"`
+    output, return_value = execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_check_topic.rb -t #{topic} -q").split("\n")
+    return_value = return_value.to_i
     has_errors = true if return_value == 1
     print_command_output(output, return_value, colorless, quiet)
   end

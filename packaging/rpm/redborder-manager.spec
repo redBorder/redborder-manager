@@ -80,6 +80,9 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Wed May 11 2022 Eduardo Reyes <eareyes@redborder.com> -
+- Add check directory
+
 * Fri Jan 28 2022 Eduardo Reyes <eareyes@redborder.com> -
 - Add rb_synthetic_producer.rb
 

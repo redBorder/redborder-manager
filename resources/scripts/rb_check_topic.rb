@@ -14,11 +14,11 @@
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
 require 'getopt/std'
-require_relative '../check/check_functions.rb'
-require_relative '../kafka-messages/rb_check_kafka-messages_functions.rb'
+require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
+require_relative '/usr/lib/redborder/lib/check/kafka-messages/rb_check_kafka-messages_functions.rb'
 
 
-opt = Getopt::Std.getopts("hq:t:")
+opt = Getopt::Std.getopts("hqt:")
 
 def usage()
   logit "rb_check_topic.rb [-h][-q][-t <topic>]"
@@ -34,7 +34,8 @@ if opt["h"]
 end
 
 if opt["t"].nil?
-  logit "No topic is provided."
+  logit "ERROR: You must provide a topic."
+  usage
   exit 1
 else
   topic = opt["t"].to_s.strip
