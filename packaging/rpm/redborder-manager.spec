@@ -33,7 +33,7 @@ install -D -m 0644 resources/redborder-manager.sh %{buildroot}/etc/profile.d
 install -D -m 0644 resources/dialogrc %{buildroot}/etc/redborder
 cp resources/bin/* %{buildroot}/usr/lib/redborder/bin
 cp resources/scripts/* %{buildroot}/usr/lib/redborder/scripts
-cp resources/check/* %{buildroot}/usr/lib/redborder/lib/check
+cp -r resources/check/* %{buildroot}/usr/lib/redborder/lib/check
 chmod 0755 %{buildroot}/usr/lib/redborder/bin/*
 chmod 0755 %{buildroot}/usr/lib/redborder/scripts/*
 install -D -m 0644 resources/lib/rb_wiz_lib.rb %{buildroot}/usr/lib/redborder/lib
