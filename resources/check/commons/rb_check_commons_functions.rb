@@ -24,7 +24,7 @@ def check_io(colorless, quiet=false)
       print_error(node + ": " + entry, colorless)
       errors += 1
     end
-    print_ok(node,colorless) if errors == 0
+    print_ok(node, colorless, quiet) if errors == 0
   end
 end
 
@@ -61,15 +61,14 @@ def check_memory(colorless, quiet=false)
     percent = 100 * (memtotal - memfree) / memtotal
 
     if percent > 90
-      print_ok(node + " " + percent.to_s + "%",colorless, quiet)
+      print_error(node + " " + percent.to_s + "%",colorless, quiet)
       has_errors = true
     else
-      print_error(node + " " + percent.to_s + "%",colorless, quiet)
+      print_ok(node + " " + percent.to_s + "%",colorless, quiet)
     end
   end
 
-  return 1 if has_errors
-  return 0
+  exit 1 if has_errors
 end
 
 def check_hd(colorless, quiet=false)
@@ -79,15 +78,18 @@ def check_hd(colorless, quiet=false)
 
   nodes.each do |node|
     errors = 0
+    max = 0
     disk_space = execute_command_on_node(node,"df --output=source,pcent").split("\n")
     disk_space.each do |entry|
       source, pcent = entry.split()
-      if pcent.chomp('%').to_i >= 90
+      pcent = pcent.chomp('%').to_i
+      max = pcent if pcent > max
+      if pcent >= 90
         errors = 1
         print_error("ERROR: Disk space problem at #{node} (#{pcent}%%) in #{source}", colorless, quiet)
       end
     end
-    print_ok(node,colorless, quiet) if errors == 0
+    print_ok(node + " (max #{max}%%)",colorless, quiet) if errors == 0
   end
 end
 

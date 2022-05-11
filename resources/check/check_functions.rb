@@ -134,38 +134,6 @@ def check_service(service)
   case service
 
 
-  when "druid-coordinator"
-    command = `/usr/lib/redborder/scripts/rb_get_druid_coordinators.rb`
-    command_return = $?.to_s.split(" ")[3].to_i
-    result.push(command)
-    ret_value.push(command_return)
-
-
-
-  when "druid-broker"
-    command = `/usr/lib/redborder/scripts/rb_get_druid_brokers.rb`
-    command_return = $?.to_s.split(" ")[3].to_i
-    result.push(command)
-    ret_value.push(command_return)
-
-
-
-  when "druid-historical"
-    command = `/usr/lib/redborder/scripts/rb_get_druid_historicals.rb`
-    command_return = $?.to_s.split(" ")[3].to_i
-    result.push(command)
-    ret_value.push(command_return)
-
-
-
-  when "druid-realtime"
-    command = `/usr/lib/redborder/scripts/rb_get_druid_historicals.rb`
-    command_return = $?.to_s.split(" ")[3].to_i
-    result.push(command)
-    ret_value.push(command_return)
-
-
-
   when "zookeeper"
     command = `echo '' | zkCli.sh -server zookeeper.service:2181 | head -n 1`.gsub("\n","")
     command_return = $?.to_s.split(" ")[3].to_i
