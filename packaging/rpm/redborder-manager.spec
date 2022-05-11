@@ -62,6 +62,7 @@ firewall-cmd --reload
 %defattr(0755,root,root)
 /usr/lib/redborder/bin
 /usr/lib/redborder/scripts
+/usr/lib/redborder/lib/check
 %defattr(0755,root,root)
 /etc/profile.d/redborder-manager.sh
 /usr/lib/redborder/lib/dhclient-enter-hooks
