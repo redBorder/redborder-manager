@@ -126,27 +126,3 @@ def print_command_output(output, return_value, colorless, quiet)
   end
 end
 
-
-
-def check_service(service)
-  result = []
-  ret_value = []
-  case service
-
-
-  when "zookeeper"
-    command = `echo '' | zkCli.sh -server zookeeper.service:2181 | head -n 1`.gsub("\n","")
-    command_return = $?.to_s.split(" ")[3].to_i
-    result.push("  " + command)
-    ret_value.push(command_return)
-
-
-  when "memcached"
-  else
-    return ret_value, result
-  end
-
-  [ret_value, result]
-end
-
-

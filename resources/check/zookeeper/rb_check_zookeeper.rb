@@ -33,7 +33,7 @@ nodes.each do |node|
   print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
-    output = `echo '' | zkCli.sh -server zookeeper.service:2181 | head -n 2`.gsub("\n","")
+    output = `echo '' | zkCli.sh -server zookeeper.service:2181 | head -n 1`.gsub("\n","")
     return_value = $?.to_s.split(" ")[3].to_i
     print_command_output(output, return_value, colorless, quiet)
   else
