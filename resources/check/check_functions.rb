@@ -6,7 +6,7 @@ end
 
 def subtitle(text, colorless, quiet)
   unless quiet
-    logit("\n")
+    logit("")
     if colorless
       logit(text)
     else
