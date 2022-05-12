@@ -6,6 +6,7 @@ end
 
 def subtitle(text, colorless, quiet)
   unless quiet
+    logit("\n")
     if colorless
       logit(text)
     else
@@ -122,9 +123,9 @@ end
 def print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
-    print_ok(text="  Service #{service} is running on node #{node}.\n", colorless, quiet)
+    print_ok(text="  Service #{service} is running on node #{node}.", colorless, quiet)
   else
-    print_error(text="  Service #{service} is not running on #{node} and it should.\n", colorless, quiet)
+    print_error(text="  Service #{service} is not running on #{node} and it should.", colorless, quiet)
   end
 end
 

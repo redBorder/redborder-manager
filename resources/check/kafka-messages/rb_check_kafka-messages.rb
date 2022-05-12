@@ -29,7 +29,7 @@ nodes = get_nodes_with_service(service)
 title_ok("Kafka messages",colorless, quiet)
 
 nodes.each do |node|
-  subtitle(node, colorless, quiet)
+  subtitle("Node " + node, colorless, quiet)
   %w[rb_monitor rb_flow rb_event rb_loc rb_social].each do | topic |
     output = execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_check_topic.rb -t #{topic}")
     return_value = $?.exitstatus
