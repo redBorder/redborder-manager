@@ -35,14 +35,14 @@ nodes.each do |node|
   print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
-    subtitle "Keys"
+    subtitle("Keys", colorless, quiet)
     output = execute_command_on_node(node,"#{red} memcached keys | grep -v '==\|--\|bytes' | wc -l").gsub("\n","")
     return_value = $?.exitstatus
     has_errors = true if return_value != 0
     print_command_output(node + " " +  output + " keys", return_value, colorless, quiet)
 
 
-    subtitle "Darklist keys"
+    subtitle("Darklist keys", colorless, quiet)
     output = execute_command_on_node(node,"#{red} memcached keys darklist | grep -c darklist").gsub("\n","")
     return_value = $?.exitstatus
     has_errors = true if return_value != 0

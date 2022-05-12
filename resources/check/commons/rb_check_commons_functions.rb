@@ -41,14 +41,14 @@ def check_install(colorless, quiet=false)
   nodes.each do |node|
     %w[.install-chef-server.log  .install-ks-post.log  .install-redborder-boot.log
        .install-redborder-cloud.log .install-redborder-db.log .restore-manager.log].each do |log_file|
-      subtitle("Checking #{log_file} error on #{node}\n") unless quiet
+      subtitle("Checking #{log_file} error on #{node}", colorless, quiet)
       p "TODO"
     end
   end
 
   title_ok("Install time",colorless, quiet)
   nodes.each do |node|
-    subtitle("Checking install time on #{node}\n") unless quiet
+    subtitle("Checking install time on #{node}", colorless, quiet)
     p "TODO" unless quiet
   end
 

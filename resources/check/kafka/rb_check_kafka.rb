@@ -33,13 +33,13 @@ nodes.each do |node|
   print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
-    subtitle("Brokers status")
+    subtitle("Brokers status", colorless, quiet)
     output = `timeout 10s /usr/lib/redborder/scripts/rb_get_brokers.rb | grep 9092`.gsub("\n","")
     return_value = $?.exitstatus
     has_errors = true if return_value != 0
     print_command_output(output, return_value, colorless, quiet)
 
-    subtitle("Topics creation")
+    subtitle("Topics creation", colorless, quiet)
     %w[rb_monitor rb_flow rb_event rb_loc rb_social].each do | topic |
       command = `timeout 10s /usr/lib/redborder/scripts/rb_get_topics.rb -t #{topic} | grep #{topic}`
       return_value = $?.exitstatus

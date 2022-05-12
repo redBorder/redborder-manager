@@ -40,14 +40,14 @@ nodes.each do |node|
     command1 = "curl http://erchef/nginx_stub_status 2>&1 /dev/null"
     command2 = "curl -k https://erchef/nginx_status 2>&1 /dev/null"
 
-    subtitle "command curl http://erchef/nginx_stub_status"
+    subtitle("command curl http://erchef/nginx_stub_status", colorless, quiet)
     execute_command_on_node(node,command1)
     return_value = $?.exitstatus
     has_errors = true if return_value != 0
     print_command_output(node, return_value, colorless, quiet)
 
 
-    subtitle "command curl -k https://erchef/nginx_status"
+    subtitle("command curl -k https://erchef/nginx_status", colorless, quiet)
     execute_command_on_node(node,command2)
     return_value = $?.exitstatus
     has_errors = true if return_value != 0
