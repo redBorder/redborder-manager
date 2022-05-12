@@ -26,15 +26,18 @@ has_errors = false
 service = "kafka"
 nodes = get_nodes_with_service(service)
 
-title_ok("Kafka-Messages",colorless, quiet)
+title_ok("Kafka messages",colorless, quiet)
 
 nodes.each do |node|
+  subtitle(node, colorless, quiet)
   %w[rb_monitor rb_flow rb_event rb_loc rb_social].each do | topic |
-    output, return_value = execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_check_topic.rb -t #{topic} -q").split("\n")
-    return_value = return_value.to_i
+    output = execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_check_topic.rb -t #{topic}")
+    return_value = $?.exitstatus
+    output = output.gsub("\n","")
     has_errors = true if return_value != 0
     print_command_output(output, return_value, colorless, quiet)
   end
 end
 
-return 1 if has_errors
+
+exit 1 if has_errors

@@ -21,9 +21,8 @@ require_relative '/usr/lib/redborder/lib/check/kafka-messages/rb_check_kafka-mes
 opt = Getopt::Std.getopts("hqt:")
 
 def usage()
-  logit "rb_check_topic.rb [-h][-q][-t <topic>]"
+  logit "rb_check_topic.rb [-h][-t <topic>]"
   logit "    -h         -> Show this help"
-  logit "    -q         -> Quiet mode (optional)"
   logit "    -t         -> Topic"
   logit "Example: rb_check_topic.rb -t rb_monitor"
 end
@@ -41,10 +40,8 @@ else
   topic = opt["t"].to_s.strip
 end
 
-opt["q"] ? quiet = true : quiet = false
+output, return_value = check_topic(topic)
 
-if quiet
-  check_topic(topic)
-else
-  check_topic(topic)[0]
-end
+puts output
+
+exit 1 if return_value != 0

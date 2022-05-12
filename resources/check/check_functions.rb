@@ -9,7 +9,7 @@ def subtitle(text, colorless, quiet)
     if colorless
       logit(text)
     else
-      logit("\e[34m#{text}\e[0m")
+      logit("\e[1m#{text}\e[0m")
     end
   end
 end
@@ -122,9 +122,9 @@ end
 def print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
-    print_ok(text="  Service #{service} is running on node #{node}.", colorless, quiet)
+    print_ok(text="  Service #{service} is running on node #{node}.\n", colorless, quiet)
   else
-    print_error(text="  Service #{service} is not running on #{node} and it should.", colorless, quiet)
+    print_error(text="  Service #{service} is not running on #{node} and it should.\n", colorless, quiet)
   end
 end
 

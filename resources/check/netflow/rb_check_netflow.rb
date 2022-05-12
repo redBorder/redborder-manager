@@ -29,7 +29,7 @@ service = "f2k"
 nodes = get_nodes_with_service(service)
 
 title_ok("Netflow (f2k)",colorless, quiet)
-
+subtitle("Service status", colorless, quiet)
 nodes.each do |node|
   status = get_service_status(service,node)
   print_service_status(service, node, status, colorless, quiet)

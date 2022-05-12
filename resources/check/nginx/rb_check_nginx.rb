@@ -29,7 +29,7 @@ service = "nginx"
 nodes = get_nodes_with_service(service)
 
 title_ok("Nginx",colorless, quiet)
-
+subtitle("Service status", colorless, quiet)
 nodes.each do |node|
 
   status = get_service_status(service,node)
@@ -37,8 +37,8 @@ nodes.each do |node|
 
   if status == 0
 
-    command1 = "curl http://erchef/nginx_stub_status 2>&1 /dev/null"
-    command2 = "curl -k https://erchef/nginx_status 2>&1 /dev/null"
+    command1 = "curl -s http://erchef/nginx_stub_status"
+    command2 = "curl -s -k https://erchef/nginx_status"
 
     subtitle("command curl http://erchef/nginx_stub_status", colorless, quiet)
     execute_command_on_node(node,command1)
