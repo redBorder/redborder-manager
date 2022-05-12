@@ -15,7 +15,7 @@
 ########################################################################
 require 'getopt/std'
 require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
-require_relative 'rb_check_memcached_functions.rb'
+require_relative 'rb_check_webui_functions.rb'
 
 red = "/usr/lib/redborder/scripts/red.rb"
 
@@ -40,7 +40,7 @@ nodes.each do |node|
 
   #Workers
   status_workers = get_service_status("rb-workers",node)
-  print_service_status(service, node, status, colorless, quiet)
+  print_service_status("rb-workers", node, status, colorless, quiet)
   status = 1 if status_workers != 0
 
 

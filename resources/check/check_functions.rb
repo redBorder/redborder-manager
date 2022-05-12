@@ -90,7 +90,7 @@ def get_nodes_with_service(service=nil)
     members.each do |node|
       node_info = get_node(node)
       node_services = node_info.attributes.redborder.services
-      nodes.push(service) if node_services.include? service
+      nodes.push(node) if node_services.include? service
     end
   end
   nodes
@@ -112,9 +112,9 @@ end
 def print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
-    print_ok(text="Service #{service} is running on node #{node}.", colorless, quiet)
+    print_ok(text="  Service #{service} is running on node #{node}.", colorless, quiet)
   else
-    print_error(text="Service #{service} is not running on #{node} and it should.", colorless, quiet)
+    print_error(text="  Service #{service} is not running on #{node} and it should.", colorless, quiet)
   end
 end
 
@@ -122,7 +122,7 @@ def print_command_output(output, return_value, colorless, quiet)
   if return_value == 0
     print_ok(text="  " + output, colorless, quiet)
   else
-    print_error(text=output, colorless, quiet)
+    print_error(text="  " + output, colorless, quiet)
   end
 end
 

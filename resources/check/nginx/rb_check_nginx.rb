@@ -40,15 +40,18 @@ nodes.each do |node|
     command1 = "curl http://erchef/nginx_stub_status"
     command2 = "curl -k https://erchef/nginx_status"
 
-    logit "command1"
-    _, return_value = execute_command_on_node(node,command1).split("\n")
+    logit "command curl http://erchef/nginx_stub_status"
+    execute_command_on_node(node,command1)
+    return_value = $?.to_s.split(" ")[3].to_i
     print_command_output(node, return_value, colorless, quiet)
-    has_errors = true if return_value == 1
+    has_errors = true if return_value != 0
 
-    logit "command2"
-    _, return_value = execute_command_on_node(node,command2).split("\n")
+    logit "command curl -k https://erchef/nginx_status"
+    execute_command_on_node(node,command2)
+    return_value = $?.to_s.split(" ")[3].to_i
     print_command_output(node, return_value, colorless, quiet)
-    has_errors = true if return_value == 1
+    has_errors = true if return_value != 0
+
 
   else
     has_errors = true

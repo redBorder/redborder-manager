@@ -36,13 +36,15 @@ nodes.each do |node|
 
   if status == 0
     logit "Keys"
-    output, return_value = execute_command_on_node(node,"#{red} memcached keys | grep -v '==\|--\|bytes' | grep -c """).split("\n")
-    print_command_output("#{node} #{output} keys", return_value, colorless, quiet)
+    output = execute_command_on_node(node,"#{red} memcached keys | grep -v '==\|--\|bytes' | wc -l").gsub("\n","")
+    return_value = $?.to_s.split(" ")[3].to_i
+    print_command_output(node + " " +  output + " keys", return_value, colorless, quiet)
     has_errors = true if return_value == 1
 
     logit "Darklist keys"
-    output, return_value = execute_command_on_node(node,"#{red} memcached keys darklist | grep -c darklist").split("\n")
-    print_command_output("#{node} #{output} darklist keys", return_value, colorless, quiet)
+    output = execute_command_on_node(node,"#{red} memcached keys darklist | grep -c darklist").gsub("\n","")
+    return_value = $?.to_s.split(" ")[3].to_i
+    print_command_output(node + " " +  output + " darklist keys", return_value, colorless, quiet)
     has_errors = true if return_value == 1
   else
     has_errors = true

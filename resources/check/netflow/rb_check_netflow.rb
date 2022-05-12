@@ -36,14 +36,15 @@ nodes.each do |node|
   print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
-    _, return_value = execute_command_on_node(node,command).split("\n")
+    execute_command_on_node(node,command)
+    return_value = $?.to_s.split(" ")[3].to_i
     if return_value == 0
       output = "#{node} is receiving data from netflow"
     else
       output = "#{node} is not receiving data from netflow"
       has_errors = true
     end
-    print_command_output("#{node} #{output} keys", return_value, colorless, quiet)
+    print_command_output(output, return_value, colorless, quiet)
   else
     has_errors = true
   end
