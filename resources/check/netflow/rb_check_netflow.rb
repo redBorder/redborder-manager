@@ -17,8 +17,7 @@ require 'getopt/std'
 require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
 require_relative 'rb_check_netflow_functions.rb'
 
-#command = "tcpdump -ni bond0 port 2055 -c 1 2>&1 | grep captured | awk '{print $1}'" #TODO
-command = "timeout 10s tcpdump -ni ens192 port 2055 -c 1 2>&1 | grep captured | awk '{print $1}'"
+command = "timeout 10s tcpdump -ni any port 2055 -c 1 2>&1 | grep captured | awk '{print $1}'"
 
 opt = Getopt::Std.getopts("cq")
 
