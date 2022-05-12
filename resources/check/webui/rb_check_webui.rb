@@ -48,10 +48,11 @@ nodes.each do |node|
 
     command = "curl -m 10 -s #{node}:8001 | grep -q '^You need to sign in or sign up before continuing.'"
 
-    logit "Check login"
-    _, return_value = execute_command_on_node(node,command).split("\n")
+    subtitle "Check login"
+    execute_command_on_node(node,command)
+    return_value = $?.exitstatus
+    has_errors = true if return_value != 0
     print_command_output(node, return_value, colorless, quiet)
-    has_errors = true if return_value == 1
 
   else
     has_errors = true

@@ -1,6 +1,7 @@
 require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
 
 def check_license(colorless, quiet=false)
+  has_errors = false
   nodes = get_nodes_with_service
 
   title_ok("Checking licenses",colorless, quiet)
@@ -8,10 +9,11 @@ def check_license(colorless, quiet=false)
   nodes.each do |node|
     p "TODO" unless quiet
   end
-
+  exit 1 if has_errors
 end
 
 def check_io(colorless, quiet=false)
+  has_errors = false
   nodes = get_nodes_with_service
 
   title_ok("I/O errors proccess",colorless, quiet)
@@ -22,13 +24,16 @@ def check_io(colorless, quiet=false)
 
     io_errors.each do |entry|
       print_error(node + ": " + entry, colorless)
+      has_errors = true
       errors += 1
     end
     print_ok(node, colorless, quiet) if errors == 0
   end
+  exit 1 if has_errors
 end
 
 def check_install(colorless, quiet=false)
+  has_errors = false
   nodes = get_nodes_with_service
 
   title_ok("Install log files",colorless, quiet)
@@ -36,16 +41,18 @@ def check_install(colorless, quiet=false)
   nodes.each do |node|
     %w[.install-chef-server.log  .install-ks-post.log  .install-redborder-boot.log
        .install-redborder-cloud.log .install-redborder-db.log .restore-manager.log].each do |log_file|
-      logit("Checking #{log_file} error on #{node}\n") unless quiet
+      subtitle("Checking #{log_file} error on #{node}\n") unless quiet
       p "TODO"
     end
   end
 
   title_ok("Install time",colorless, quiet)
   nodes.each do |node|
-    logit("Checking install time on #{node}\n") unless quiet
+    subtitle("Checking install time on #{node}\n") unless quiet
     p "TODO" unless quiet
   end
+
+  exit 1 if has_errors
 end
 
 def check_memory(colorless, quiet=false)
@@ -72,6 +79,7 @@ def check_memory(colorless, quiet=false)
 end
 
 def check_hd(colorless, quiet=false)
+  has_errors = false
   nodes = get_nodes_with_service
 
   title_ok("Hard Disk",colorless, quiet)
@@ -87,13 +95,17 @@ def check_hd(colorless, quiet=false)
       if pcent >= 90
         errors = 1
         print_error("ERROR: Disk space problem at #{node} (#{pcent}%%) in #{source}", colorless, quiet)
+        has_errors = true
       end
     end
     print_ok(node + " (max #{max}%%)",colorless, quiet) if errors == 0
   end
+  exit 1 if has_errors
 end
 
 def check_killed(colorless, quiet=false)
+  has_errors = false
+
   nodes = get_nodes_with_service
 
   title_ok("Killed proccesses",colorless, quiet)
@@ -104,8 +116,10 @@ def check_killed(colorless, quiet=false)
 
     killed.each do |entry|
       print_error(node + ": " + entry, colorless, quiet)
+      has_errors = true
       errors += 1
     end
     print_ok(node,colorless, quiet) if errors == 0
   end
+  exit 1 if has_errors
 end

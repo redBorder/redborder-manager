@@ -34,7 +34,8 @@ nodes.each do |node|
 
   if status == 0
     output = `/usr/lib/redborder/scripts/rb_get_druid_coordinators.rb`.gsub("\n","")
-    return_value = $?.to_s.split(" ")[3].to_i
+    return_value = $?.exitstatus
+    has_errors = true if return_value != 0
     print_command_output(output, return_value, colorless, quiet)
   else
     has_errors = true

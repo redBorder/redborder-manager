@@ -37,13 +37,15 @@ nodes.each do |node|
 
   if status == 0
     execute_command_on_node(node,command)
-    return_value = $?.to_s.split(" ")[3].to_i
+    return_value = $?.exitstatus
+
     if return_value == 0
       output = "#{node} is receiving data from netflow"
     else
       output = "#{node} is not receiving data from netflow"
       has_errors = true
     end
+
     print_command_output(output, return_value, colorless, quiet)
   else
     has_errors = true

@@ -4,15 +4,25 @@ def logit(text)
   printf("%s\n", text)
 end
 
+def subtitle(text, colorless, quiet)
+  unless quiet
+    if colorless
+      logit(text)
+    else
+      logit("\e[34m#{text}\e[0m")
+    end
+  end
+end
+
 def print_ok(text="", colorless, quiet)
   unless quiet
     spec_char = text.count('%')/2
     printf(text)
     printf("%*c", 94 + spec_char - text.size, ' ')
-    unless colorless
-      printf("[ \e[32m OK \e[0m ]\n")
-    else
+    if colorless
       printf("[  OK  ]\n")
+    else
+      printf("[ \e[32m OK \e[0m ]\n")
     end
   end
 end
@@ -22,38 +32,38 @@ def print_error(text="", colorless, quiet)
     spec_char = text.count('%')/2
     printf(text)
     printf("%*c", 94 + spec_char - text.size, ' ')
-    unless colorless
-      printf("[\e[31mFAILED\e[0m]\n")
-    else
+    if colorless
       printf("[FAILED]\n")
+    else
+      printf("[\e[31mFAILED\e[0m]\n")
     end
   end
 end
 
 def title_ok(text, colorless, quiet)
   unless quiet
-    unless colorless
-      printf("\e[36m######################################################################################################\n#")
-      printf("\e[34m %s\e[36m\n", text)
-      printf("######################################################################################################\e[0m\n")
-    else
+    if colorless
       printf("######################################################################################################\n#")
       printf(" %s\n", text)
       printf("######################################################################################################\n")
+    else
+      printf("\e[36m######################################################################################################\n#")
+      printf("\e[34m %s\e[36m\n", text)
+      printf("######################################################################################################\e[0m\n")
     end
   end
 end
 
 def title_error(text, colorless, quiet)
   unless quiet
-    unless colorless
-      printf("\e[31m######################################################################################################\n#")
-      printf("\e[1m\e[31m %s\e[0m\e[31m\n", text)
-      printf("######################################################################################################\e[0m\n")
-    else
+    if colorless
       printf("######################################################################################################\n#")
       printf(" %s \n", text)
       printf("######################################################################################################\n")
+    else
+      printf("\e[31m######################################################################################################\n#")
+      printf("\e[1m\e[31m %s\e[0m\e[31m\n", text)
+      printf("######################################################################################################\e[0m\n")
     end
   end
 end

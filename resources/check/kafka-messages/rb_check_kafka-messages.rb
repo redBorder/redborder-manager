@@ -32,7 +32,7 @@ nodes.each do |node|
   %w[rb_monitor rb_flow rb_event rb_loc rb_social].each do | topic |
     output, return_value = execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_check_topic.rb -t #{topic} -q").split("\n")
     return_value = return_value.to_i
-    has_errors = true if return_value == 1
+    has_errors = true if return_value != 0
     print_command_output(output, return_value, colorless, quiet)
   end
 end
