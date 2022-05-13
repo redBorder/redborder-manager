@@ -27,12 +27,14 @@ service = "druid-historical"
 nodes = get_nodes_with_service(service)
 
 title_ok("Druid historical",colorless, quiet)
-subtitle("Service status", colorless, quiet)
+
 nodes.each do |node|
+  subtitle("Service status", colorless, quiet)
   status = get_service_status(service,node)
   print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
+    subtitle("Brokers status", colorless, quiet)
     output = `/usr/lib/redborder/scripts/rb_get_druid_historicals.rb`.gsub("\n","")
     return_value = $?.exitstatus
     has_errors = true if return_value != 0
