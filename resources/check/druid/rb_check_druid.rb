@@ -15,7 +15,7 @@
 ########################################################################
 require 'getopt/std'
 require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
-require_relative 'rb_check_druid-broker_functions.rb'
+require_relative 'rb_check_druid_functions.rb'
 
 opt = Getopt::Std.getopts("cq")
 
@@ -23,24 +23,30 @@ opt["c"] ? colorless = true : colorless = false
 opt["q"] ? quiet = true : quiet = false
 
 has_errors = false
-service = "druid-broker"
-nodes = get_nodes_with_service(service)
+title_ok("Druid",colorless, quiet)
 
-title_ok("Druid broker",colorless, quiet)
+%w[druid-broker druid-coordinator druid-historical druid-realtime].each do | service |
+  nodes = get_nodes_with_service(service)
+  status = 0
 
-nodes.each do |node|
-  subtitle("Service status", colorless, quiet)
-  status = get_service_status(service,node)
-  print_service_status(service, node, status, colorless, quiet)
+  nodes.each do |node|
 
-  if status == 0
-    subtitle("Brokers status", colorless, quiet)
-    output = `/usr/lib/redborder/scripts/rb_get_druid_brokers.rb`.gsub("\n","")
-    return_value = $?.exitstatus
-    has_errors = true if return_value != 0
-    print_command_output(output, return_value, colorless, quiet)
-  else
-    has_errors = true
+    service_name = service[6..-1] # Removing druid-
+    subtitle("Druid #{service_name} status", colorless, quiet)
+
+    status_service = get_service_status(service,node)
+    print_service_status(service, node, status_service, colorless, quiet)
+    status = 1 if status_service != 0
+
+    if status == 0
+
+      output = `/usr/lib/redborder/scripts/rb_get_druid_#{service_name}s.rb`.gsub("\n","")
+      return_value = $?.exitstatus
+      has_errors = true if return_value != 0
+      print_command_output(output, return_value, colorless, quiet)
+    else
+      has_errors = true
+    end
   end
 end
 

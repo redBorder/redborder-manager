@@ -31,12 +31,14 @@ nodes.each do |node|
   status = 0
   subtitle("Services status", colorless, quiet)
 
-  %w[chef-client opscode-rabbitmq opscode-bookshelf opscode-expander
+  %w[chef-client opscode-rabbitmq opscode-expander
      opscode-oc_id opscode-redis_lb opscode-chef-mover opscode-nginx
      opscode-postgresql opscode-solr4 opscode-erchef opscode-oc_bifrost].each do | service |
+    # opscode-bookshelf  is inactive
+    # opscode-postgresql is inactive
 
     status_service = get_service_status(service,node)
-    print_service_status(service, node, status, colorless, quiet)
+    print_service_status(service, node, status_service, colorless, quiet)
     status = 1 if status_service != 0
 
   end
