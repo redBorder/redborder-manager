@@ -33,10 +33,11 @@ nodes.each do |node|
   print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
-    output = `echo '' | zkCli.sh -server zookeeper.service:2181 | head -n 1`.gsub("\n","")
-    return_value = $?.exitstatus
-    has_errors = true if return_value != 0
-    print_command_output(output, return_value, colorless, quiet)
+    %w[druid opscode_chef radius redborder].each do |database|
+      return_value = check_postgres_database(node,database)
+      has_errors = true if return_value != 0
+      print_command_output("Database #{database} in node #{node}", return_value, colorless, quiet)
+    end
   else
     has_errors = true
   end

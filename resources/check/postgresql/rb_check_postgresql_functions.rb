@@ -1,4 +1,4 @@
-def check_postgres_database(database)
+def check_postgres_database(node,database)
   case database
   when "druid"
     table = "druid_rules"
@@ -16,7 +16,7 @@ def check_postgres_database(database)
     return 1
   end
 
-  `echo "select id from #{table} LIMIT 1; " | rb_psql #{database} &>/dev/null`
+  execute_command_on_node(node,"echo \"select id from #{table} LIMIT 1; \" | rb_psql #{database} &>/dev/null")
   $?.exitstatus
 
 end
