@@ -42,6 +42,7 @@ nodes.each do |node|
   status = 1 if status_redborder_postgres != 0
 
   if status == 0
+    subtitle("Databases", colorless, quiet)
     %w[druid opscode_chef radius redborder].each do |database|
       return_value = check_postgres_database(node,database)
       has_errors = true if return_value != 0

@@ -1,4 +1,8 @@
 def check_postgres_database(node,database)
+
+  rb_manager_utils = "/usr/lib/redborder/bin/rb_manager_utils.sh"
+  rb_psql = "/usr/lib/redborder/bin/rb_psql"
+
   case database
   when "druid"
     table = "druid_rules"
@@ -16,7 +20,8 @@ def check_postgres_database(node,database)
     return 1
   end
 
-  execute_command_on_node(node,"echo \"select id from #{table} LIMIT 1; \" | rb_psql #{database} &>/dev/null")
-  $?.exitstatus
+  command = rb_manager_utils + ' -e -n ' + node + ' -s "echo -e \"select id from ' + table + '\;\" | ' +  rb_psql + ' ' + database
+
+  system(command) ? 0 : 1
 
 end

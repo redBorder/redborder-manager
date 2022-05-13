@@ -15,7 +15,7 @@
 ########################################################################
 require 'getopt/std'
 require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
-require_relative 'rb_check_druid-broker_functions.rb'
+require_relative 'rb_check_chef_functions.rb'
 
 opt = Getopt::Std.getopts("cq")
 
