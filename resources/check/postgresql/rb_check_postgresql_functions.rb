@@ -20,7 +20,7 @@ def check_postgres_database(node,database)
     return 1
   end
 
-  command = rb_manager_utils + ' -e -n ' + node + ' -s "echo -e \"select id from ' + table + '\;\" | ' +  rb_psql + ' ' + database
+  command = rb_manager_utils + ' -e -n ' + node + ' -s "echo -e \"select id from ' + table + '\;\" | ' +  rb_psql + ' ' + database + ' &>/dev/null"'
 
   system(command) ? 0 : 1
 

@@ -23,19 +23,59 @@ opt["c"] ? colorless = true : colorless = false
 opt["q"] ? quiet = true : quiet = false
 
 has_errors = false
-service = "chef-client"
-nodes = get_nodes_with_service(service)
+nodes = get_nodes_with_service("chef-client")
 
 title_ok("Chef",colorless, quiet)
 
 nodes.each do |node|
-  subtitle("Service status", colorless, quiet)
-  status = get_service_status(service,node)
-  print_service_status(service, node, status, colorless, quiet)
+  status = 0
+  subtitle("Services status", colorless, quiet)
+
+  %w[chef-client opscode-rabbitmq opscode-bookshelf opscode-expander
+     opscode-oc_id opscode-redis_lb opscode-chef-mover opscode-nginx
+     opscode-postgresql opscode-solr4 opscode-erchef opscode-oc_bifrost].each do | service |
+
+    status_service = get_service_status(service,node)
+    print_service_status(service, node, status, colorless, quiet)
+    status = 1 if status_service != 0
+
+  end
 
   if status == 0
-    subtitle("Last time execution", colorless, quiet)
-    puts get_time_from_last_run(node)
+
+    subtitle("Chef\'s last time execution", colorless, quiet)
+    return_value, seconds_from_last_run, interval, splay = check_last_chef_run(node)
+    if return_value == 0
+      text = "Chef\'s last run was #{seconds_from_last_run}s ago"
+    else
+      text = "Chef\'s last run was #{seconds_from_last_run}s ago, when its interval and splay are #{interval} and #{splay}"
+      has_errors = true
+    end
+    print_command_output(text, return_value, colorless, quiet)
+
+    subtitle("knife commands", colorless, quiet)
+    %w[node client].each do |command|
+      if system("knife #{command} list &> /dev/null")
+        return_value = 0
+      else
+        return_value = 1
+        has_errors = true
+      end
+      print_command_output("knife #{command} list", return_value, colorless, quiet)
+    end
+
+    subtitle("Rabbitmq commands", colorless, quiet)
+    %w[status list_users].each do |command|
+      if system("rabbitmqctl #{command} &> /dev/null")
+        return_value = 0
+      else
+        return_value = 1
+        has_errors = true
+      end
+      print_command_output("rabbitmqctl #{command}", return_value, colorless, quiet)
+    end
+
+
   else
     has_errors = true
   end
