@@ -15,7 +15,7 @@
 ########################################################################
 require 'getopt/std'
 require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
-require_relative 'rb_check_zookeeper_functions.rb'
+require_relative 'rb_check_consul_functions.rb'
 
 opt = Getopt::Std.getopts("cq")
 
@@ -23,20 +23,29 @@ opt["c"] ? colorless = true : colorless = false
 opt["q"] ? quiet = true : quiet = false
 
 has_errors = false
-service = "zookeeper"
+service = "consul"
 nodes = get_nodes_with_service(service)
 
-title_ok("Zookeeper",colorless, quiet)
-subtitle("Service status", colorless, quiet)
+title_ok("Consul",colorless, quiet)
+
 nodes.each do |node|
+  subtitle("Service status", colorless, quiet)
   status = get_service_status(service,node)
   print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
-    output = execute_command_on_node(node,"echo \"\" | zkCli.sh -server zookeeper.service:2181 | head -n 1")
-    return_value = $?.exitstatus
-    has_errors = true if return_value != 0
-    print_command_output(output.gsub("\n",""), return_value, colorless, quiet)
+    subtitle("Consul members", colorless, quiet)
+    members = get_consul_members_status
+
+    members.each do | member |
+      member_name, member_ip_port, member_status = member.split()
+      member_ip, _ = member_ip_port.split(":")
+      member_status == "alive" ? return_value = 0 : return_value = 1
+      output = "#{member_name}   #{member_ip}   #{member_status}"
+      has_errors = true if return_value != 0
+      print_command_output(output, return_value, colorless, quiet)
+    end
+
   else
     has_errors = true
   end

@@ -39,8 +39,7 @@ title_ok("Druid",colorless, quiet)
     status = 1 if status_service != 0
 
     if status == 0
-
-      output = `/usr/lib/redborder/scripts/rb_get_druid_#{service_name}s.rb`.gsub("\n","")
+      output = execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_get_druid_#{service_name}s.rb").gsub("\n","")
       return_value = $?.exitstatus
       has_errors = true if return_value != 0
       print_command_output(output, return_value, colorless, quiet)

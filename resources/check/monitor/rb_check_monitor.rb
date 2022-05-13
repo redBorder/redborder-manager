@@ -15,7 +15,7 @@
 ########################################################################
 require 'getopt/std'
 require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
-require_relative 'rb_check_zookeeper_functions.rb'
+require_relative 'rb_check_monitor_functions.rb'
 
 opt = Getopt::Std.getopts("cq")
 
@@ -23,20 +23,24 @@ opt["c"] ? colorless = true : colorless = false
 opt["q"] ? quiet = true : quiet = false
 
 has_errors = false
-service = "zookeeper"
+service = "redborder-monitor"
 nodes = get_nodes_with_service(service)
 
-title_ok("Zookeeper",colorless, quiet)
-subtitle("Service status", colorless, quiet)
+title_ok("Monitor",colorless, quiet)
+
 nodes.each do |node|
+  subtitle("Service status", colorless, quiet)
   status = get_service_status(service,node)
   print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
-    output = execute_command_on_node(node,"echo \"\" | zkCli.sh -server zookeeper.service:2181 | head -n 1")
+    subtitle("Topic rb-monitor", colorless, quiet)
+
+    execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_check_topic.rb -t #{topic}")
     return_value = $?.exitstatus
     has_errors = true if return_value != 0
-    print_command_output(output.gsub("\n",""), return_value, colorless, quiet)
+    print_command_output("Redborder monitor is sending data to Kafka in node #{node}", return_value, colorless, quiet)
+
   else
     has_errors = true
   end
