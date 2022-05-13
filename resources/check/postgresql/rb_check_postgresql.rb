@@ -27,10 +27,17 @@ service = "postgresql"
 nodes = get_nodes_with_service(service)
 
 title_ok("Postgresql",colorless, quiet)
-subtitle("Service status", colorless, quiet)
+subtitle("Services status", colorless, quiet)
 nodes.each do |node|
-  status = get_service_status(service,node)
-  print_service_status(service, node, status, colorless, quiet)
+  status = 0
+
+  status_postgres = get_service_status(service,node)
+  print_service_status(service, node, status_postgres, colorless, quiet)
+  status = 1 if status_postgres != 0
+
+  status_redborder_postgres = get_service_status(service,node)
+  print_service_status("redborder-postgresql", node, status_postgres, colorless, quiet)
+  status = 1 if status_redborder_postgres != 0
 
   if status == 0
     %w[druid opscode_chef radius redborder].each do |database|
