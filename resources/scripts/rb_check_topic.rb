@@ -15,7 +15,7 @@
 ########################################################################
 require 'getopt/std'
 require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
-require_relative '/usr/lib/redborder/lib/check/kafka-messages/rb_check_kafka-messages_functions.rb'
+require_relative '/usr/lib/redborder/lib/check/kafka/rb_check_kafka_functions.rb'
 
 
 opt = Getopt::Std.getopts("hqt:")
