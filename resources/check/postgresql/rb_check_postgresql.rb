@@ -26,7 +26,7 @@ has_errors = false
 service = "postgresql"
 nodes = get_nodes_with_service(service)
 
-title_ok("Postgresql",colorless, quiet)
+title("Postgresql",colorless, quiet)
 
 nodes.each do |node|
   subtitle("Services status", colorless, quiet)

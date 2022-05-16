@@ -28,7 +28,7 @@ has_errors = false
 service = "memcached"
 nodes = get_nodes_with_service(service)
 
-title_ok("Memcached",colorless, quiet)
+title("Memcached",colorless, quiet)
 
 nodes.each do |node|
   subtitle("Service status", colorless, quiet)

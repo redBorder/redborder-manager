@@ -23,7 +23,7 @@ opt["c"] ? colorless = true : colorless = false
 opt["q"] ? quiet = true : quiet = false
 
 has_errors = false
-title_ok("Druid",colorless, quiet)
+title("Druid",colorless, quiet)
 
 %w[druid-broker druid-coordinator druid-historical druid-realtime].each do | service |
   nodes = get_nodes_with_service(service)

@@ -4,6 +4,10 @@ def logit(text)
   printf("%s\n", text)
 end
 
+def get_stty_columns
+  `echo $COLUMNS`.to_i
+end
+
 def subtitle(text, colorless, quiet)
   unless quiet
     logit("")
@@ -17,9 +21,10 @@ end
 
 def print_ok(text="", colorless, quiet)
   unless quiet
+    columns =  get_stty_columns
     spec_char = text.count('%')/2
     printf(text)
-    printf("%*c", 94 + spec_char - text.size, ' ')
+    printf("%*c", columns - 8 - text.size + spec_char, ' ')
     if colorless
       printf("[  OK  ]\n")
     else
@@ -30,9 +35,10 @@ end
 
 def print_error(text="", colorless, quiet)
   unless quiet
+    columns =  get_stty_columns
     spec_char = text.count('%')/2
     printf(text)
-    printf("%*c", 94 + spec_char - text.size, ' ')
+    printf("%*c", columns - 8 - text.size + spec_char, ' ')
     if colorless
       printf("[FAILED]\n")
     else
@@ -41,30 +47,17 @@ def print_error(text="", colorless, quiet)
   end
 end
 
-def title_ok(text, colorless, quiet)
+def title(text, colorless, quiet)
   unless quiet
+    columns =  get_stty_columns
     if colorless
-      printf("######################################################################################################\n#")
+      logit("#" * columns)
       printf(" %s\n", text)
-      printf("######################################################################################################\n")
+      logit("#" * columns)
     else
-      printf("\e[36m######################################################################################################\n#")
+      logit("\e[36m" + "#" * columns)
       printf("\e[34m %s\e[36m\n", text)
-      printf("######################################################################################################\e[0m\n")
-    end
-  end
-end
-
-def title_error(text, colorless, quiet)
-  unless quiet
-    if colorless
-      printf("######################################################################################################\n#")
-      printf(" %s \n", text)
-      printf("######################################################################################################\n")
-    else
-      printf("\e[31m######################################################################################################\n#")
-      printf("\e[1m\e[31m %s\e[0m\e[31m\n", text)
-      printf("######################################################################################################\e[0m\n")
+      logit("#" * columns + "\e[0m")
     end
   end
 end
