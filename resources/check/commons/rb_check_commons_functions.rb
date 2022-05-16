@@ -1,13 +1,32 @@
+require 'json'
 require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
 
 def check_license(colorless, quiet=false)
   has_errors = false
   nodes = get_nodes_with_service
+  time = Time.new.to_i
 
-  title_ok("Checking licenses",colorless, quiet)
+  title_ok("Licenses",colorless, quiet)
 
   nodes.each do |node|
-    p "TODO" unless quiet
+    subtitle("Node #{node}", colorless, quiet)
+    licenses = execute_command_on_node(node, "ls /etc/licenses/").split("\n")
+    licenses.each do | license |
+      command = "cat /etc/licenses/#{license}"
+      license_values = JSON.parse(execute_command_on_node(node, command))
+      expire_at = license_values["info"]["expire_at"]
+      license_uuid = license_values["info"]["uuid"]
+
+      if expire_at > time
+        return_value = 0
+      else
+        return_value = 1
+        has_errors = true
+      end
+
+      print_command_output(license_uuid, return_value, colorless, quiet)
+
+    end
   end
   exit 1 if has_errors
 end
