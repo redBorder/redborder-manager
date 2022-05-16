@@ -5,7 +5,7 @@ def logit(text)
 end
 
 def get_stty_columns
-  `echo $COLUMNS`.to_i
+  `tput cols`.to_i
 end
 
 def title_ok(text, colorless, quiet)
