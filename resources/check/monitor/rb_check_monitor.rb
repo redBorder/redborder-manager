@@ -34,12 +34,17 @@ nodes.each do |node|
   print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
-    subtitle("Topic rb-monitor", colorless, quiet)
+    subtitle("Topic rb_monitor", colorless, quiet)
 
-    execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_check_topic.rb -t #{topic}")
+    execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_check_topic.rb -t rb_monitor")
     return_value = $?.exitstatus
-    has_errors = true if return_value != 0
-    print_command_output("Redborder monitor is sending data to Kafka in node #{node}", return_value, colorless, quiet)
+    if return_value == 0
+      text = "Redborder monitor is sending data to Kafka in node #{node}"
+    else
+      text = "Redborder monitor is not sending data to Kafka in node #{node}"
+      has_errors = true
+    end
+    print_command_output(text, return_value, colorless, quiet)
 
   else
     has_errors = true

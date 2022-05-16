@@ -33,7 +33,7 @@ nodes.each do |node|
 
   %w[chef-client opscode-rabbitmq opscode-expander
      opscode-oc_id opscode-redis_lb opscode-chef-mover opscode-nginx
-     opscode-postgresql opscode-solr4 opscode-erchef opscode-oc_bifrost].each do | service |
+     opscode-solr4 opscode-erchef opscode-oc_bifrost].each do | service |
     # opscode-bookshelf  is inactive
     # opscode-postgresql is inactive
 
