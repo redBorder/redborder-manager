@@ -28,7 +28,7 @@ has_errors = false
 service = "f2k"
 nodes = get_nodes_with_service(service)
 
-title("Netflow (f2k)",colorless, quiet)
+title_ok("Netflow (f2k)",colorless, quiet)
 
 nodes.each do |node|
   subtitle("Service status", colorless, quiet)

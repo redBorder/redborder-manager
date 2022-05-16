@@ -25,7 +25,7 @@ opt["q"] ? quiet = true : quiet = false
 has_errors = false
 nodes = get_nodes_with_service("chef-client")
 
-title("Chef",colorless, quiet)
+title_ok("Chef",colorless, quiet)
 
 nodes.each do |node|
   status = 0

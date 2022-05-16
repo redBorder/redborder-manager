@@ -28,7 +28,7 @@ has_errors = false
 service = "nginx"
 nodes = get_nodes_with_service(service)
 
-title("Nginx",colorless, quiet)
+title_ok("Nginx",colorless, quiet)
 
 nodes.each do |node|
   subtitle("Service status", colorless, quiet)

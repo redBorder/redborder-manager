@@ -8,6 +8,21 @@ def get_stty_columns
   `echo $COLUMNS`.to_i
 end
 
+def title_ok(text, colorless, quiet)
+  unless quiet
+    columns =  get_stty_columns
+    if colorless
+      logit("#" * columns)
+      printf(" %s\n", text)
+      logit("#" * columns)
+    else
+      logit("\e[36m" + "#" * columns)
+      printf("\e[34m %s\e[36m\n", text)
+      logit("#" * columns + "\e[0m")
+    end
+  end
+end
+
 def subtitle(text, colorless, quiet)
   unless quiet
     logit("")
@@ -43,21 +58,6 @@ def print_error(text="", colorless, quiet)
       printf("[FAILED]\n")
     else
       printf("[\e[31mFAILED\e[0m]\n")
-    end
-  end
-end
-
-def title(text, colorless, quiet)
-  unless quiet
-    columns =  get_stty_columns
-    if colorless
-      logit("#" * columns)
-      printf(" %s\n", text)
-      logit("#" * columns)
-    else
-      logit("\e[36m" + "#" * columns)
-      printf("\e[34m %s\e[36m\n", text)
-      logit("#" * columns + "\e[0m")
     end
   end
 end

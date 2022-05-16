@@ -28,7 +28,7 @@ has_errors = false
 service = "webui"
 nodes = get_nodes_with_service(service)
 
-title("Webui",colorless, quiet)
+title_ok("Webui",colorless, quiet)
 subtitle("Services status", colorless, quiet)
 nodes.each do |node|
   status = 0

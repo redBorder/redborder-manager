@@ -26,7 +26,7 @@ has_errors = false
 service = "consul"
 nodes = get_nodes_with_service(service)
 
-title("Consul",colorless, quiet)
+title_ok("Consul",colorless, quiet)
 
 nodes.each do |node|
   subtitle("Service status", colorless, quiet)

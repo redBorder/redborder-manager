@@ -26,7 +26,7 @@ has_errors = false
 service = "redborder-monitor"
 nodes = get_nodes_with_service(service)
 
-title("Monitor",colorless, quiet)
+title_ok("Monitor",colorless, quiet)
 
 nodes.each do |node|
   subtitle("Service status", colorless, quiet)

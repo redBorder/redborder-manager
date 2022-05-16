@@ -26,7 +26,7 @@ has_errors = false
 service = "kafka"
 nodes = get_nodes_with_service(service)
 
-title("Kafka",colorless, quiet)
+title_ok("Kafka",colorless, quiet)
 
 nodes.each do |node|
   subtitle("Node " + node, colorless, quiet)

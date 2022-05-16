@@ -4,7 +4,7 @@ def check_license(colorless, quiet=false)
   has_errors = false
   nodes = get_nodes_with_service
 
-  title("Checking licenses",colorless, quiet)
+  title_ok("Checking licenses",colorless, quiet)
 
   nodes.each do |node|
     p "TODO" unless quiet
@@ -16,7 +16,7 @@ def check_io(colorless, quiet=false)
   has_errors = false
   nodes = get_nodes_with_service
 
-  title("I/O errors proccess",colorless, quiet)
+  title_ok("I/O errors proccess",colorless, quiet)
 
   nodes.each do |node|
     errors = 0
@@ -36,7 +36,7 @@ def check_install(colorless, quiet=false)
   has_errors = false
   nodes = get_nodes_with_service
 
-  title("Install log files",colorless, quiet)
+  title_ok("Install log files",colorless, quiet)
 
   nodes.each do |node|
     %w[.install-chef-server.log  .install-ks-post.log  .install-redborder-boot.log
@@ -46,7 +46,7 @@ def check_install(colorless, quiet=false)
     end
   end
 
-  title("Install time",colorless, quiet)
+  title_ok("Install time",colorless, quiet)
   nodes.each do |node|
     subtitle("Checking install time on #{node}", colorless, quiet)
     p "TODO" unless quiet
@@ -59,7 +59,7 @@ def check_memory(colorless, quiet=false)
   has_errors = false
   nodes = get_nodes_with_service
 
-  title("Memory",colorless, quiet)
+  title_ok("Memory",colorless, quiet)
 
   nodes.each do |node|
     mem = execute_command_on_node(node,"free |grep Mem:").split()
@@ -82,7 +82,7 @@ def check_hd(colorless, quiet=false)
   has_errors = false
   nodes = get_nodes_with_service
 
-  title("Hard Disk",colorless, quiet)
+  title_ok("Hard Disk",colorless, quiet)
 
   nodes.each do |node|
     errors = 0
@@ -108,7 +108,7 @@ def check_killed(colorless, quiet=false)
 
   nodes = get_nodes_with_service
 
-  title("Killed proccesses",colorless, quiet)
+  title_ok("Killed proccesses",colorless, quiet)
 
   nodes.each do |node|
     errors = 0

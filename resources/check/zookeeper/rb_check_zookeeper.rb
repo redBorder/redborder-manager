@@ -26,7 +26,7 @@ has_errors = false
 service = "zookeeper"
 nodes = get_nodes_with_service(service)
 
-title("Zookeeper",colorless, quiet)
+title_ok("Zookeeper",colorless, quiet)
 subtitle("Service status", colorless, quiet)
 nodes.each do |node|
   status = get_service_status(service,node)
