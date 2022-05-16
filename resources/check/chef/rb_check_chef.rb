@@ -50,7 +50,7 @@ nodes.each do |node|
     if return_value == 0
       text = "Chef\'s last run was #{seconds_from_last_run}s ago"
     else
-      text = "Chef\'s last run was #{seconds_from_last_run}s ago, when its interval and splay are #{interval} and #{splay}"
+      text = "Chef\'s last run was #{seconds_from_last_run}s ago, when its interval and splay are #{interval}s and #{splay}s"
       has_errors = true
     end
     print_command_output(text, return_value, colorless, quiet)
