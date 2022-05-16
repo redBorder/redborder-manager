@@ -35,10 +35,16 @@ nodes.each do |node|
 
   if status == 0
     subtitle("Consul members", colorless, quiet)
-    members = get_consul_members_status
 
+    if colorless
+      printf("     Node       Address     Status\n") unless quiet
+    else
+      printf("\e[1m     Node       Address     Status\e[0m\n") unless quiet
+    end
+
+    members = get_consul_members_status
     members.each do | member |
-      member_name, member_ip_port, member_status = member.split()
+      member_name, member_ip_port, member_status = member.split
       member_ip, _ = member_ip_port.split(":")
       member_status == "alive" ? return_value = 0 : return_value = 1
       output = "#{member_name}   #{member_ip}   #{member_status}"

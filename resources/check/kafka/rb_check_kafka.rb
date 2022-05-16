@@ -29,29 +29,40 @@ nodes = get_nodes_with_service(service)
 title_ok("Kafka",colorless, quiet)
 
 nodes.each do |node|
+  subtitle("Node " + node, colorless, quiet)
+
   subtitle("Service status", colorless, quiet)
   status = get_service_status(service,node)
   print_service_status(service, node, status, colorless, quiet)
 
   if status == 0
+
     subtitle("Brokers status", colorless, quiet)
     output = execute_command_on_node(node,"timeout 10s /usr/lib/redborder/scripts/rb_get_brokers.rb | grep 9092").gsub("\n","")
     return_value = $?.exitstatus
     has_errors = true if return_value != 0
     print_command_output(output, return_value, colorless, quiet)
 
+
     subtitle("Topics creation", colorless, quiet)
     %w[rb_monitor rb_flow rb_event rb_loc rb_social].each do | topic |
       execute_command_on_node(node,"timeout 10s /usr/lib/redborder/scripts/rb_get_topics.rb -t #{topic} | grep #{topic}")
       return_value = $?.exitstatus
-
       if return_value == 0
         output = "Topic " + topic
       else
         has_errors = true
         output = "Topic " + topic + " did not found"
       end
+      print_command_output(output, return_value, colorless, quiet)
+    end
 
+    subtitle("Kafka messages", colorless, quiet)
+    %w[rb_monitor rb_flow rb_event rb_loc rb_social].each do | topic |
+      output = execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_check_topic.rb -t #{topic}")
+      return_value = $?.exitstatus
+      output = output.gsub("\n","")
+      has_errors = true if return_value != 0
       print_command_output(output, return_value, colorless, quiet)
     end
   else
