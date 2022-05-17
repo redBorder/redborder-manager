@@ -62,8 +62,8 @@ def check_install(colorless, quiet=false)
   nodes.each do |node|
     subtitle(node, colorless, quiet)
     %w[ /root/.install-chef-client.log /root/.install-chef-server.log /var/www/rb-rails/log/install-redborder-db.log
-        .install-ks-post.log  .install-redborder-boot.log
-        .install-redborder-cloud.log .restore-manager.log].each do |log_file|
+        /root/.install-redborder-boot.log
+        .install-ks-post.log .install-redborder-cloud.log .restore-manager.log].each do |log_file|
       execute_command_on_node(node,"test -f #{log_file}")
 
       if $?.success?
