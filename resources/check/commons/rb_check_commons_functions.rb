@@ -55,7 +55,7 @@ def check_install(colorless, quiet=false)
   has_errors = false
   nodes = get_nodes_with_service
 
-  title_ok("Install log files",colorless, quiet)
+  title_ok("Installation log files",colorless, quiet)
   # /var/www/rb-rails/log/install-redborder-db.log
   # /root/.install-chef-client.log
   # /root/.install-chef-server.log
@@ -90,10 +90,9 @@ def check_install(colorless, quiet=false)
     end
   end
 
-  title_ok("Install time",colorless, quiet)
+  title_ok("Installation time",colorless, quiet)
   nodes.each do |node|
-    subtitle("Checking install time on #{node}", colorless, quiet)
-    p "TODO" unless quiet
+    subtitle("TODO", colorless, quiet)
   end
 
   exit 1 if has_errors
