@@ -56,12 +56,37 @@ def check_install(colorless, quiet=false)
   nodes = get_nodes_with_service
 
   title_ok("Install log files",colorless, quiet)
-
+  # /var/www/rb-rails/log/install-redborder-db.log
+  # /root/.install-chef-client.log
+  # /root/.install-chef-server.log
   nodes.each do |node|
-    %w[.install-chef-server.log  .install-ks-post.log  .install-redborder-boot.log
-       .install-redborder-cloud.log .install-redborder-db.log .restore-manager.log].each do |log_file|
-      subtitle("Checking #{log_file} error on #{node}", colorless, quiet)
-      p "TODO"
+    subtitle(node, colorless, quiet)
+    %w[ /root/.install-chef-client.log /root/.install-chef-server.log /var/www/rb-rails/log/install-redborder-db.log
+        .install-ks-post.log  .install-redborder-boot.log
+        .install-redborder-cloud.log .restore-manager.log].each do |log_file|
+      execute_command_on_node(node,"test -f #{log_file}")
+
+      if $?.success?
+        file_name = log_file.partition("/").last
+        command = "grep -i 'error\|fail\|denied' #{log_file}"
+        command += " | grep -v \"To check your SSL configuration, or troubleshoot errors, you can use the\""
+        command += " | grep -v \"INFO: HTTP Request Returned 404 Object Not Found: error\""
+        command += " | grep -v task.drop.deserialization.errors"
+        command += " | grep -v \"Will not attempt to authenticate using SASL\""
+        command += " | grep -v \"already exists\""
+        command += " | grep -v 'retry [123]/5'|"
+
+        errors = execute_command_on_node(node,command).split("\n")
+
+        if errors.empty? #No error messages in log file
+          print_ok(file_name,colorless, quiet)
+        else
+          has_errors = true
+          print_error(file_name,colorless, quiet)
+          errors.each_with_index { |error, i| logit("  " + i.to_s + ". " + error) unless quiet }
+        end
+      end
+    exit 1 if has_errors
     end
   end
 
