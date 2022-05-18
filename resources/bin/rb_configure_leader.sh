@@ -347,7 +347,11 @@ function configure_leader(){
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
 
-  listCookbooks="zookeeper kafka druid http2k memcached chef-server consul hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner ntp f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter rsyslog rbsocial freeradius rbnmsp n2klocd rbale rbcep k2http rb-proxy rb-ips rb-manager" # The order matters!
+  listCookbooks="cron ohai zookeeper kafka druid http2k memcached chef-server consul
+                hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner
+                ntp f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
+                rsyslog rbsocial freeradius rbnmsp n2klocd rbale rbcep k2http rb-proxy
+                snort barnyard2 rb-ips rb-manager" # The order matters!
   for n in $listCookbooks; do # cookbooks
     # rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
@@ -386,7 +390,7 @@ function configure_leader(){
 
   # Multiple runs of chef-client
   e_title "Configuring Chef-Client. Please wait...  "
-  e_title "redborder install run (1/3) $(date)" #>>/root/.install-chef-client.log
+  e_title "redborder install run (1/4) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
 
   # Replace chef-server SV init scripts by systemd scripts
@@ -401,15 +405,17 @@ function configure_leader(){
     done
   fi
 
-  e_title "redborder install run (2/3) $(date)" #>>/root/.install-chef-client.log
+  e_title "redborder install run (2/4) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
-  e_title "redborder install run (3/3) $(date)" #>>/root/.install-chef-client.log
+  
+  e_title "redborder install run (3/4) $(date)" #>>/root/.install-chef-client.log
   chef-client #&>/root/.install-chef-client.log
 
   e_title "Creating database structure $(date)"
   chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
-  systemctl restart webui &>/dev/nul
-
+  
+  e_title "redborder install run (4/4) $(date)" #>>/root/.install-chef-client.log
+  chef-client #&>/root/.install-chef-client.log
 }
 
 function set_external_service_names {
