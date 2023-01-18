@@ -8,8 +8,10 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash ntp dialog postgresql s3cmd dmidecode rsync nc telnet redborder-serf redborder-common redborder-chef-client redborder-cookbooks redborder-rubyrvm redborder-cli synthetic-producer darklist-updated
-
+Requires: bash ntp dialog postgresql s3cmd dmidecode rsync nc
+Requires: telnet redborder-serf redborder-common redborder-chef-client
+Requires: redborder-cookbooks redborder-rubyrvm redborder-cli
+Requires: synthetic-producer darklist-updated tcpdump
 %description
 %{summary}
 
@@ -23,6 +25,7 @@ mkdir -p %{buildroot}/etc/redborder
 mkdir -p %{buildroot}/usr/lib/redborder/bin
 mkdir -p %{buildroot}/usr/lib/redborder/scripts
 mkdir -p %{buildroot}/usr/lib/redborder/lib
+mkdir -p %{buildroot}/usr/lib/redborder/lib/check
 mkdir -p %{buildroot}/etc/profile.d
 mkdir -p %{buildroot}/var/chef/cookbooks
 mkdir -p %{buildroot}/var/chef/solo
@@ -32,6 +35,7 @@ install -D -m 0644 resources/redborder-manager.sh %{buildroot}/etc/profile.d
 install -D -m 0644 resources/dialogrc %{buildroot}/etc/redborder
 cp resources/bin/* %{buildroot}/usr/lib/redborder/bin
 cp resources/scripts/* %{buildroot}/usr/lib/redborder/scripts
+cp -r resources/check/* %{buildroot}/usr/lib/redborder/lib/check
 chmod 0755 %{buildroot}/usr/lib/redborder/bin/*
 chmod 0755 %{buildroot}/usr/lib/redborder/scripts/*
 install -D -m 0644 resources/lib/rb_wiz_lib.rb %{buildroot}/usr/lib/redborder/lib
@@ -60,6 +64,7 @@ firewall-cmd --reload
 %defattr(0755,root,root)
 /usr/lib/redborder/bin
 /usr/lib/redborder/scripts
+/usr/lib/redborder/lib/check
 %defattr(0755,root,root)
 /etc/profile.d/redborder-manager.sh
 /usr/lib/redborder/lib/dhclient-enter-hooks
@@ -77,6 +82,9 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Wed May 11 2022 Eduardo Reyes <eareyes@redborder.com> -
+- Add check directory
+
 * Fri Jan 28 2022 Eduardo Reyes <eareyes@redborder.com> -
 - Add rb_synthetic_producer.rb
 
