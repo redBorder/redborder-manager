@@ -375,8 +375,10 @@ function configure_leader(){
 
   # Multiple runs of chef-client
   e_title "Configuring Chef-Client. Please wait...  "
-  e_title "redborder install run (1/4) $(date)" #>>/root/.install-chef-client.log
-  chef-client #&>/root/.install-chef-client.log
+
+  e_title "redborder install run (1/4) $(date)" | tee -a /root/.install-chef-client.log
+  chef-client | tee -a /root/.install-chef-client.log
+
 
   # Replace chef-server SV init scripts by systemd scripts
   /usr/bin/chef-server-ctl graceful-kill &>/dev/null
@@ -390,17 +392,17 @@ function configure_leader(){
     done
   fi
 
-  e_title "redborder install run (2/4) $(date)" #>>/root/.install-chef-client.log
-  chef-client #&>/root/.install-chef-client.log
+  e_title "redborder install run (2/4) $(date)" | tee -a /root/.install-chef-client.log
+  chef-client | tee -a /root/.install-chef-client.log
   
-  e_title "redborder install run (3/4) $(date)" #>>/root/.install-chef-client.log
-  chef-client #&>/root/.install-chef-client.log
+  e_title "redborder install run (3/4) $(date)" | tee -a /root/.install-chef-client.log
+  chef-client | tee -a /root/.install-chef-client.log
 
   e_title "Creating database structure $(date)"
   chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
   
-  e_title "redborder install run (4/4) $(date)" #>>/root/.install-chef-client.log
-  chef-client #&>/root/.install-chef-client.log
+  e_title "redborder install run (4/4) $(date)" | tee -a /root/.install-chef-client.log
+  chef-client | tee -a /root/.install-chef-client.log
 }
 
 function set_external_service_names {
@@ -473,7 +475,7 @@ ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabb
 
 # Chef server initial configuration
 e_title "Configuring Chef-Server"
-/usr/bin/chef-server-ctl reconfigure #&>> /root/.install-chef-server.log
+/usr/bin/chef-server-ctl reconfigure | tee -a /root/.install-chef-server.log
 
 # Chef user creation
 # $ chef-server-ctl user-create USER_NAME FIRST_NAME LAST_NAME EMAIL 'PASSWORD' --filename FILE_NAME
