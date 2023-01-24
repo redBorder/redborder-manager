@@ -51,10 +51,10 @@ if [ "x$USER" == "xdruid" -o "x$USER" == "xredborder" -o "x$USER" == "xopscode_c
     [ "x$PGHOSTNAME" == "x" ] && PGHOSTNAME="master.postgresql.service.${DOMAIN}"
 
     if [ "x$PGPASSWORD" != "x" ]; then
-        PGPASSWORD="$PGPASSWORD" /bin/psql -U ${USER} -h $PGHOSTNAME -p ${PGPORT}
+        PGPASSWORD="$PGPASSWORD" /bin/psql -U ${USER} -h $PGHOSTNAME -p ${PGPORT} -v ON_ERROR_STOP=on
         RET=$?
     else
-        /bin/psql -U ${USER} -h $PGHOSTNAME -p ${PGPORT}
+        /bin/psql -U ${USER} -h $PGHOSTNAME -p ${PGPORT} -v ON_ERROR_STOP=on
         RET=$?
     fi
 
