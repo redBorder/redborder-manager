@@ -3,14 +3,16 @@
 
 source /etc/profile.d/rvm.sh
 
-[ ! -f /tmp/memcached_pid ] && exit 0;
+DARK_LIST_FILE="/usr/share/darklist.json"
 
-PID=$(/usr/sbin/pidof memcached)
-[ $? -eq 1 ] && exit 0;
-
-OLD_PID=$(</tmp/memcached_pid)
-if [ $PID -ne $OLD_PID ];then
-  echo $PID > /tmp/memcached_pid
-  /usr/lib/redborder/bin/rb_refresh_darklist_memcached_keys &>/dev/null
+if [ ! -f DARK_LIST_FILE ]; then
+  /usr/lib/redborder/bin/rb_update_darklist.sh
 fi
-exit 0;
+
+entries=$(/usr/lib/redborder/scripts/red.rb memcached keys dark | grep -c darklist)
+
+
+
+if [ "$entries" -eq 0 ];then
+  /usr/lib/redborder/scripts/rb_refresh_darklist_memcached_keys.rb > /dev/null
+fi
