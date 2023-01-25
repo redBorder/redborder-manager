@@ -82,6 +82,9 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Wed Jan 25 2023 Luis Blanco <ljblanco@redborder.com> - 
+- Open snmp ports
+
 * Wed May 11 2022 Eduardo Reyes <eareyes@redborder.com> -
 - Add check directory
 
