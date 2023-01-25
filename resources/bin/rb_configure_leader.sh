@@ -528,6 +528,7 @@ rm -f /var/lock/leader-configuring.lock
 # Copy dhclient hook
 cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
+
 e_title "Leader Node configured!"
 
 date > /etc/redborder/cluster-installed.txt
