@@ -82,6 +82,9 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Thu Jan 26 2023 Luis Blanco <lblanco@redborder.com> -
+- Check config.json is a directory when the setup of s3
+
 * Wed May 11 2022 Eduardo Reyes <eareyes@redborder.com> -
 - Add check directory
 
