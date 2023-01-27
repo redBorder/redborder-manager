@@ -82,8 +82,11 @@ firewall-cmd --reload
 %doc
 
 %changelog
-* Thu Jan 26 2023 Luis Blanco <lblanco@redborder.com> -
+* Thu Jan 26 2023 Luis Blanco <lblanco@redborder.com> - 0.8.4
 - Check config.json is a directory when the setup of s3
+
+* Wed Jan 25 2023 Luis Blanco <ljblanco@redborder.com> - 
+- Open snmp ports
 
 * Wed May 11 2022 Eduardo Reyes <eareyes@redborder.com> -
 - Add check directory
