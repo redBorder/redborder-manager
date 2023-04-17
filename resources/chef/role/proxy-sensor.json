@@ -14,6 +14,7 @@
   },
   "chef_type": "role",
   "run_list": [
+    "recipe[ohai]",
     "recipe[rb-proxy]"
   ],
   "env_run_lists": {
