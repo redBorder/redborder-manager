@@ -82,7 +82,10 @@ firewall-cmd --reload
 %doc
 
 %changelog
-* Thu Jan 26 2023 Luis Blanco <lblanco@redborder.com> - 0.8.4
+* Tue Apr 18 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.6
+- Databag monitors
+
+* Thu Jan 26 2023 Luis Blanco <ljblanco@redborder.com> - 0.8.4
 - Check config.json is a directory when the setup of s3
 
 * Wed Jan 25 2023 Luis Blanco <ljblanco@redborder.com> - 
