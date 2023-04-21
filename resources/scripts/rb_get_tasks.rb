@@ -62,7 +62,7 @@ elsif opt["d"]
   other=0
   t = Time.now
   str="_#{t.year}-#{t.month<10?"0":""}#{t.month}-#{t.day<10?"0":""}#{t.day}T#{t.hour<10?"0":""}#{t.hour}:"
-  tasks.each do |t|
+  tasks.each do |t| #TODO: define another name for the variable
     if !t["id"].nil? and t["id"].include?str
       current=current+1
     else
