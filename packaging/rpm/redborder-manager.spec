@@ -82,6 +82,9 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Mon Apr 24 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.7
+- Scripts recovery from old version for monitor sensors
+
 * Tue Apr 18 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.6
 - Databag monitors
 
