@@ -15,6 +15,7 @@
 # along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 #######################################################################
 
-source /etc/profile
+source /etc/profile.d/rvm.sh
 
-/usr/lib/redborder/scripts/rb_get_redfish.rb $*
+/usr/lib/redborder/scripts/rb_get_tiers.rb $*
+
