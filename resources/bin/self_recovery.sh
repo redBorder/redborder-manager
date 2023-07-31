@@ -17,11 +17,4 @@
 
 source /etc/profile.d/rvm.sh
 
-# add path in rc.local
-echo "/usr/lib/redborder/scripts/self_recovery.rb" >> /etc/rc.d/rc.local
-
-# modify permissions to rc.local
-chmod a+x /etc/rc.d/rc.local
-
-
 /usr/lib/redborder/scripts/self_recovery.rb $*
