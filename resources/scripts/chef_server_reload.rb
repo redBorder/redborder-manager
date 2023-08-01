@@ -14,6 +14,10 @@
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
 
+puts "CHEF SERVER RELOAD"
+puts "Killing and Stopping chef-server...."
+
+
 # stop chef-server services
 `chef-server-ctl graceful-kill`
 
