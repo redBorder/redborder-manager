@@ -259,7 +259,7 @@ end
 
 # Node reboot
 # add path in rc.local
-system (echo "/usr/lib/redborder/scripts/chef_server_reload.sh >> /etc/rc.d/rc.local")
+system (echo "/usr/lib/redborder/scripts/rb_chef_server_reload.sh >> /etc/rc.d/rc.local")
 # modify permissions to rc.local
 system("chmod a+x /etc/rc.d/rc.local")
 
