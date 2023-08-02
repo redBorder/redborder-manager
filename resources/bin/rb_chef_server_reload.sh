@@ -17,4 +17,4 @@
 
 source /etc/profile.d/rvm.sh
 
-/usr/lib/redborder/scripts/chef_server_reload.rb $*
+/usr/lib/redborder/scripts/rb_chef_server_reload.rb $*
