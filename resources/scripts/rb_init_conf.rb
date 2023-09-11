@@ -257,7 +257,7 @@ if !network.nil? #Firewall rules are not needed in cloud environments
 
 end
 
-
+# TODO: maybe we should stop using rc.local and start using systemd for this
 # Configure rc.local scripts
 system("chmod a+x /etc/rc.d/rc.local")
 # Stop chef-server-ctl when system boots
