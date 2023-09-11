@@ -15,6 +15,12 @@
 # along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 #######################################################################
 
-source /etc/profile.d/rvm.sh
+if [ -f /opt/opscode/bin/chef-server-ctl ]; then
+  source /etc/profile.d/rvm.sh
 
-/usr/lib/redborder/scripts/rb_chef_server_reload.rb $*
+  echo "Calling chef-server-ctl graceful-kill.."
+  /opt/opscode/bin/chef-server-ctl graceful-kill
+  
+  echo "Calling chef-server-ctl stop.."
+  /opt/opscode/bin/chef-server-ctl stop
+fi

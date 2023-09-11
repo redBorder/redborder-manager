@@ -257,12 +257,11 @@ if !network.nil? #Firewall rules are not needed in cloud environments
 
 end
 
-# Node reboot
-# add path in rc.local
-system ("echo /usr/lib/redborder/scripts/rb_chef_server_reload.sh >> /etc/rc.d/rc.local")
-# modify permissions to rc.local
-system("chmod a+x /etc/rc.d/rc.local")
 
+# Configure rc.local scripts
+system("chmod a+x /etc/rc.d/rc.local")
+# Stop chef-server-ctl when system boots
+system ("echo /usr/lib/redborder/bin/rb_chef_server_ctl_stop.sh >> /etc/rc.d/rc.local")
 
 # Upgrade system
 system('yum install systemd -y')
