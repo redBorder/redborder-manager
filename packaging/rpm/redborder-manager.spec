@@ -82,6 +82,12 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Thu May 04 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.8
+- Add ohai recipe to the list 
+
+* Mon Apr 24 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.7
+- Scripts recovery from old version for monitor sensors
+
 * Tue Apr 18 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.6
 - Databag monitors
 
