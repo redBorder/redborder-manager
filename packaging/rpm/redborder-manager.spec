@@ -82,6 +82,9 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Thu Sep 13 2023 Julio Peralta <jperalta@redborder.com> - 0.8.9
+- Fix chef running duplicate on boot
+
 * Thu May 04 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.8
 - Add ohai recipe to the list 
 
