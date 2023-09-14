@@ -82,7 +82,10 @@ firewall-cmd --reload
 %doc
 
 %changelog
-* Thu Sep 13 2023 Julio Peralta <jperalta@redborder.com> - 0.8.9
+* Thu Sep 14 2023 Julio Peralta <jperalta@redborder.com> - 0.9.0
+- Removed IF="," when accesing zookeeper in rb_get_zkinfo.sh
+
+* Wed Sep 13 2023 Julio Peralta <jperalta@redborder.com> - 0.8.9
 - Fix chef running duplicate on boot
 
 * Thu May 04 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.8
