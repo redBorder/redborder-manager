@@ -10,7 +10,6 @@
   "run_list": [
     "recipe[ohai]",
     "recipe[snmp]",
-    "recipe[ntp]",
     "recipe[rsyslog]",
     "recipe[redborder-IPSv2-sensor::common_v2]",
     "recipe[geodb]",

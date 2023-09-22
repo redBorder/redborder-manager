@@ -10,7 +10,6 @@
   "run_list": [
     "recipe[ohai]",
     "recipe[snmp]",
-    "recipe[ntp]",
     "recipe[rsyslog]",
     "recipe[redborder-common]",
     "recipe[redborder-mail-sensor]"

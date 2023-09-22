@@ -21,7 +21,7 @@ require 'net/http'
 
 opt = Getopt::Std.getopts("hcelmnupvwz")
 
-pipelines=["rbwindow-pipeline", "apstate-pipeline", "intrusion-pipeline", "bi-pipeline", "scanner-pipeline", "nmsp-pipeline", "radius-pipeline", "vault-pipeline", "netflow-pipeline", "sflow-pipeline", "meraki-pipeline", "monitor-pipeline", "social-pipeline", "location-pipeline", "mobility-pipeline", "redfish-pipeline", "bulkstats-pipeline", "ips-pipeline", "mailgw-pipeline", "scores-pipeline", "malware-pipeline"]
+pipelines=["rbwindow-pipeline", "apstate-pipeline", "intrusion-pipeline", "bi-pipeline", "scanner-pipeline", "nmsp-pipeline", "radius-pipeline", "vault-pipeline", "netflow-pipeline", "sflow-pipeline", "meraki-pipeline", "monitor-pipeline", "location-pipeline", "mobility-pipeline", "redfish-pipeline", "bulkstats-pipeline", "ips-pipeline", "mailgw-pipeline", "scores-pipeline", "malware-pipeline"]
 
 logstash="localhost:9600"
 
@@ -37,7 +37,7 @@ def usage
   printf("  * -e [<pipeline>] -> get logstash in events\n")
   printf("  * -w <pipeline> -> get the number of events in queue\n")
   printf("  * -z <pipeline> -> get the number of events in queue in bytes\n")
-  printf("  * pipelines: rbwindow-pipeline apstate-pipeline intrusion-pipeline bi-pipeline scanner-pipeline nmsp-pipeline radius-pipeline vault-pipeline netflow-pipeline sflow-pipeline meraki-pipeline monitor-pipeline social-pipeline location-pipeline mobility-pipeline redfish-pipeline bulkstats-pipeline ips-pipeline mailgw-pipeline scores-pipeline malware-pipeline \n")
+  printf("  * pipelines: rbwindow-pipeline apstate-pipeline intrusion-pipeline bi-pipeline scanner-pipeline nmsp-pipeline radius-pipeline vault-pipeline netflow-pipeline sflow-pipeline meraki-pipeline monitor-pipeline location-pipeline mobility-pipeline redfish-pipeline bulkstats-pipeline ips-pipeline mailgw-pipeline scores-pipeline malware-pipeline \n")
 end
 
 

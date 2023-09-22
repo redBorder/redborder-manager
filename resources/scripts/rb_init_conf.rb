@@ -108,7 +108,7 @@ end
 ####################
 
 system("timedatectl set-timezone UTC")
-system("ntpdate pool.ntp.org")
+#system("ntpdate pool.ntp.org")
 
 ######################
 # Serf configuration #
