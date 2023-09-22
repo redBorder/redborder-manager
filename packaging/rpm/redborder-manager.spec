@@ -8,7 +8,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash ntp dialog postgresql s3cmd dmidecode rsync nc
+Requires: bash chrony dialog postgresql s3cmd dmidecode rsync nc
 Requires: telnet redborder-serf redborder-common redborder-chef-client
 Requires: redborder-cookbooks redborder-rubyrvm redborder-cli
 Requires: synthetic-producer darklist-updated tcpdump
@@ -82,6 +82,9 @@ firewall-cmd --reload
 %doc
 
 %changelog
+* Fri Sep 22 2023 Miguel Negrón <manegron@redborder.com> - 0.9.1
+- Change ntp by chrony
+
 * Thu Sep 14 2023 Julio Peralta <jperalta@redborder.com> - 0.9.0
 - Removed IF="," when accesing zookeeper in rb_get_zkinfo.sh
 
