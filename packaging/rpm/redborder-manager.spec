@@ -82,7 +82,7 @@ firewall-cmd --reload
 %doc
 
 %changelog
-* Thu Sep 26 2023 Miguel Álvarez <malvarez@redborder.com> - 0.9.1-1
+* Tue Sep 26 2023 Miguel Álvarez <malvarez@redborder.com> - 0.9.1-1
 - Added rbaioutliers in cookbook list for upload in rb_configure_leader.sh
 - Updated manager.json chef role for outliers adaption
 
