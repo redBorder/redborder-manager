@@ -1,3 +1,5 @@
+%undefine __brp_mangle_shebangs
+
 Name: redborder-manager
 Version: %{__version}
 Release: %{__release}%{?dist}
