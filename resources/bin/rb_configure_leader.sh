@@ -414,7 +414,7 @@ function configure_leader(){
   chef-client | tee -a /root/.install-chef-client.log
 
   e_title "Creating database structure $(date)"
-  chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
+  /opt/chef/embedded/bin/chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
   
   e_title "redborder install run (4/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log

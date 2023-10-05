@@ -32,7 +32,7 @@ _RBEOF_
 
 #Configure s3 service using chef-solo
 echo "INFO: Configure Minio service using chef-solo"
-chef-solo -c /var/chef/solo/s3-solo.rb -j /var/chef/solo/s3-attributes.json
+/opt/chef/embedded/bin/chef-solo -c /var/chef/solo/s3-solo.rb -j /var/chef/solo/s3-attributes.json
 if [ $? -ne 0 ] ; then
   echo "ERROR: chef-solo exited with code $?"
   exit 1
