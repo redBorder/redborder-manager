@@ -482,6 +482,10 @@ echo "nginx['non_ssl_port'] = 4480" >> /etc/opscode/chef-server.rb
 e_title "Configuring Chef-Server"
 /usr/bin/chef-server-ctl reconfigure --chef-license=accept | tee -a /root/.install-chef-server.log
 
+# TODO: Check why we need to sleep here
+puts "Sleeping for 30 seconds"
+sleep 30
+
 # Chef user creation
 # $ chef-server-ctl user-create USER_NAME FIRST_NAME LAST_NAME EMAIL 'PASSWORD' --filename FILE_NAME
 /usr/bin/chef-server-ctl user-create $CHEFUSER $CHEFUSER $CHEFUSER $CHEFUSER@$cdomain \'$CHEFPASS\' --filename /etc/opscode/$CHEFUSER.pem
