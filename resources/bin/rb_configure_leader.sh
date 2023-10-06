@@ -480,7 +480,7 @@ echo "nginx['non_ssl_port'] = 4480" >> /etc/opscode/chef-server.rb
 
 # Chef server initial configuration
 e_title "Configuring Chef-Server"
-/usr/bin/chef-server-ctl reconfigure | tee -a /root/.install-chef-server.log
+/usr/bin/chef-server-ctl reconfigure --accept-license | tee -a /root/.install-chef-server.log
 
 # Chef user creation
 # $ chef-server-ctl user-create USER_NAME FIRST_NAME LAST_NAME EMAIL 'PASSWORD' --filename FILE_NAME
