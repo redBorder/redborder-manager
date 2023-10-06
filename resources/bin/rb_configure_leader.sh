@@ -70,16 +70,15 @@ _RBEOF2_
 function configure_dataBags(){
 
   # Chef server configuration file
-  ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config"
+  ERCHEFCFG="/opt/opscode/embedded/service/opscode-erchef/sys.config"
 
   # Data bag encrypted key
   [ "x$DATABAGKEY" == "x" ] && DATABAGKEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   echo $DATABAGKEY > /etc/chef/encrypted_data_bag_secret
 
   # Chef middleware configurations
-  OCID_DBCFG="/var/opt/opscode/oc_id/config/database.yml"
-  OCBIFROST_DBCFG="/var/opt/opscode/oc_bifrost/sys.config"
-  CHEFMOVER_DBCFG="/var/opt/opscode/opscode-chef-mover/sys.config"
+  OCID_DBCFG="/opt/opscode/embedded/service/oc_id/config/database.yml"
+  OCBIFROST_DBCFG="/opt/opscode/embedded/service/oc_bifrost/sys.config"
 
   # Obtaining chef database current configuration
   OPSCODE_DBHOST="`grep {db_host $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
@@ -88,7 +87,6 @@ function configure_dataBags(){
   OPSCODE_DBPASS="`grep {db_pass $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   OPSCODE_OCID_PASS="`grep password $OCID_DBCFG | sed 's/ password: //' | tr -d ' '`"
   OPSCODE_OCBIFROST_PASS="`grep db_pass $OCBIFROST_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
-  OPSCODE_CHEFMOVER_PASS="`grep db_pass $CHEFMOVER_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
 
   # Obtaining chef cookbook storage current configuration
   S3KEY="`grep s3_access_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
@@ -121,8 +119,7 @@ function configure_dataBags(){
   "port": "$OPSCODE_DBPORT",
   "pass": "$OPSCODE_DBPASS",
   "ocid_pass": "$OPSCODE_OCID_PASS",
-  "ocbifrost_pass": "$OPSCODE_OCBIFROST_PASS",
-  "chefmover_pass": "$OPSCODE_CHEFMOVER_PASS"
+  "ocbifrost_pass": "$OPSCODE_OCBIFROST_PASS"
 }
 _RBEOF_
   # monitors rBglobal
@@ -377,9 +374,9 @@ function configure_leader(){
 
   # Copy web certificates (use only chef-server certificate) #CHECK #??#
   mkdir -p /root/.chef/trusted_certs/
-  rsync /var/opt/opscode/nginx/ca/*.crt /root/.chef/trusted_certs/
+  rsync /opt/opscode/embedded/nginx/ca/*.crt /root/.chef/trusted_certs/
   mkdir -p /home/redborder/.chef/trusted_certs/
-  rsync /var/opt/opscode/nginx/ca/*.crt /home/redborder/.chef/trusted_certs/
+  rsync /opt/opscode/embedded/nginx/ca/*.crt /home/redborder/.chef/trusted_certs/
   chown -R redborder:redborder /home/redborder/.chef
 
   # Clean yum data (to install packages from chef)
@@ -480,13 +477,6 @@ fi
 # Set chef-server internal nginx port to 4443
 echo "nginx['ssl_port'] = 4443" >> /etc/opscode/chef-server.rb
 echo "nginx['non_ssl_port'] = 4480" >> /etc/opscode/chef-server.rb
-
-# Modifying some default chef parameters (rabbitmq, postgresql) ## Check
-# Rabbitmq # CHECK CHECK CHECK
-sed -i "s/rabbit@localhost/rabbit@$CLIENTNAME/" /opt/opscode/embedded/cookbooks/private-chef/attributes/default.rb
-mkdir -p /var/opt/opscode/rabbitmq/db
-rm -f /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
-ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
 
 # Chef server initial configuration
 e_title "Configuring Chef-Server"

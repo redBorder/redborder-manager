@@ -35,10 +35,10 @@ if [ "x$USER" == "xdruid" -o "x$USER" == "xredborder" -o "x$USER" == "xopscode_c
         PGPASSWORD=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "password: " | head -n 1 | awk '{print $2}')
         PGHOSTNAME=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "host: " | head -n 1 | awk '{print $2}')
         PGPORT=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "port: " | head -n 1 | awk '{print $2}')
-    elif [ "x$USER" == "xopscode_chef" -a -f /var/opt/opscode/opscode-erchef/sys.config ]; then
-        PGPASSWORD=$(grep '{db_pass' /var/opt/opscode/opscode-erchef/sys.config |awk '{print $2}' | sed 's/^"//'|sed 's/"},$//')
-        PGHOSTNAME=$(grep '{db_host' /var/opt/opscode/opscode-erchef/sys.config |awk '{print $2}' | sed 's/^"//'|sed 's/"},$//')
-        PGPORT=$(grep '{db_port' /var/opt/opscode/opscode-erchef/sys.config |awk '{print $2}' | sed 's/^"//'|sed 's/"},$//' |sed 's/}.*//')
+    elif [ "x$USER" == "xopscode_chef" -a -f /opt/opscode/embedded/service/opscode-erchef/sys.config ]; then
+        PGPASSWORD=$(grep '{db_pass' /opt/opscode/embedded/service/opscode-erchef/sys.config |awk '{print $2}' | sed 's/^"//'|sed 's/"},$//')
+        PGHOSTNAME=$(grep '{db_host' /opt/opscode/embedded/service/opscode-erchef/sys.config |awk '{print $2}' | sed 's/^"//'|sed 's/"},$//')
+        PGPORT=$(grep '{db_port' /opt/opscode/embedded/service/opscode-erchef/sys.config |awk '{print $2}' | sed 's/^"//'|sed 's/"},$//' |sed 's/}.*//')
     elif [ "x$USER" == "xradius" -a -f /var/www/rb-rails/config/database.yml ]; then
         line=$(awk '/radius/{ print NR; exit }' /var/www/rb-rails/config/database.yml)
         PGPASSWORD=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "password: " | head -n 1 | awk '{print $2}')

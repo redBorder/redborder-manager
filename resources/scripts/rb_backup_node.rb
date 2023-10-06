@@ -192,9 +192,9 @@ if opt['b']
     # Make database backup
     check_oper("nice -n 19 ionice -c2 -n7 su - opscode-pgsql -m -s /bin/bash -c \"/opt/opscode/embedded/bin/pg_dumpall -c | gzip --fast > /tmp/#{hostname}-postgresql-dump-#{date}.gz\"; sync", verbose, type, "Database backup in progress ... ")      # Make important data backup
     if opt['m']
-      tarcmd = "nice -n 19 ionice -c2 -n7 #{tar} #{file_path} --exclude=/var/opt/chef-server/nginx/html --exclude=/opt/rb/root/.chef/syntax_check_cache --exclude=/opt/rb/var/chef/cookbooks --exclude=/opt/rb/var/chef/backup --exclude=/opt/rb/var/chef/data --exclude=/opt/rb/var/chef/backups --exclude=/var/opt/chef-server/rabbitmq/db --exclude=/var/opt/chef-server/bookshelf/data /opt/rb/root/.chef /etc/chef-server /opt/rb/etc/chef /opt/rb/var/chef /opt/rb/var/www/rb-rails/config /opt/rb/etc/mode /etc/hosts /opt/rb/etc/keepalived/keepalived.conf /opt/rb/var/pgdata/pg_hba.conf /var/opt/chef-server/nginx/ca /var/opt/chef-server/erchef/etc /var/opt/chef-server/chef-solr/etc /var/opt/chef-server/chef-expander/etc /var/opt/chef-server/rabbitmq/etc /opt/rb/etc/manager_index /tmp/#{hostname}-postgresql-dump-#{date}.gz /tmp/#{hostname}-backup-#{date}.txt"
+      tarcmd = "nice -n 19 ionice -c2 -n7 #{tar} #{file_path} --exclude=/var/opt/chef-server/nginx/html --exclude=/opt/rb/root/.chef/syntax_check_cache --exclude=/opt/rb/var/chef/cookbooks --exclude=/opt/rb/var/chef/backup --exclude=/opt/rb/var/chef/data --exclude=/opt/rb/var/chef/backups --exclude=/var/opt/chef-server/bookshelf/data /opt/rb/root/.chef /etc/chef-server /opt/rb/etc/chef /opt/rb/var/chef /opt/rb/var/www/rb-rails/config /opt/rb/etc/mode /etc/hosts /opt/rb/etc/keepalived/keepalived.conf /opt/rb/var/pgdata/pg_hba.conf /var/opt/chef-server/nginx/ca /var/opt/chef-server/erchef/etc /opt/rb/etc/manager_index /tmp/#{hostname}-postgresql-dump-#{date}.gz /tmp/#{hostname}-backup-#{date}.txt"
     else
-      tarcmd = "nice -n 19 ionice -c2 -n7 #{tar} #{file_path} --exclude=/var/opt/chef-server/nginx/html --exclude=/opt/rb/root/.chef/syntax_check_cache --exclude=/opt/rb/var/chef/cookbooks --exclude=/opt/rb/var/chef/backup --exclude=/opt/rb/var/chef/data --exclude=/opt/rb/var/chef/cache --exclude=/opt/rb/var/chef/backups --exclude=/var/opt/chef-server/rabbitmq/db --exclude=/var/opt/chef-server/bookshelf/data /opt/rb/root/.chef /etc/chef-server /opt/rb/etc/chef /opt/rb/var/chef /opt/rb/var/www/rb-rails/config /opt/rb/etc/mode /etc/hosts /opt/rb/etc/keepalived/keepalived.conf /opt/rb/var/pgdata/pg_hba.conf /var/opt/chef-server/nginx/ca /var/opt/chef-server/erchef/etc /var/opt/chef-server/chef-solr/etc /var/opt/chef-server/chef-expander/etc /var/opt/chef-server/rabbitmq/etc /opt/rb/etc/manager_index /tmp/#{hostname}-postgresql-dump-#{date}.gz /tmp/#{hostname}-backup-#{date}.txt"
+      tarcmd = "nice -n 19 ionice -c2 -n7 #{tar} #{file_path} --exclude=/var/opt/chef-server/nginx/html --exclude=/opt/rb/root/.chef/syntax_check_cache --exclude=/opt/rb/var/chef/cookbooks --exclude=/opt/rb/var/chef/backup --exclude=/opt/rb/var/chef/data --exclude=/opt/rb/var/chef/cache --exclude=/opt/rb/var/chef/backups --exclude=/var/opt/chef-server/bookshelf/data /opt/rb/root/.chef /etc/chef-server /opt/rb/etc/chef /opt/rb/var/chef /opt/rb/var/www/rb-rails/config /opt/rb/etc/mode /etc/hosts /opt/rb/etc/keepalived/keepalived.conf /opt/rb/var/pgdata/pg_hba.conf /var/opt/chef-server/nginx/ca /var/opt/chef-server/erchef/etc /opt/rb/etc/manager_index /tmp/#{hostname}-postgresql-dump-#{date}.gz /tmp/#{hostname}-backup-#{date}.txt"
     end
 
     if opt['f'] # To path
@@ -330,7 +330,7 @@ elsif opt['r']
     # Stop chef-client
     check_oper("rb_service stop chef druid awslogs rb-cloudwatch rb-monitor rb-workers rb-webui nprobe n2klocd memcached kafka hadoop_ stanchion riak zookeeper pgpool nginx freeradius postgresql keepalived", verbose, type, "Stoping all services ... ")
     # Restore the node
-    check_oper("rm -f /var/opt/chef-server/rabbitmq/db/*; #{tar} #{path} -C /", verbose, type, "Restoring files ... ")
+    check_oper("#{tar} #{path} -C /", verbose, type, "Restoring files ... ")
     `sed -i '/rb_aws_secondary_ip.sh/d' /etc/keepalived/keepalived.conf`
     # we need to change remote ips for current ips on /etc/hosts
     check_oper("sed -i 's/^#{ipmagntorestore} /127.0.0.1 /g' /etc/hosts; sed -i 's/^#{ipsynctorestore} /127.0.0.1 /g' /etc/hosts;", verbose, type, "Replacing ips on /etc/hosts ... ")
@@ -444,8 +444,6 @@ elsif opt['r']
       printf "CMD: #{opt['c']}\n"
       system(opt['c'])
     end
-
-    check_oper("rb_service stop rabbitmq; rm -rf /var/opt/chef-server/rabbitmq/db/*; rb_service start rabbitmq; sleep 5; /opt/rb/bin/rb_create_rabbitusers.sh; rm -f /opt/rb/etc/rabbitmq/users_created", verbose, type, "Removing rabbitmq data ... ")
 
     if hostname != noderestore and !opt['p']
       # Change node to original
