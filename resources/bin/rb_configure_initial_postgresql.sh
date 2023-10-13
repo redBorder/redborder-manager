@@ -15,7 +15,7 @@ systemctl restart serf
 
 #Configure postgresql service using chef-solo
 echo "INFO: Configure PostgreSQL service using chef-solo"
-/opt/chef/embedded/bin/chef-solo -c /var/chef/solo/postgresql-solo.rb -j /var/chef/solo/postgresql-attributes.json
+chef-solo -c /var/chef/solo/postgresql-solo.rb -j /var/chef/solo/postgresql-attributes.json
 if [ $? -ne 0 ] ; then
   echo "ERROR: chef-solo exited with code $?"
   exit 1

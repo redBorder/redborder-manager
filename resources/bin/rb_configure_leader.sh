@@ -356,7 +356,7 @@ function configure_leader(){
   done
 
   e_title "Registering chef-client ..."
-  /opt/opscode/bin/chef-client
+  chef-client
   # Adding chef role to node
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[$CLIENTNAME]"
@@ -374,9 +374,9 @@ function configure_leader(){
 
   # Copy web certificates (use only chef-server certificate) #CHECK #??#
   mkdir -p /root/.chef/trusted_certs/
-  rsync /opt/opscode/embedded/nginx/ca/*.crt /root/.chef/trusted_certs/
+  rsync /var/opt/opscode/nginx/ca/*.crt /root/.chef/trusted_certs/
   mkdir -p /home/redborder/.chef/trusted_certs/
-  rsync /opt/opscode/embedded/nginx/ca/*.crt /home/redborder/.chef/trusted_certs/
+  rsync /var/opt/opscode/nginx/ca/*.crt /home/redborder/.chef/trusted_certs/
   chown -R redborder:redborder /home/redborder/.chef
 
   # Clean yum data (to install packages from chef)
@@ -411,7 +411,7 @@ function configure_leader(){
   chef-client | tee -a /root/.install-chef-client.log
 
   e_title "Creating database structure $(date)"
-  /opt/chef/embedded/bin/chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
+  chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
   
   e_title "redborder install run (4/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
@@ -459,7 +459,7 @@ yum install -y redborder-chef-server
 rb_init_chef
 
 # Set chef-server.rb configuration file (S3)
-[ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb #&& rm -f /etc/redborder/chef-server-s3.rb
+#[ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb #&& rm -f /etc/redborder/chef-server-s3.rb
 
 # Set chef-server.rb configuration file (postgresql) and obtain database credentials
 if [ -f /etc/redborder/chef-server-postgresql.rb ]; then
@@ -477,6 +477,7 @@ fi
 # Set chef-server internal nginx port to 4443
 echo "nginx['ssl_port'] = 4443" >> /etc/opscode/chef-server.rb
 echo "nginx['non_ssl_port'] = 4480" >> /etc/opscode/chef-server.rb
+echo "bookshelf['vip_port'] = 4443"
 
 # Chef server initial configuration
 e_title "Configuring Chef-Server"
