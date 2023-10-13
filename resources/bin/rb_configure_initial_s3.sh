@@ -30,6 +30,9 @@ MINIO_ROOT_USER=$MINIO_ACCESS_KEY
 MINIO_ROOT_PASSWORD=$MINIO_SECRET_KEY
 _RBEOF_
 
+#Accept chef-client license
+chef-client --chef-license accept &>/dev/null
+
 #Configure s3 service using chef-solo
 echo "INFO: Configure Minio service using chef-solo"
 chef-solo -c /var/chef/solo/s3-solo.rb -j /var/chef/solo/s3-attributes.json
