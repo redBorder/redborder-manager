@@ -14,6 +14,8 @@ Requires: bash chrony dialog postgresql s3cmd dmidecode rsync nc
 Requires: telnet redborder-serf redborder-common redborder-chef-client
 Requires: redborder-cookbooks redborder-rubyrvm redborder-cli
 Requires: synthetic-producer darklist-updated tcpdump
+Requires: chef-workstation
+
 %description
 %{summary}
 
