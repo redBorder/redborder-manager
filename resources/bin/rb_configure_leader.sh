@@ -344,7 +344,7 @@ function configure_leader(){
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
 
-  listCookbooks="cron ohai zookeeper kafka druid http2k memcached chef-server consul
+  listCookbooks="cron zookeeper kafka druid http2k memcached chef-server consul
                 hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner
                 f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
                 rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rb-proxy

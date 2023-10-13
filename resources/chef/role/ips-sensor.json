@@ -8,7 +8,6 @@
   },
   "chef_type": "role",
   "run_list": [
-    "recipe[ohai]",
     "recipe[snmp]",
     "recipe[rsyslog]",
     "recipe[redborder-common]",
