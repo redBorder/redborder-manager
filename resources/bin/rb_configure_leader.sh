@@ -459,7 +459,7 @@ yum install -y redborder-chef-server
 rb_init_chef
 
 # Set chef-server.rb configuration file (S3)
-#[ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb #&& rm -f /etc/redborder/chef-server-s3.rb
+[ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb #&& rm -f /etc/redborder/chef-server-s3.rb
 
 # Set chef-server.rb configuration file (postgresql) and obtain database credentials
 if [ -f /etc/redborder/chef-server-postgresql.rb ]; then
