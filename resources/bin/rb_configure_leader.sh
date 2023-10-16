@@ -478,10 +478,14 @@ fi
 echo "nginx['ssl_port'] = 4443" >> /etc/opscode/chef-server.rb
 echo "nginx['non_ssl_port'] = 4480" >> /etc/opscode/chef-server.rb
 echo "bookshelf['vip_port'] = 4443" >> /etc/opscode/chef-server.rb
+echo "opscode_erchef['s3_url_type'] = 'path'" >> /etc/opscode/chef-server.rb
 
 # Chef server initial configuration
 e_title "Configuring Chef-Server"
 /usr/bin/chef-server-ctl reconfigure --chef-license=accept | tee -a /root/.install-chef-server.log
+
+# TODO: check if this is the way or file acls
+[-f /etc/opscode/private-chef-secrets.json ] && chown opscode. /etc/opscode/private-chef-secrets.json
 
 # TODO: Check why we need to sleep here
 echo "Sleeping for 30 seconds"
