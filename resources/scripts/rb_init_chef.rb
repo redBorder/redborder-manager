@@ -49,6 +49,7 @@ unless s3_conf.nil?
     f.puts "bookshelf['access_key_id'] = \"#{s3_access}\""
     f.puts "bookshelf['secret_access_key'] = \"#{s3_secret}\""
     f.puts "opscode_erchef['s3_bucket'] = \"#{s3_bucket}\""
+    f.puts "opscode_erchef['s3_url_type'] = \"path\""
   }
 end
 
