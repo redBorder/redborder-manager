@@ -71,6 +71,7 @@ function configure_dataBags(){
 
   # Chef server configuration file
   ERCHEFCFG="/opt/opscode/embedded/service/opscode-erchef/sys.config"
+  S3INITCONF="${RBETC}/s3_init_conf.yml"
 
   # Data bag encrypted key
   [ "x$DATABAGKEY" == "x" ] && DATABAGKEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
@@ -89,8 +90,8 @@ function configure_dataBags(){
   OPSCODE_OCBIFROST_PASS="`grep db_pass $OCBIFROST_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
 
   # Obtaining chef cookbook storage current configuration
-  S3KEY="`grep s3_access_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
-  S3SECRET="`grep s3_secret_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+  S3KEY="`grep access_key ${S3INITCONF} | awk '{print $2}'`"
+  S3SECRET="`grep secret_key ${S3INITCONF} | awk '{print $2}'`"
   S3HOST="`cat /etc/redborder/rb_init_conf.yml | grep endpoint | awk {'print $2'}`" #CHECK If bookshelf enabled, this value will be empty
   S3URL="`grep s3_url, $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`" #CHECK when {s3_external_url, host_header},
