@@ -62,7 +62,7 @@ if !opt["s"].nil? or !opt["l"].nil?
 elsif !opt["n"].nil?
   nodes = []
   service = opt["n"]
-  consul_response = JSON.parse(`curl http://localhost:8500/v1/catalog/service/#{service} 2>/dev/null`)
+  consul_response = JSON.parse(`curl -X PUT http://localhost:8500/v1/catalog/service/#{service} 2>/dev/null`)
   consul_response.each_with_index do |n,i|
     nodes[i] = n["Node"]
   end
