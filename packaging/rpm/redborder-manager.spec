@@ -15,6 +15,7 @@ Requires: telnet redborder-serf redborder-common redborder-chef-client
 Requires: redborder-cookbooks redborder-rubyrvm redborder-cli
 Requires: synthetic-producer darklist-updated tcpdump
 Requires: chef-workstation
+Requires: alternatives java-1.8.0-openjdk java-1.8.0-openjdk-devel
 
 %description
 %{summary}
@@ -63,6 +64,9 @@ firewall-cmd --zone=public --add-port=7946/tcp --permanent
 #firewall-cmd --zone=public --add-port=7373/tcp --permanent
 #firewall-cmd --zone=public --add-port=5353/tcp --permanent
 firewall-cmd --reload
+
+%posttrans
+update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "java"|head -n 1)
 
 %files
 %defattr(0755,root,root)
