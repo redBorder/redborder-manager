@@ -237,7 +237,7 @@ EOF
 dialog = MRDialog.new
 dialog.clear = true
 dialog.title = "Confirm configuration"
-yesno = dialog.yesno(text,0,0)
+yesno = dialog.yesno(text,0,0, false)
 
 if yesno # yesno is "yes" -> true
     # configure dns
@@ -260,7 +260,7 @@ EOF
 dialog = MRDialog.new
 dialog.clear = true
 dialog.title = "Confirm configuration"
-yesno = dialog.yesno(text,0,0)
+yesno = dialog.yesno(text,0,0, false)
 
 if yesno # yesno is "yes" -> true
     # configure dns
