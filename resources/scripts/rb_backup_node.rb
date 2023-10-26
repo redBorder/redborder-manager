@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 #######################################################################
 ## Copyright (c) 2016 ENEO Tecnología S.L.
 ## This file is part of redBorder.
