@@ -90,25 +90,27 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
-* Fri Sep 22 2023 Miguel Negrón <manegron@redborder.com> - 0.9.1
+* Fri Sep 22 2023 Miguel Álvarez <malvarez@redborder.com> - 0.9.1-1
 - Change ntp by chrony
+- Added rbaioutliers in cookbook list for upload in rb_configure_leader.sh
+- Updated manager.json chef role for outliers adaption
 
 * Thu Sep 14 2023 Julio Peralta <jperalta@redborder.com> - 0.9.0
 - Removed IF="," when accesing zookeeper in rb_get_zkinfo.sh
 
-* Wed Sep 13 2023 Julio Peralta <jperalta@redborder.com> - 0.8.9
+* Wed Sep 13 2023 Julio Peralta <jperalta@redborder.com> - 0.8.9-1
 - Fix chef running duplicate on boot
 
-* Thu May 04 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.8
+* Thu May 04 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.8-1
 - Add ohai recipe to the list 
 
-* Mon Apr 24 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.7
+* Mon Apr 24 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.7-1
 - Scripts recovery from old version for monitor sensors
 
-* Tue Apr 18 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.6
+* Tue Apr 18 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.6-1
 - Databag monitors
 
-* Thu Jan 26 2023 Luis Blanco <ljblanco@redborder.com> - 0.8.4
+* Thu Jan 26 2023 Luis Blanco <ljblanco@redborder.com> - 0.8.4-1
 - Check config.json is a directory when the setup of s3
 
 * Wed Jan 25 2023 Luis Blanco <ljblanco@redborder.com> - 

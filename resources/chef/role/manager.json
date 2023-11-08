@@ -32,6 +32,11 @@
       },
       "smtp": {
         "relayhost": ""
+      },
+      "outliers": {
+        "WINDOW_SIZE": "0.1",
+        "AUTO_SENSITIVITY_ANOMALY_PCNT": "0.01",
+        "AUTO_SENSITIVITY_SD": "3"
       }
     }
   },
