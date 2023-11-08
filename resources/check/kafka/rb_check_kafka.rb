@@ -45,7 +45,7 @@ nodes.each do |node|
 
 
     subtitle("Topics creation", colorless, quiet)
-    %w[rb_monitor rb_flow rb_event rb_loc rb_social].each do | topic |
+    %w[rb_monitor rb_flow rb_event rb_loc].each do | topic |
       execute_command_on_node(node,"timeout 10s /usr/lib/redborder/scripts/rb_get_topics.rb -t #{topic} | grep #{topic}")
       return_value = $?.exitstatus
       if return_value == 0
@@ -58,7 +58,7 @@ nodes.each do |node|
     end
 
     subtitle("Kafka messages", colorless, quiet)
-    %w[rb_monitor rb_flow rb_event rb_loc rb_social].each do | topic |
+    %w[rb_monitor rb_flow rb_event rb_loc].each do | topic |
       output = execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_check_topic.rb -t #{topic}")
       return_value = $?.exitstatus
       output = output.gsub("\n","")

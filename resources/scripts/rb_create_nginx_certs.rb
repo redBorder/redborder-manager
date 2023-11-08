@@ -19,7 +19,7 @@ def create_cert(cn)
 	cert.add_extension extension_factory.create_extension('keyUsage', 'keyEncipherment,dataEncipherment,digitalSignature')
 	cert.add_extension extension_factory.create_extension('subjectKeyIdentifier', 'hash')
 	cert.issuer = name
-	cert.sign key, OpenSSL::Digest::SHA1.new
+	cert.sign key, OpenSSL::Digest::SHA256.new
   	{ :key => key, :crt => cert}
 end
 

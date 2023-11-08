@@ -70,16 +70,16 @@ _RBEOF2_
 function configure_dataBags(){
 
   # Chef server configuration file
-  ERCHEFCFG="/var/opt/opscode/opscode-erchef/sys.config"
+  ERCHEFCFG="/opt/opscode/embedded/service/opscode-erchef/sys.config"
+  S3INITCONF="${RBETC}/s3_init_conf.yml"
 
   # Data bag encrypted key
   [ "x$DATABAGKEY" == "x" ] && DATABAGKEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   echo $DATABAGKEY > /etc/chef/encrypted_data_bag_secret
 
   # Chef middleware configurations
-  OCID_DBCFG="/var/opt/opscode/oc_id/config/database.yml"
-  OCBIFROST_DBCFG="/var/opt/opscode/oc_bifrost/sys.config"
-  CHEFMOVER_DBCFG="/var/opt/opscode/opscode-chef-mover/sys.config"
+  OCID_DBCFG="/opt/opscode/embedded/service/oc_id/config/database.yml"
+  OCBIFROST_DBCFG="/opt/opscode/embedded/service/oc_bifrost/sys.config"
 
   # Obtaining chef database current configuration
   OPSCODE_DBHOST="`grep {db_host $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
@@ -88,11 +88,10 @@ function configure_dataBags(){
   OPSCODE_DBPASS="`grep {db_pass $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   OPSCODE_OCID_PASS="`grep password $OCID_DBCFG | sed 's/ password: //' | tr -d ' '`"
   OPSCODE_OCBIFROST_PASS="`grep db_pass $OCBIFROST_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
-  OPSCODE_CHEFMOVER_PASS="`grep db_pass $CHEFMOVER_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
 
   # Obtaining chef cookbook storage current configuration
-  S3KEY="`grep s3_access_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
-  S3SECRET="`grep s3_secret_key_id $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+  S3KEY="`grep access_key ${S3INITCONF} | awk '{print $2}'`"
+  S3SECRET="`grep secret_key ${S3INITCONF} | awk '{print $2}'`"
   S3HOST="`cat /etc/redborder/rb_init_conf.yml | grep endpoint | awk {'print $2'}`" #CHECK If bookshelf enabled, this value will be empty
   S3URL="`grep s3_url, $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`" #CHECK when {s3_external_url, host_header},
@@ -121,8 +120,7 @@ function configure_dataBags(){
   "port": "$OPSCODE_DBPORT",
   "pass": "$OPSCODE_DBPASS",
   "ocid_pass": "$OPSCODE_OCID_PASS",
-  "ocbifrost_pass": "$OPSCODE_OCBIFROST_PASS",
-  "chefmover_pass": "$OPSCODE_CHEFMOVER_PASS"
+  "ocbifrost_pass": "$OPSCODE_OCBIFROST_PASS"
 }
 _RBEOF_
   # monitors rBglobal
@@ -347,11 +345,12 @@ function configure_leader(){
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
 
-  listCookbooks="cron ohai zookeeper kafka druid http2k memcached chef-server consul
+  listCookbooks="cron zookeeper kafka druid http2k memcached chef-server consul
                 hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner
-                ntp f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
-                rsyslog rbsocial freeradius rbnmsp n2klocd rbale rbcep k2http rb-proxy
+                f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
+                rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rb-proxy
                 snort barnyard2 rb-ips rbaioutliers rb-manager" # The order matters!
+
   for n in $listCookbooks; do # cookbooks
     # rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
     # Uploadind cookbooks
@@ -359,7 +358,7 @@ function configure_leader(){
   done
 
   e_title "Registering chef-client ..."
-  /opt/opscode/bin/chef-client
+  chef-client
   # Adding chef role to node
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
   knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[$CLIENTNAME]"
@@ -481,16 +480,16 @@ fi
 echo "nginx['ssl_port'] = 4443" >> /etc/opscode/chef-server.rb
 echo "nginx['non_ssl_port'] = 4480" >> /etc/opscode/chef-server.rb
 
-# Modifying some default chef parameters (rabbitmq, postgresql) ## Check
-# Rabbitmq # CHECK CHECK CHECK
-sed -i "s/rabbit@localhost/rabbit@$CLIENTNAME/" /opt/opscode/embedded/cookbooks/private-chef/attributes/default.rb
-mkdir -p /var/opt/opscode/rabbitmq/db
-rm -f /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
-ln -s /var/opt/opscode/rabbitmq/db/rabbit\@$CLIENTNAME.pid /var/opt/opscode/rabbitmq/db/rabbit@localhost.pid
-
 # Chef server initial configuration
 e_title "Configuring Chef-Server"
-/usr/bin/chef-server-ctl reconfigure | tee -a /root/.install-chef-server.log
+/usr/bin/chef-server-ctl reconfigure --chef-license=accept | tee -a /root/.install-chef-server.log
+
+# TODO: check if this is the way or file acls
+[ -f /etc/opscode/private-chef-secrets.json ] && chown opscode. /etc/opscode/private-chef-secrets.json
+
+# TODO: Check why we need to sleep here
+echo "Sleeping for 30 seconds"
+sleep 30
 
 # Chef user creation
 # $ chef-server-ctl user-create USER_NAME FIRST_NAME LAST_NAME EMAIL 'PASSWORD' --filename FILE_NAME

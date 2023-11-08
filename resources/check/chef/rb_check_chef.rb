@@ -31,9 +31,9 @@ nodes.each do |node|
   status = 0
   subtitle("Services status", colorless, quiet)
 
-  %w[chef-client opscode-rabbitmq opscode-expander
-     opscode-oc_id opscode-redis_lb opscode-chef-mover opscode-nginx
-     opscode-solr4 opscode-erchef opscode-oc_bifrost].each do | service |
+  %w[chef-client
+     opscode-oc_id opscode-redis_lb opscode-nginx
+     opscode-erchef opscode-oc_bifrost opscode-opensearch].each do | service |
     # opscode-bookshelf  is inactive
     # opscode-postgresql is inactive
 
@@ -65,18 +65,6 @@ nodes.each do |node|
       end
       print_command_output("knife #{command} list", return_value, colorless, quiet)
     end
-
-    subtitle("Rabbitmq commands", colorless, quiet)
-    %w[status list_users].each do |command|
-      if system("rabbitmqctl #{command} &> /dev/null")
-        return_value = 0
-      else
-        return_value = 1
-        has_errors = true
-      end
-      print_command_output("rabbitmqctl #{command}", return_value, colorless, quiet)
-    end
-
 
   else
     has_errors = true

@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 ##
 #########################################################################
 #### Coopyright (c) 2014 ENEO Tecnología S.L.

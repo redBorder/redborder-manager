@@ -1,3 +1,5 @@
+%undefine __brp_mangle_shebangs
+
 Name: redborder-manager
 Version: %{__version}
 Release: %{__release}%{?dist}
@@ -8,10 +10,13 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash ntp dialog postgresql s3cmd dmidecode rsync nc
+Requires: bash chrony dialog postgresql s3cmd dmidecode rsync nc
 Requires: telnet redborder-serf redborder-common redborder-chef-client
 Requires: redborder-cookbooks redborder-rubyrvm redborder-cli
 Requires: synthetic-producer darklist-updated tcpdump
+Requires: chef-workstation
+Requires: alternatives java-1.8.0-openjdk java-1.8.0-openjdk-devel
+
 %description
 %{summary}
 
@@ -60,6 +65,9 @@ firewall-cmd --zone=public --add-port=7946/tcp --permanent
 #firewall-cmd --zone=public --add-port=5353/tcp --permanent
 firewall-cmd --reload
 
+%posttrans
+update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "java"|head -n 1)
+
 %files
 %defattr(0755,root,root)
 /usr/lib/redborder/bin
@@ -82,11 +90,12 @@ firewall-cmd --reload
 %doc
 
 %changelog
-* Tue Sep 26 2023 Miguel Álvarez <malvarez@redborder.com> - 0.9.1-1
+* Fri Sep 22 2023 Miguel Álvarez <malvarez@redborder.com> - 0.9.1-1
+- Change ntp by chrony
 - Added rbaioutliers in cookbook list for upload in rb_configure_leader.sh
 - Updated manager.json chef role for outliers adaption
 
-* Thu Sep 14 2023 Julio Peralta <jperalta@redborder.com> - 0.9.0-1
+* Thu Sep 14 2023 Julio Peralta <jperalta@redborder.com> - 0.9.0
 - Removed IF="," when accesing zookeeper in rb_get_zkinfo.sh
 
 * Wed Sep 13 2023 Julio Peralta <jperalta@redborder.com> - 0.8.9-1

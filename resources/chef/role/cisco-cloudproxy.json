@@ -10,9 +10,7 @@
   },
   "chef_type": "role",
   "run_list": [
-    "recipe[ohai]",
     "recipe[snmp]",
-    "recipe[ntp]",
     "recipe[geodb]",
     "recipe[cisco-cloudproxy]"
   ],

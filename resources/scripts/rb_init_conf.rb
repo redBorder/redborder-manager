@@ -108,7 +108,7 @@ end
 ####################
 
 system("timedatectl set-timezone UTC")
-system("ntpdate pool.ntp.org")
+#system("ntpdate pool.ntp.org")
 
 ######################
 # Serf configuration #
@@ -189,9 +189,6 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   #Chef server
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 4443 -j ACCEPT &>/dev/null")
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 5432 -j ACCEPT &>/dev/null")
-
-  #Rabbitmq
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 5672 -j ACCEPT &>/dev/null")
 
   #zookeeper
   system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 2888 -j ACCEPT &>/dev/null")

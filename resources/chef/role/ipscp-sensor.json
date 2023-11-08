@@ -14,7 +14,6 @@
   },
   "chef_type": "role",
   "run_list": [
-    "recipe[ohai]",
     "recipe[rb-ips]"
   ],
   "env_run_lists": {

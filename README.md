@@ -1,14 +1,14 @@
 # redborder-manager Main package
  
-Main package to install redborder manager in Centos7
+Main package to install redborder manager in Rocky Linux 9
 
 #### Platforms
 
-- Centos 7
+- Rocky Linux 9
 
 #### Installation
 
-1. yum install epel-release && rpm -ivh http://repo.redborder.com/redborder-repo-0.0.3-1.el7.rb.noarch.rpm
+1. Follow the steps to install redborder repo in https://repo.redborderc.om 
 
 2. yum install redborder-manager
 

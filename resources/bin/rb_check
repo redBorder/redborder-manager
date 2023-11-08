@@ -349,7 +349,6 @@ e_title "          DATE: $(date)    "
 [ -f ${SCRIPTS_PATH}/*nginx* ] && [ "x$s" == "x" -o "x$s" == "xnginx" ] && check_nginx
 [ -f ${SCRIPTS_PATH}/*postgresql* ] && [ "x$s" == "x" -o "x$s" == "xpostgresql" ] && check_postgresql
 [ -f ${SCRIPTS_PATH}/*chef* ] && [ "x$s" == "x" -o "x$s" == "xerchef" -o "x$s" == "xchef" ] && check_erchef
-[ -f ${SCRIPTS_PATH}/*chef* ] && [ "x$s" == "x" -o "x$s" == "xrabbitmq" ] && check_rabbitmq
 [ -f ${SCRIPTS_PATH}/*riak* ] && [ "x$s" == "x" -o "x$s" == "xriak" -o "x$s" == "xs3" ] && check_riak
 [ -f ${SCRIPTS_PATH}/*riak* ] && [ "x$s" == "x" -o "x$s" == "xriak_segments" ] && check_riak_segments
 [ -f ${SCRIPTS_PATH}/*druid* ] && [ "x$s" == "x" -o "x$s" == "xdruid" -o "x$s" == "xcoordinator" -o "x$s" == "xdruid_coordinator" ] && check_druid_coordinator

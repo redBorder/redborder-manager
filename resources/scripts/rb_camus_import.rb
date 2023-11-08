@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 
 #######################################################################
 ## Copyright (c) 2014 ENEO Tecnología S.L.
@@ -32,7 +32,7 @@ end
 
 if opt["h"]
   logit "rb_camus_import.rb -t topic [-h]"
-  logit "    -t topic [rb_event|rb_event_post|rb_flow|rb_flow_post|rb_loc|rb_nmsp|rb_social|rb_monitor|rb_loc_post|rb_monitor_post|all] -> topic to import"
+  logit "    -t topic [rb_event|rb_event_post|rb_flow|rb_flow_post|rb_loc|rb_nmsp|rb_monitor|rb_loc_post|rb_monitor_post|all] -> topic to import"
   logit "    -h       -> print this help"
   exit 1
 end
@@ -68,7 +68,7 @@ else
    zk.create("/camus/#{topic}",data: Socket.gethostname.to_s, ephemeral: true)
 end
 
-if (topic == 'rb_event' or topic == 'rb_event_post' or topic == 'rb_flow' or topic == 'rb_flow_post' or topic == 'rb_monitor' or topic == 'rb_monitor_post' or topic == 'rb_loc' or topic == 'rb_loc_post' or topic == 'rb_social' or topic == 'rb_nmsp' or topic == 'all')
+if (topic == 'rb_event' or topic == 'rb_event_post' or topic == 'rb_flow' or topic == 'rb_flow_post' or topic == 'rb_monitor' or topic == 'rb_monitor_post' or topic == 'rb_loc' or topic == 'rb_loc_post' or topic == 'rb_nmsp' or topic == 'all')
     if(topic == 'all')
        system("java -cp #{classpath} com.linkedin.camus.etl.kafka.CamusJob -P #{dir}/conf/camus.properties")
        zk.delete("/camus/#{topic}")

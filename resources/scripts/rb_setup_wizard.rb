@@ -237,6 +237,7 @@ EOF
 dialog = MRDialog.new
 dialog.clear = true
 dialog.title = "Confirm configuration"
+dialog.dialog_options = "--defaultno"
 yesno = dialog.yesno(text,0,0)
 
 if yesno # yesno is "yes" -> true
@@ -260,6 +261,7 @@ EOF
 dialog = MRDialog.new
 dialog.clear = true
 dialog.title = "Confirm configuration"
+dialog.dialog_options = "--defaultno"
 yesno = dialog.yesno(text,0,0)
 
 if yesno # yesno is "yes" -> true
