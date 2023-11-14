@@ -91,6 +91,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Tue Nov 14 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.3-1
+- Fix RSA creation for RHEL9
+
 * Tue Nov 14 2023 Miguel Negron <manegron@redborder.com> - 0.9.2-1
 - Add network scripts
 
