@@ -33,6 +33,7 @@ fi
 if [ "x$OVR" == "xy" -o "x$OVR" == "xY" ]; then
   rm -f /var/www/rb-rails/config/rsa
   ssh-keygen -t rsa -f /var/www/rb-rails/config/rsa -N ""
+  ssh-keygen -p -m PEM -f /var/www/rb-rails/config/rsa -N ""
   chown webui:webui /var/www/rb-rails/config/rsa /var/www/rb-rails/config/rsa.pub
   echo "{
  \"id\": \"ssh\",
