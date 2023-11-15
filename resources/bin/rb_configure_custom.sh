@@ -22,6 +22,8 @@ cp -f /etc/resolv.conf $RBETC/original_resolv.conf
 CONSULIP=$(serf members -tag consul=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
 valid_ip $CONSULIP
 if [ "x$?" == "x0" ]; then
+  # Use correct search domain
+  sed -i "s/search .*/search node.$cdomain service.$cdomain $cdomain/g" /etc/resolv.conf
   # Use Consul IP as DNS
   sed -i "s/nameserver .*/nameserver $CONSULIP/g" /etc/resolv.conf
   # Check if chef-server is registered in consul
