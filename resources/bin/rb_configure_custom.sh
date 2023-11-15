@@ -94,7 +94,7 @@ knife role -c /root/.chef/knife.rb from file /var/chef/data/role/$CLIENTNAME.jso
 
 # Create chef node and client from files in /etc/chef
 e_title "Registering chef-client ..."
-chef-client
+chef-client --chef-license accept
 
 # Adding chef roles to node
 knife node -c /root/.chef/knife.rb run_list add $CLIENTNAME "role[manager]"
