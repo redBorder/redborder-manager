@@ -332,7 +332,7 @@ class HostConf < WizConf
             @conf["Hostname:"] = fullhostname.match(/^(?<hostname>[^.]+)(\.(?<domain>.*))?$/)[:hostname]
             @conf["Domain name:"] = fullhostname.match(/^(?<hostname>[^.]+)(\.(?<domain>.*))?$/)[:domain]
         end
-        if @conf["Hostname:"] == "rbmanager" or @conf["Hostname:"] == "localhost"
+        if @conf["Hostname:"] == "rbmanager" or @conf["Hostname:"] == "localhost" or @conf["Hostname:"] = ""
             @conf["Hostname:"] = "rb-#{rand(36**10).to_s(36)}"
             @conf["Domain name:"] = "redborder.cluster"
         end
