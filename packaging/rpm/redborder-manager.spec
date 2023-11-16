@@ -91,6 +91,12 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Thu Nov 16 2023 Vicente Mesa <vimesa@redborder.com> - 0.9.5-1
+- Fix random hostname
+
+* Wed Nov 15 2023 Miguel Negron, Miguel Álvarez <manegron@redborder.com, malvarez@redborder.com> - 0.9.4-1
+- Fix chef license auto accept and fix serf DNS 
+
 * Tue Nov 14 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.3-1
 - Fix RSA creation for RHEL9
 
