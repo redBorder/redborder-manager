@@ -91,6 +91,10 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Tue Nov 21 2023 David Vanhoucke, Vicente Mesa <dvanhoucke@redborder.com, vimesa@redborder.com> - 0.9.6-1
+- Fix firewall direct rules
+- Add dhclient
+
 * Thu Nov 16 2023 Vicente Mesa <vimesa@redborder.com> - 0.9.5-1
 - Fix random hostname
 
