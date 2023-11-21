@@ -61,7 +61,7 @@ install -D -m 0644 resources/etc/01default_handlers.json %{buildroot}/etc/serf/0
 %post
 /usr/lib/redborder/bin/rb_rubywrapper.sh -c
 firewall-cmd --zone=public --add-port=443/tcp --permanent
-firewall-cmd --zone=public --add-port=7946/tcp --permanent
+#firewall-cmd --zone=public --add-port=7946/tcp --permanent
 #firewall-cmd --zone=public --add-port=7373/tcp --permanent
 #firewall-cmd --zone=public --add-port=5353/tcp --permanent
 firewall-cmd --reload

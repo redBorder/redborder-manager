@@ -172,85 +172,90 @@ file_serf_tags.close
 
 #Firewall rules
 if !network.nil? #Firewall rules are not needed in cloud environments
-  # Allow multicast packets from sync_net. This rule allows a new serf node publish it in multicast address
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -s #{sync_net} -m pkttype --pkt-type multicast -j ACCEPT &>/dev/null")
-  # Allow traffic from 5353/udp and sync_net. This rule allows other serf nodes to communicate with the new node
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --sport 5353 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-source=#{sync_net} &>/dev/null")
+  system("firewall-cmd --zone=home --add-protocol=igmp &>/dev/null")
 
+  #nginx
+  system("firewall-cmd --permanent --zone=home --add-port=443/tcp &>/dev/null") 
+
+  # mDNS / serf
+  system("firewall-cmd --permanent --zone=home --add-source-port=5353/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=7946/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=7946/udp &>/dev/null") 
+  
   #Consul ports
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8300 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8301 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 8301 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8302 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 8302 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8400 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8500 -j ACCEPT &>/dev/null")
-
+  system("firewall-cmd --permanent --zone=home --add-port=8300/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=8301/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=8301/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=8302/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=8302/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=8400/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=8500/tcp &>/dev/null") 
+  
   #DNS
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 53 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 53 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=53/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=53/udp &>/dev/null") 
 
   #Chef server
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 4443 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 5432 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=4443/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=5432/tcp &>/dev/null") 
 
   #zookeeper
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 2888 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 3888 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 2181 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=2888/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=3888/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=2181/tcp &>/dev/null") 
 
   #kafka
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 9092 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=9092/tcp &>/dev/null") 
 
   #http2k
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 7980 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=7980/tcp &>/dev/null") 
 
   #f2k
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 2055 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=2055/udp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=2055/udp &>/dev/null")
 
   #sfacctd (pmacctd)
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 6343 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=6343/udp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=6343/udp &>/dev/null")
 
   #rsyslogd 
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 514 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 514 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=514/tcp &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=514/udp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=514/tcp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=514/udp &>/dev/null")
  
   #freeradius
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 1812 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=1812/udp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=1812/udp &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 1813 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=1813/udp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=1813/udp &>/dev/null")
 
   #rb-ale
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 7779 -j ACCEPT &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=7779/tcp &>/dev/null")
 
   #n2klocd
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 2056 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=2056/tcp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=2056/tcp &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 2057 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=2057/tcp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=2057/tcp &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 2058 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=2058/tcp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=2058/tcp &>/dev/null")
  
   #druid
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8080 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8081 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8083 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 8084 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=8080/tcp &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=8081/tcp &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=8083/tcp &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=8084/tcp &>/dev/null")
 
   #minio
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 9000 -j ACCEPT &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p tcp -s #{sync_net} -m tcp --dport 9001 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=9000/tcp &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=9001/tcp &>/dev/null")
 
   #snmp
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 161 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=161/udp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=161/udp &>/dev/null")
-  system("firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT 0 -p udp -s #{sync_net} -m udp --dport 162 -j ACCEPT &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=162/udp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=162/udp &>/dev/null")
 
   # Reload firewalld configuration
