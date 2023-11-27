@@ -52,6 +52,9 @@ if [ "x$?" == "x0" ] ; then
   done
   [ $counter -gt 10 ] && echo "WARNING: Required key tag not found while leader is waiting" && exit 0
 
+  echo "configure selimux $(date)"
+  chef-solo -c /var/chef/solo/rb-selinux-solo.rb -j /var/chef/solo/rb-selinux-attributes.json
+
   #Check if any of S3_TAG or PG_TAG are true
   serf members -tag $s3_TAG | grep -q $s3_TAG || serf members -tag $postgres_TAG | grep -q $postgres_TAG
   if [ "x$?" == "x0" ] ; then

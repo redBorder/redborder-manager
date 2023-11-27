@@ -114,9 +114,6 @@ $RBBIN/rb_update_timestamp &>/dev/null
 # Cleaning yum data and cache
 yum clean all
 
-e_title "configure selimux $(date)"
-chef-solo -c /var/chef/solo/rb-selinux-solo.rb -j /var/chef/solo/rb-selinux-attributes.json
-
 # Multiple runs of chef-client
 e_title "Configuring Chef-Client. Please wait...  "
 e_title "redborder install run $(date)" #>>/root/.install-chef-client.log

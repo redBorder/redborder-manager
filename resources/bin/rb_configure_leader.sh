@@ -387,9 +387,6 @@ function configure_leader(){
   #Add client to admins group
   knife group add client `hostname -s` admins &>/dev/null
 
-  e_title "configure selimux $(date)"
-  chef-solo -c /var/chef/solo/rb-selinux-solo.rb -j /var/chef/solo/rb-selinux-attributes.json
-
   # Multiple runs of chef-client
   e_title "Configuring Chef-Client. Please wait...  "
 
