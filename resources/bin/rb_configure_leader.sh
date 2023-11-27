@@ -345,7 +345,7 @@ function configure_leader(){
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
 
-  listCookbooks="cron zookeeper kafka druid http2k memcached chef-server consul
+  listCookbooks="rb-selinux cron zookeeper kafka druid http2k memcached chef-server consul
                 hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner
                 f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
                 rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rb-proxy
@@ -386,6 +386,9 @@ function configure_leader(){
 
   #Add client to admins group
   knife group add client `hostname -s` admins &>/dev/null
+
+  e_title "configure selimux $(date)"
+  chef-solo -c /var/chef/solo/rb-selinux-solo.rb -j /var/chef/solo/rb-selinux-attributes.json
 
   # Multiple runs of chef-client
   e_title "Configuring Chef-Client. Please wait...  "
