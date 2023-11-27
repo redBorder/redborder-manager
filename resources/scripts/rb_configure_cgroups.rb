@@ -155,5 +155,5 @@ module RedBorder
 end
 
 services = RedBorder::Checker.conf || (exit 1)
-RedBorder::Checker.check_units('redBorder', services)
-RedBorder::Checker.reassign_memory('redBorder', services)
+RedBorder::Checker.check_units('redborder', services)
+RedBorder::Checker.reassign_memory('redborder', services)
