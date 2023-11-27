@@ -13,9 +13,6 @@ _RBEOF_
 echo "INFO: Restarting serf. Loading new handlers"
 systemctl restart serf
 
-#Accept chef-client license
-chef-client --chef-license accept &>/dev/null
-
 #Configure postgresql service using chef-solo
 echo "INFO: Configure PostgreSQL service using chef-solo"
 chef-solo -c /var/chef/solo/postgresql-solo.rb -j /var/chef/solo/postgresql-attributes.json
