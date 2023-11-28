@@ -172,6 +172,26 @@ module Config_utils
       ret
     end
 
+    # function to convert dotted mmask to cidr
+    # eg 255.224.0.0 -> /11
+    def self.to_cidr_mask(dotted_mask)
+      NetAddr::CIDR.create('0.0.0.0/'+dotted_mask).netmask
+    end
+
+    # function to set the range correctly with the cidr
+    # eg 192.168.0.1/24 -> 192.168.0.0/24
+    def self.serialize_ipaddr(address)
+      addr = IPAddr.new(address)
+      mask = addr.instance_variable_get(:@mask_addr).to_s(2).count('1')
+      "#{addr}/#{mask}"
+    end
+
+    # check if ip belongs to network range
+    # network is defined as 127.0.0.1/8
+    def self.network_contains(network, address)
+      IPAddr.new(network).include? address
+    end
+
    # POSTGRESQL PARAMETER CHECKS
    #TODO
    def self.check_sql_host(host)
