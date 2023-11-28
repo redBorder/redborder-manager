@@ -83,14 +83,18 @@ unless network.nil? # network will not be defined in cloud deployments
     iface_mode = iface['mode']
     open("/etc/sysconfig/network-scripts/ifcfg-#{dev}", 'w') { |f|
       if iface_mode != 'dhcp'
-        if Config_utils.check_ipv4({:ip => iface['ip'], :netmask => iface['netmask']})  and Config_utils.check_ipv4(:ip => iface['gateway'])
+        if Config_utils.check_ipv4({:ip => iface['ip'], :netmask => iface['netmask']})
           f.puts "IPADDR=#{iface['ip']}"
           f.puts "NETMASK=#{iface['netmask']}"
-          f.puts "GATEWAY=#{iface['gateway']}" unless iface['gateway'].nil?
+          f.puts "GATEWAY=#{iface['gateway']}" unless (iface['gateway'].nil? or iface['gateway'].empty? or Config_utils.network_contains(serf['sync_net'], iface['ip']))
         else
           p err_msg = "Invalid network configuration for device #{dev}. Please review #{INITCONF} file"
           exit 1
         end
+      else
+        interface_info=Config_utils.get_ipv4_network(iface['device'])
+        ip=interface_info[:ip]
+        f.puts "DEFROUTE=no" if Config_utils.network_contains(serf['sync_net'], ip)
       end
       dev_uuid = File.read("/proc/sys/kernel/random/uuid").chomp
       f.puts "BOOTPROTO=#{iface_mode}"
@@ -110,7 +114,7 @@ unless network.nil? # network will not be defined in cloud deployments
       else
         ip=iface['ip']
         netmask=iface['netmask']
-        gateway=iface['gateway'] if iface['gateway']
+        gateway=iface['gateway'] unless iface['gateway'].nil? or iface['gateway'].empty?
       end
 
       metric=Config_utils.network_contains(serf['sync_net'], ip) ? 101:100
@@ -121,7 +125,7 @@ unless network.nil? # network will not be defined in cloud deployments
         f.puts "#{metric} #{iface['device']}tbl" #if File.readlines("/etc/iproute2/rt_tables").grep(/#{metric} #{iface['device']}tbl/).any?
       }
       open("/etc/sysconfig/network-scripts/route-#{dev}", 'w') { |f|
-        f.puts "default via #{gateway} dev #{iface['device']} table #{iface['device']}tbl" if gateway
+        f.puts "default via #{gateway} dev #{iface['device']} table #{iface['device']}tbl" unless gateway.nil? or gateway.empty?
         f.puts "#{iprange} dev #{iface['device']} table #{iface['device']}tbl"
         f.puts "#{iprange} dev #{iface['device']} table main"
       }
