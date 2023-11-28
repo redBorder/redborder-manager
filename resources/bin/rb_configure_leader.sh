@@ -527,6 +527,9 @@ rm -f /var/lock/leader-configuring.lock
 # Copy dhclient hook
 cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
+e_title "Configure Cgroups"
+
+rb_configure_cgroups
 
 e_title "Leader Node configured!"
 
