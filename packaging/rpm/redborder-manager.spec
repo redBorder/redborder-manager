@@ -91,6 +91,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Wed Nov 28 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.8-1
+- Fix sync network routes and allow no gateways
+
 * Mon Nov 21 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.7-1
 - Add support for sync network
 
