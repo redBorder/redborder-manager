@@ -86,7 +86,13 @@ unless network.nil? # network will not be defined in cloud deployments
         if Config_utils.check_ipv4({:ip => iface['ip'], :netmask => iface['netmask']})
           f.puts "IPADDR=#{iface['ip']}"
           f.puts "NETMASK=#{iface['netmask']}"
-          f.puts "GATEWAY=#{iface['gateway']}" unless (iface['gateway'].nil? or iface['gateway'].empty? or Config_utils.network_contains(serf['sync_net'], iface['ip']))
+          unless iface['gateway'].nil? or iface['gateway'].empty? or not Config_utils.check_ipv4(:ip => iface['gateway'])
+            if network['interfaces'].count > 1 and not Config_utils.network_contains(serf['sync_net'], iface['gateway'])
+              f.puts "GATEWAY=#{iface['gateway']}"
+            elsif network['interfaces'].count == 1
+              f.puts "GATEWAY=#{iface['gateway']}"
+            end
+          end
         else
           p err_msg = "Invalid network configuration for device #{dev}. Please review #{INITCONF} file"
           exit 1
@@ -94,7 +100,7 @@ unless network.nil? # network will not be defined in cloud deployments
       else
         interface_info=Config_utils.get_ipv4_network(iface['device'])
         ip=interface_info[:ip]
-        f.puts "DEFROUTE=no" if Config_utils.network_contains(serf['sync_net'], ip)
+        f.puts "DEFROUTE=no" if network['interfaces'].count > 1 and Config_utils.network_contains(serf['sync_net'], ip)
       end
       dev_uuid = File.read("/proc/sys/kernel/random/uuid").chomp
       f.puts "BOOTPROTO=#{iface_mode}"
