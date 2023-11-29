@@ -127,5 +127,11 @@ knife group add client `hostname -s` admins &>/dev/null
 # Copy dhclient hook
 cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
+e_title "Configuring cgroups (first time), please wait..."
+
+rb_configure_cgroups &>/dev/null
+
+echo "Cgroups configured in /sys/fs/cgroup/redborder.slice/"
+
 e_title "Custom Node configured!"
 date > /etc/redborder/cluster-installed.txt
