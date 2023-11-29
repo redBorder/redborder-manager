@@ -531,6 +531,8 @@ e_title "Configuring cgroups (first time), please wait..."
 
 rb_configure_cgroups &>/dev/null
 
+echo "Cgroups configured in /sys/fs/cgroup/redborder.slice/"
+
 e_title "Leader Node configured!"
 
 date > /etc/redborder/cluster-installed.txt
