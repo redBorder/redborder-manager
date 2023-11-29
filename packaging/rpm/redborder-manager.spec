@@ -92,6 +92,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Wed Nov 29 2023 Miguel Álvarez <malvarez@redborder.com> - 1.0.0-1
+- Add cgroup
+
 * Tue Nov 28 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.9-1
 - Fix single interface manager configuration
 
