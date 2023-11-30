@@ -60,7 +60,15 @@ elsif opt["e"]
     print JSON.parse(Net::HTTP.get(URI.parse("http://#{logstash}/_node/stats/events?pretty")))["events"]["in"]
     printf("\n")
   else
-    print JSON.parse(Net::HTTP.get(URI.parse("http://#{logstash}/_node/stats/pipelines/#{pipeline}?pretty")))["pipelines"]["#{pipeline}"]["events"]["in"] rescue print 0
+    begin
+      response = JSON.parse(Net::HTTP.get(URI.parse("http://#{logstash}/_node/stats/pipelines/#{pipeline}?pretty"))) 
+      events_in_bytes = response.dig("pipelines", pipeline, "events", "in") || 0
+      print events_in_bytes
+      printf("\n")
+    rescue KeyError
+      print 0
+      printf("\n")
+    end
   end
 elsif opt["l"]
   print JSON.parse(Net::HTTP.get(URI.parse("http://#{logstash}/_node/stats/process?pretty")))["process"]["cpu"]["load_average"]["1m"]
@@ -78,16 +86,35 @@ elsif opt["w"]
   pipeline = ARGV[0] rescue nil
   unless pipelines.include? pipeline
     print 0
+    printf("\n")
   else
-    print JSON.parse(Net::HTTP.get(URI.parse("http://#{logstash}/_node/stats/pipelines/#{pipeline}?pretty")))["pipelines"]["#{pipeline}"]["queue"]["events_count"] rescue print 0
+    begin
+      response = JSON.parse(Net::HTTP.get(URI.parse("http://#{logstash}/_node/stats/pipelines/#{pipeline}?pretty")))
+      events_count = response.dig("pipelines", pipeline, "queue", "events_count") || 0
+      print events_count
+      printf("\n")
+    rescue KeyError
+      print 0
+      printf("\n")
+    end
   end
 elsif opt["z"]
   pipeline = ARGV[0] rescue nil
   unless pipelines.include? pipeline
     print 0
+    printf("\n")
   else
-    print JSON.parse(Net::HTTP.get(URI.parse("http://#{logstash}/_node/stats/pipelines/#{pipeline}?pretty")))["pipelines"]["#{pipeline}"]["queue"]["queue_size_in_bytes"] rescue print 0
+    begin
+      response = JSON.parse(Net::HTTP.get(URI.parse("http://#{logstash}/_node/stats/pipelines/#{pipeline}?pretty")))
+      queue_size_in_bytes = response.dig("pipelines", pipeline, "queue", "queue_size_in_bytes") || 0
+      print queue_size_in_bytes
+      printf("\n")
+    rescue KeyError
+      print 0
+      printf("\n")
+    end
   end
 elsif opt["v"]
   print JSON.parse(Net::HTTP.get(URI.parse("http://#{logstash}/_node/stats/process?pretty")))["process"]["mem"]["total_virtual_in_bytes"]
+  printf("\n")
 end
