@@ -17,6 +17,7 @@ Requires: synthetic-producer darklist-updated tcpdump
 Requires: chef-workstation
 Requires: alternatives java-1.8.0-openjdk java-1.8.0-openjdk-devel
 Requires: network-scripts network-scripts-teamd
+Requires: redborder-cgroups
 
 %description
 %{summary}
@@ -91,6 +92,21 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Wed Nov 29 2023 David Vanhoucke <dvanhoucke@redborder.com> - 1.0.1-1
+- Fix firewall public zone broadcast
+
+* Wed Nov 29 2023 Miguel Álvarez <malvarez@redborder.com> - 1.0.0-1
+- Add cgroup
+
+* Tue Nov 28 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.9-1
+- Fix single interface manager configuration
+
+* Tue Nov 28 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.8-1
+- Fix sync network routes and allow no gateways
+
+* Mon Nov 21 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.7-1
+- Add support for sync network
+
 * Tue Nov 21 2023 David Vanhoucke, Vicente Mesa <dvanhoucke@redborder.com, vimesa@redborder.com> - 0.9.6-1
 - Fix firewall direct rules
 - Add dhclient

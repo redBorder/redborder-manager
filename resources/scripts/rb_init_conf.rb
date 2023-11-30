@@ -58,7 +58,6 @@ unless network.nil? # network will not be defined in cloud deployments
   system('systemctl disable NetworkManager &> /dev/null')
   system('systemctl stop NetworkManager &> /dev/null')
 
-  # Enable network service
   system('systemctl enable network &> /dev/null')
   system('systemctl start network &> /dev/null')
 
@@ -84,14 +83,24 @@ unless network.nil? # network will not be defined in cloud deployments
     iface_mode = iface['mode']
     open("/etc/sysconfig/network-scripts/ifcfg-#{dev}", 'w') { |f|
       if iface_mode != 'dhcp'
-        if Config_utils.check_ipv4({:ip => iface['ip'], :netmask => iface['netmask']})  and Config_utils.check_ipv4(:ip => iface['gateway'])
+        if Config_utils.check_ipv4({:ip => iface['ip'], :netmask => iface['netmask']})
           f.puts "IPADDR=#{iface['ip']}"
           f.puts "NETMASK=#{iface['netmask']}"
-          f.puts "GATEWAY=#{iface['gateway']}" unless iface['gateway'].nil?
+          unless iface['gateway'].nil? or iface['gateway'].empty? or not Config_utils.check_ipv4(:ip => iface['gateway'])
+            if network['interfaces'].count > 1 and not Config_utils.network_contains(serf['sync_net'], iface['gateway'])
+              f.puts "GATEWAY=#{iface['gateway']}"
+            elsif network['interfaces'].count == 1
+              f.puts "GATEWAY=#{iface['gateway']}"
+            end
+          end
         else
           p err_msg = "Invalid network configuration for device #{dev}. Please review #{INITCONF} file"
           exit 1
         end
+      else
+        interface_info=Config_utils.get_ipv4_network(iface['device'])
+        ip=interface_info[:ip]
+        f.puts "DEFROUTE=no" if network['interfaces'].count > 1 and Config_utils.network_contains(serf['sync_net'], ip)
       end
       dev_uuid = File.read("/proc/sys/kernel/random/uuid").chomp
       f.puts "BOOTPROTO=#{iface_mode}"
@@ -99,10 +108,43 @@ unless network.nil? # network will not be defined in cloud deployments
       f.puts "ONBOOT=yes"
       f.puts "UUID=#{dev_uuid}"
     }
+
+    # if we have management and sync network
+    # define the routing tables for each interface
+    if network['interfaces'].count > 1
+      if iface['mode'] == "dhcp"
+        interface_info=Config_utils.get_ipv4_network(iface['device'])
+        ip=interface_info[:ip]
+        netmask=interface_info[:netmask]
+        gateway=Config_utils.get_gateway(iface['device'])
+      else
+        ip=iface['ip']
+        netmask=iface['netmask']
+        gateway=iface['gateway'] unless iface['gateway'].nil? or iface['gateway'].empty?
+      end
+
+      metric=Config_utils.network_contains(serf['sync_net'], ip) ? 101:100
+      cidr=Config_utils.to_cidr_mask(netmask)
+      iprange=Config_utils.serialize_ipaddr(ip+cidr)
+
+      open("/etc/iproute2/rt_tables", 'a') { |f|
+        f.puts "#{metric} #{iface['device']}tbl" #if File.readlines("/etc/iproute2/rt_tables").grep(/#{metric} #{iface['device']}tbl/).any?
+      }
+      open("/etc/sysconfig/network-scripts/route-#{dev}", 'w') { |f|
+        f.puts "default via #{gateway} dev #{iface['device']} table #{iface['device']}tbl" unless gateway.nil? or gateway.empty?
+        f.puts "#{iprange} dev #{iface['device']} table #{iface['device']}tbl"
+        f.puts "#{iprange} dev #{iface['device']} table main"
+      }
+      open("/etc/sysconfig/network-scripts/rule-#{dev}", 'w') { |f|
+        f.puts "from #{iprange} table #{iface['device']}tbl"
+      }
+    end
   end
 
-  # Restart NetworkManager
-  system('service network restart &> /dev/null')
+  # Enable network service
+  system('ip route flush table main &> /dev/null')
+  system('systemctl restart network &> /dev/null')
+
 end
 
 # TODO: check network connectivity. Try to resolve repo.redborder.com
@@ -123,6 +165,7 @@ SERFSNAPSHOT="/etc/serf/snapshot"
 
 serf_conf = {}
 serf_tags = {}
+sync_interface = ""
 sync_net = serf['sync_net']
 encrypt_key = serf['encrypt_key']
 multicast = serf['multicast']
@@ -133,6 +176,7 @@ unless sync_net.nil?
     System.get_all_ifaddrs.each do |netdev|
         if IPAddr.new(sync_net).include?(netdev[:inet_addr])
             serf_conf["bind"] = netdev[:inet_addr].to_s
+            sync_interface = netdev[:interface]
         end
     end
     if serf_conf["bind"].nil?
@@ -172,6 +216,9 @@ file_serf_tags.close
 
 #Firewall rules
 if !network.nil? #Firewall rules are not needed in cloud environments
+  if sync_interface != ""
+    system("firewall-cmd --permanent --zone=home --add-interface=#{sync_interface}")
+  end
   system("firewall-cmd --permanent --zone=home --add-source=#{sync_net} &>/dev/null")
   system("firewall-cmd --zone=home --add-protocol=igmp &>/dev/null")
 
@@ -180,6 +227,9 @@ if !network.nil? #Firewall rules are not needed in cloud environments
 
   # mDNS / serf
   system("firewall-cmd --permanent --zone=home --add-source-port=5353/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=public --add-source-port=5353/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=5353/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=public --add-port=5353/udp &>/dev/null") 
   system("firewall-cmd --permanent --zone=home --add-port=7946/tcp &>/dev/null") 
   system("firewall-cmd --permanent --zone=home --add-port=7946/udp &>/dev/null") 
   

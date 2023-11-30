@@ -349,7 +349,7 @@ function configure_leader(){
                 hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner
                 f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
                 rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rb-proxy
-                snort barnyard2 rb-ips rbaioutliers rb-manager" # The order matters!
+                snort barnyard2 rb-ips rbaioutliers rbcgroup rb-manager" # The order matters!
 
   for n in $listCookbooks; do # cookbooks
     # rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
@@ -527,6 +527,11 @@ rm -f /var/lock/leader-configuring.lock
 # Copy dhclient hook
 cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
+e_title "Configuring cgroups (first time), please wait..."
+
+rb_configure_cgroups &>/dev/null
+
+echo "Cgroups configured in /sys/fs/cgroup/redborder.slice/"
 
 e_title "Leader Node configured!"
 
