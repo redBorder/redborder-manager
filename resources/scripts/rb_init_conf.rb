@@ -227,6 +227,9 @@ if !network.nil? #Firewall rules are not needed in cloud environments
 
   # mDNS / serf
   system("firewall-cmd --permanent --zone=home --add-source-port=5353/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=public --add-source-port=5353/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=5353/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=public --add-port=5353/udp &>/dev/null") 
   system("firewall-cmd --permanent --zone=home --add-port=7946/tcp &>/dev/null") 
   system("firewall-cmd --permanent --zone=home --add-port=7946/udp &>/dev/null") 
   
