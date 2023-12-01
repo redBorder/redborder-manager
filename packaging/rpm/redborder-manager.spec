@@ -92,6 +92,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Fri Dec 01 2023 David Vanhoucke <dvanhoucke@redborder.com> - 1.0.3-1
+- Add selinux
+
 * Thu Nov 30 2023 David Vanhoucke <dvanhoucke@redborder.com> - 1.0.2-1
 - Change rescue of json parse
 
