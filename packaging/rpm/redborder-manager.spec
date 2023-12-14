@@ -92,6 +92,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Thu Dec 14 2023 Miguel Negrón <manegron@redborder.com> - 1.0.4-1
+- Fix order of cookbooks
+
 * Fri Dec 01 2023 David Vanhoucke <dvanhoucke@redborder.com> - 1.0.3-1
 - Add selinux
 
