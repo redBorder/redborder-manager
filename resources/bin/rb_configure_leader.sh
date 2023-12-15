@@ -348,8 +348,8 @@ function configure_leader(){
   listCookbooks="rb-selinux cron zookeeper kafka druid http2k memcached chef-server consul
                 hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner
                 f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
-                rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rb-proxy
-                snort barnyard2 rb-ips rbaioutliers rbcgroup rblogstatter rb-manager" # The order matters!
+                rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rbcgroup rb-proxy
+                snort barnyard2 rb-ips rbaioutliers rb-manager" # The order matters!
 
   for n in $listCookbooks; do # cookbooks
     # rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
