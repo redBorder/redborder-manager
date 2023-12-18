@@ -92,6 +92,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Mon Dec 18 2023 Miguel Álvarez <malvarez@redborder.com> - 1.0.5-1
+- Add rb-logstatter
+
 * Thu Dec 14 2023 Miguel Negrón <manegron@redborder.com> - 1.0.4-1
 - Fix order of cookbooks
 
