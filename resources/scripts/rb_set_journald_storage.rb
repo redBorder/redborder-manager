@@ -24,28 +24,28 @@ def usage
   printf "Example: rb_set_journald_storage.rb volatil\n"
 end
 
-Chef::Config.from_file("/etc/chef/client.rb")
-Chef::Config[:node_name]  = "admin"
-Chef::Config[:client_key] = "/etc/chef/admin.pem"
+Chef::Config.from_file('/etc/chef/client.rb')
+Chef::Config[:node_name]  = 'admin'
+Chef::Config[:client_key] = '/etc/chef/admin.pem'
 Chef::Config[:http_retry_count] = 5
 
-if ARGV.length == 1 
+if ARGV.length == 1
   storage = ARGV[0]
 
-  must_save = ["auto", "volatile", "persistent", "none"].include? storage
+  must_save = %w[auto volatile persistent none].include? storage
 
   if must_save
-    role = Chef::Role.load("manager")
-    role.override_attributes["redborder"] = {} if role.override_attributes["redborder"].nil?
-    role.override_attributes["redborder"]["manager"] = {} if role.override_attributes["redborder"]["manager"].nil?
-    role.override_attributes["redborder"]["manager"]["journald"] = {} if role.override_attributes["redborder"]["manager"]["journald"].nil?
-    role.override_attributes["redborder"]["manager"]["journald"]["storage"] = storage
+    role = Chef::Role.load('manager')
+    role.override_attributes['redborder'] = {} if role.override_attributes['redborder'].nil?
+    role.override_attributes['redborder']['manager'] = {} if role.override_attributes['redborder']['manager'].nil?
+    role.override_attributes['redborder']['manager']['journald'] = {} if role.override_attributes['redborder']['manager']['journald'].nil?
+    role.override_attributes['redborder']['manager']['journald']['storage'] = storage
     printf "journald storage passed to #{storage}\n"
 
     if role.save
-      printf "role[manager] saved successfully\n"
+      printf 'role[manager] saved successfully\n'
     else
-      printf "ERROR: role[manager] cannot be saved!!!\n"
+      printf 'ERROR: role[manager] cannot be saved!!!\n'
     end
   else
     usage
@@ -53,4 +53,3 @@ if ARGV.length == 1
 else
   usage
 end
-
