@@ -92,6 +92,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Fri Jan 19 2024 Miguel Negrón <manegron@redborder.com> - 1.0.7-1
+- Add journald script to configure logs storage
+
 * Fri Jan 19 2024 David Vanhoucke <dvanhoucke@redborder.com> - 1.0.6-1
 - Add rb-arubacentral
 
