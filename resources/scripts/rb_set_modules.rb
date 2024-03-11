@@ -22,7 +22,7 @@ require 'json'
 def usage
   printf "Usage: rb_set_modules.rb <module_name>:0|1\n"
   printf "Example: rb_set_modules.rb flow:1 ips:0 monitor:1 api:1 location:0\n"
-  printf "Available modules: ips, flow, monitor, api, location, malware, correlation_engine_rule, policy_enforcer, vault, bi, scanner"
+  printf "Available modules: ips, flow, monitor, api, location, malware, correlation_engine_rule, policy_enforcer, vault, bi, scanner, wireless"
 end
 
 Chef::Config.from_file("/etc/chef/client.rb")
@@ -45,7 +45,7 @@ if ARGV.length >= 1
       status=true
     end
 
-    if name=="ips" or name=="flow" or name=="monitor" or name=="api" or name=="all" or name=="location" or name=="malware" or name=="correlation_engine_rule" or name=="policy_enforcer" or name=="vault" or name=="bi" or name=="scanner"
+    if name=="ips" or name=="flow" or name=="monitor" or name=="api" or name=="all" or name=="location" or name=="malware" or name=="correlation_engine_rule" or name=="policy_enforcer" or name=="vault" or name=="bi" or name=="scanner"  or name=="wireless"
       role.override_attributes["redborder"] = {} if role.override_attributes["redborder"].nil?
       role.override_attributes["redborder"]["manager"] = {} if role.override_attributes["redborder"]["manager"].nil?
       role.override_attributes["redborder"]["manager"]["modules"] = {} if role.override_attributes["redborder"]["manager"]["modules"].nil?
