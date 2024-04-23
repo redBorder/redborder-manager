@@ -36,7 +36,7 @@ def usage
   exit 0
 end
 
-def implemented_topics(topic)
+def show_implemented_topics(topic)
   paths = Dir['/etc/synthetic-producer/config/*.yml']
   puts "Topic \"#{topic}\" has not default configuration file. You have to import it using flag -c \n"
   puts 'Only the following topics has default configuration file:'
@@ -45,21 +45,19 @@ def implemented_topics(topic)
 end
 
 JAR_PATH = '/usr/share/synthetic-producer/synthetic-producer.jar'
-begin
-  raise('Synthetic Producer is not installed') unless File.exist?(JAR_PATH)
-rescue RuntimeError => e
-  puts "[ERROR] #{e.message}"
-  exit 0
-end
+# Check setup
+raise('Synthetic Producer is not installed') unless File.exist?(JAR_PATH)
 
+# Check arguments
 usage if opt[:h] || (opt[:t].nil? && opt[:c].nil?) || opt[:p].nil? || opt[:r].nil?
 
+# Parse arguments
 topic = opt[:t].to_s.strip unless opt[:t].nil?
 config_file = opt[:c] || "/etc/synthetic-producer/config/#{topic}.yml"
 rate = opt[:r].to_s.strip
 threads = opt[:p].to_s.strip
 
-implemented_topics(topic.to_s) unless File.exist?(config_file) && opt[:c].nil?
+show_implemented_topics(topic.to_s) unless File.exist?(config_file) && opt[:c].nil?
 
 begin
   raise('Consul is not installed') unless system(`consul &>/dev/null`).nil?
