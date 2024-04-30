@@ -123,6 +123,9 @@ unless network.nil? # network will not be defined in cloud deployments
         gateway=iface['gateway'] unless iface['gateway'].nil? or iface['gateway'].empty?
       end
 
+      # No extra configuration is require if the interface has no IP/Netmask (for now)
+      next unless ip && !ip.empty?
+
       metric=Config_utils.network_contains(serf['sync_net'], ip) ? 101:100
       cidr=Config_utils.to_cidr_mask(netmask)
       iprange=Config_utils.serialize_ipaddr(ip+cidr)
