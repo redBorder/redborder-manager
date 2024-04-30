@@ -14,6 +14,7 @@
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
 
+# Import required libraries
 require 'resolv'
 require 'rest-client'
 require 'json'
@@ -30,6 +31,7 @@ end
 
 # Establish connection to the PostgreSQL database
 def connect_to_db(config)
+  puts "Connecting to the database..."
   PG.connect(
     dbname: config["database"],
     user: config["username"],
@@ -41,13 +43,19 @@ end
 
 # Resolve the name associated with an IP address using the database and DNS
 def resolve_ip(ip, conn)
+  # puts "Resolved ip..."
   result = conn.exec("SELECT name FROM redborder_objects WHERE value = '#{ip}'")
     return result[0]['name'] unless result.num_tuples.zero?
 
+    # If no name found in the database, perform DNS resolution
     name = Resolv.getname(ip)
   return name
-rescue PG::Error
-rescue Resolv::ResolvError
+rescue PG::Error => e
+  # Log database error
+  # puts "Database error: #{e.message}"
+rescue Resolv::ResolvError => e
+  # Log DNS resolution error
+  # puts "DNS resolution error: #{e.message}"
 ensure
   return "unknown" unless defined?(name)
 end
@@ -69,18 +77,16 @@ end
 
 # Detect the device type based on the MAC address vendor and application name
 def detect_device_type(client_mac_vendor, app_name)
-  case [client_mac_vendor, app_name]
-  when [/^(Google)/, /google-services/]
-    'Android'
-  when [/^(Apple)/, /apple-services/]
-    'iOS'
-  when [/^(Microsoft)/, /active-directory/]
-    'Windows Server'
-  when [/^(Microsoft)/, /VMware/]
-    'Virtual Machine'
-  else
-    'Unknown Device'
-  end
+  return 'Virtual Machine' if client_mac_vendor =~ /VMware/i
+  return 'iOS' if client_mac_vendor =~ /Apple/i
+  return 'Windows Server' if client_mac_vendor =~ /Microsoft/i
+
+  return 'Android' if app_name =~ /google-services/i
+  return 'iOS' if app_name =~ /apple-services/i
+  return 'MacOS' if app_name =~ /mac-os/i
+  return 'Windows Server' if app_name =~ /active-directory/i
+
+  'Unknown Device'
 end
 
 # Get the name of the application
@@ -113,7 +119,7 @@ def fetch_mac_addresses(conn)
   response_json = JSON.parse(curl_response)
 
   if response_json.empty?
-    puts "No se encontraron MAC en este rango de tiempo."
+    puts "No MAC addresses found in this time range."
     return []
   else
     response_json.map do |item|
@@ -122,41 +128,49 @@ def fetch_mac_addresses(conn)
   end
 end
 
-# Insert MAC address into the redborder_objects table in the PostgreSQL database
 def insert_mac_address(conn, mac_address, resolved_ip, device_type)
-  # Si el nombre de la MAC está vacío, establecer un nombre predeterminado
-  resolved_ip = "Unknown MAC Name" if resolved_ip.nil? || resolved_ip.empty?
-  
-  result = conn.exec_params("SELECT * FROM redborder_objects WHERE value = $1", [mac_address])
+  # puts "Insert MAC..."
+  return false if invalid_mac_name?(resolved_ip)
 
-  if result.num_tuples.zero?
+  existing_mac = conn.exec_params("SELECT * FROM redborder_objects WHERE value = $1", [mac_address])
+  if existing_mac.num_tuples.zero?
     insert_new_mac(conn, mac_address, resolved_ip, device_type)
     true
   else
-    update_mac_name(conn, mac_address, resolved_ip, device_type)
+    update_mac_name(conn, mac_address, resolved_ip) if existing_mac[0]['name'] != resolved_ip
     false
   end
 end
 
 # Insert a new MAC address into the database
 def insert_new_mac(conn, mac_address, resolved_ip, device_type)
-  default_name = resolved_ip.nil? || resolved_ip.empty? ? "Unknown Mac Name" : resolved_ip
+  # Ensure resolved_ip is not invalid
+  return if invalid_mac_name?(resolved_ip)
+
   current_time = Time.now.strftime("%Y-%m-%d %H:%M:%S")
 
+  # Insert the MAC address into redborder_objects
   insert_query = <<~SQL
     INSERT INTO redborder_objects (name, value, type, object_type, created_at, updated_at, user_id)
     VALUES ($1, $2, $3, $4, $5, $6, $7)
   SQL
 
-  conn.exec_params(insert_query, [default_name, mac_address, 'MacObject', device_type, current_time, current_time, 1])
+  conn.exec_params(insert_query, [resolved_ip, mac_address, 'MacObject', device_type, current_time, current_time, 1])
 
+  # Check if the device type exists in object_types table, insert if not
   update_object_types(conn, device_type, current_time)
 end
 
+# Helper function to check if MAC name is invalid
+def invalid_mac_name?(name)
+  name.nil? || name.empty? || name == 'Unknown Mac Name'
+end
+
 # Update the name of the MAC address in the database
-def update_mac_name(conn, mac_address, resolved_ip, device_type)
-  update_query = "UPDATE redborder_objects SET name = $1, object_type = $2, updated_at = $3 WHERE value = $4"
-  conn.exec_params(update_query, [resolved_ip, device_type, Time.now.strftime("%Y-%m-%d %H:%M:%S"), mac_address])
+def update_mac_name(conn, mac_address, resolved_ip)
+  # puts "Update MAC..."
+  update_query = "UPDATE redborder_objects SET name = $1 WHERE value = $2"
+  conn.exec_params(update_query, [resolved_ip, mac_address])
 end
 
 # Insert the device type into the object_types table if it doesn't exist
@@ -171,8 +185,10 @@ end
 
 # Process MAC addresses obtained from the curl query
 def process_mac_addresses(conn)
+  puts "Processing..."
   total_mac_count = 0
-  fetch_mac_addresses(conn).each do |mac_address, lan_ip, app_name, client_mac_vendor|
+  fetch_mac_addresses(conn).each do |mac_address, lan_ip, app_value, client_mac_vendor|
+    app_name = get_application_name(app_value, conn)
     device_type = detect_device_type(client_mac_vendor, app_name)
     if is_private_ip?(lan_ip)
       insert_result = insert_mac_address(conn, mac_address, resolve_ip(lan_ip, conn), device_type)
