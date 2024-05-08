@@ -45,10 +45,10 @@ end
 def resolve_ip(ip, conn)
   # puts "Resolved ip..."
   result = conn.exec("SELECT name FROM redborder_objects WHERE value = '#{ip}'")
-    return result[0]['name'] unless result.num_tuples.zero?
+  return result[0]['name'] unless result.num_tuples.zero?
 
-    # If no name found in the database, perform DNS resolution
-    name = Resolv.getname(ip)
+  # If no name found in the database, perform DNS resolution
+  name = Resolv.getname(ip)
   return name
 rescue PG::Error => e
   # Log database error
@@ -75,24 +75,11 @@ def calculate_time_interval
   [start_time, end_time]
 end
 
-# Detect the device type based on the MAC address vendor and application name
-def detect_device_type(client_mac_vendor, app_name)
-  return 'Virtual Machine' if client_mac_vendor =~ /VMware/i
-  return 'iOS' if client_mac_vendor =~ /Apple/i
-  return 'Windows Server' if client_mac_vendor =~ /Microsoft/i
-
-  return 'Android' if app_name =~ /google-services/i
-  return 'iOS' if app_name =~ /apple-services/i
-  return 'MacOS' if app_name =~ /mac-os/i
-  return 'Windows Server' if app_name =~ /active-directory/i
-
-  'Unknown Device'
-end
-
-# Get the name of the application
-def get_application_name(app_value, conn)
-  result = conn.exec_params("SELECT name FROM application_objects WHERE value = $1", [app_value])
-  result.num_tuples.zero? ? "Unknown App Name" : result[0]['name']
+# Detect the device type
+def detect_device_type(conn)
+  latest_default = conn.exec("SELECT object_type FROM redborder_objects WHERE object_type LIKE 'device#-%' ORDER BY object_type DESC LIMIT 1").first
+  latest_number = latest_default ? latest_default['object_type'].split('#').last.to_i : 0
+  "device#-#{latest_number + 1}"
 end
 
 # Fetch MAC addresses from curl query
@@ -107,7 +94,7 @@ def fetch_mac_addresses(conn)
       queryType: "groupBy",
       dataSource: "rb_flow",
       granularity: "all",
-      dimensions: ["client_mac", "client_mac_vendor", "lan_ip", "application_id_name"],
+      dimensions: ["client_mac", "client_mac_vendor", "lan_ip"],
       context: {timeout: 90000, skipEmptyBuckets: true},
       limitSpec: {type: "default", limit: 10000, columns: [{dimension: "client_mac", direction: "ascending"}]},
       intervals: intervals,
@@ -118,16 +105,19 @@ def fetch_mac_addresses(conn)
 
   response_json = JSON.parse(curl_response)
 
+  # If no MAC addresses found, return an empty array
   if response_json.empty?
     puts "No MAC addresses found in this time range."
     return []
   else
+    # Extract MAC address information from the response
     response_json.map do |item|
-      [item['event']['client_mac'], item['event']['lan_ip'], item['event']['application_id_name'], item['event']['client_mac_vendor']]
+      [item['event']['client_mac'], item['event']['lan_ip'], item['event']['client_mac_vendor']]
     end
   end
 end
 
+# Insert or update a MAC address in the database
 def insert_mac_address(conn, mac_address, resolved_ip, device_type)
   # puts "Insert MAC..."
   return false if invalid_mac_name?(resolved_ip)
@@ -156,9 +146,6 @@ def insert_new_mac(conn, mac_address, resolved_ip, device_type)
   SQL
 
   conn.exec_params(insert_query, [resolved_ip, mac_address, 'MacObject', device_type, current_time, current_time, 1])
-
-  # Check if the device type exists in object_types table, insert if not
-  update_object_types(conn, device_type, current_time)
 end
 
 # Helper function to check if MAC name is invalid
@@ -173,32 +160,20 @@ def update_mac_name(conn, mac_address, resolved_ip)
   conn.exec_params(update_query, [resolved_ip, mac_address])
 end
 
-# Insert the device type into the object_types table if it doesn't exist
-def update_object_types(conn, device_type, current_time)
-  result = conn.exec_params("SELECT * FROM object_types WHERE name = $1", [device_type])
-
-  if result.num_tuples.zero?
-    insert_type_query = "INSERT INTO object_types (name, created_at, updated_at) VALUES ($1, $2, $3)"
-    conn.exec_params(insert_type_query, [device_type, current_time, current_time])
-  end
-end
-
 # Process MAC addresses obtained from the curl query
 def process_mac_addresses(conn)
   puts "Processing..."
   total_mac_count = 0
-  fetch_mac_addresses(conn).each do |mac_address, lan_ip, app_value, client_mac_vendor|
-    app_name = get_application_name(app_value, conn)
-    device_type = detect_device_type(client_mac_vendor, app_name)
+  fetch_mac_addresses(conn).each do |mac_address, lan_ip, client_mac_vendor|
     if is_private_ip?(lan_ip)
-      insert_result = insert_mac_address(conn, mac_address, resolve_ip(lan_ip, conn), device_type)
+      insert_result = insert_mac_address(conn, mac_address, resolve_ip(lan_ip, conn), detect_device_type(conn))
       total_mac_count += 1 if insert_result
     end
   end
   total_mac_count
 end
 
-# Execute the script
+# Main execution - Execute the script
 begin
   db_config = load_db_config
   conn = connect_to_db(db_config)
