@@ -77,9 +77,16 @@ end
 
 # Detect the device type
 def detect_device_type(conn)
-  latest_default = conn.exec("SELECT object_type FROM redborder_objects WHERE object_type LIKE 'device#-%' ORDER BY object_type DESC LIMIT 1").first
-  latest_number = latest_default ? latest_default['object_type'].split('#').last.to_i : 0
-  "device#-#{latest_number + 1}"
+  query = <<~SQL
+    SELECT MAX(SUBSTRING(object_type, 8)::INTEGER) + 1 AS next_num 
+    FROM redborder_objects 
+    WHERE object_type LIKE 'device#%' AND type = 'MacObject'
+  SQL
+
+  result = conn.exec(query).first
+  next_num = result&.fetch('next_num', '0').to_i
+
+  "device##{next_num}"
 end
 
 # Fetch MAC addresses from curl query
