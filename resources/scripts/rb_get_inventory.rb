@@ -1,6 +1,9 @@
 #!/usr/bin/env ruby
 #######################################################################
 ## Copyright (c) 2024 ENEO Tecnología S.L.
+## Authors :
+## Vicente Mesa Torres <vimesa@redborder.com>
+## Juan Sebastian Soto <jsoto@redborder.com>
 ## This file is part of redBorder.
 ## redBorder is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU Affero General Public License License as published by
@@ -90,38 +93,45 @@ def detect_device_type(conn)
 end
 
 # Fetch MAC addresses from curl query
-def fetch_mac_addresses(conn)
+def fetch_mac_addresses(conn, data_sources)
   start_time, end_time = calculate_time_interval
 
   intervals = ["#{start_time}/#{end_time}"]
 
-  curl_response = RestClient.post(
-    'http://localhost:8080/druid/v2',
-    {
-      queryType: "groupBy",
-      dataSource: "rb_flow",
-      granularity: "all",
-      dimensions: ["client_mac", "client_mac_vendor", "lan_ip"],
-      context: {timeout: 90000, skipEmptyBuckets: true},
-      limitSpec: {type: "default", limit: 10000, columns: [{dimension: "client_mac", direction: "ascending"}]},
-      intervals: intervals,
-      aggregations: [{type: "count", name: "event_count"}]
-    }.to_json,
-    {content_type: :json}
-  )
+  data_sources << 'rb_flow'
 
-  response_json = JSON.parse(curl_response)
+  data_sources.map do |data_source|
+    actual_data_source = if data_source == 'rb_flow'
+                            'rb_flow'
+                        else
+                          "rb_flow_#{data_source}"
+                        end
+    puts "Searching in data source: #{actual_data_source}"
+    curl_response = RestClient.post(
+      "http://localhost:8080/druid/v2",
+      {
+        queryType: "groupBy",
+        dataSource: actual_data_source,
+        granularity: "all",
+        dimensions: ["client_mac", "client_mac_vendor", "lan_ip"],
+        context: {timeout: 90000, skipEmptyBuckets: true},
+        limitSpec: {type: "default", limit: 10000, columns: [{dimension: "client_mac", direction: "ascending"}]},
+        intervals: intervals,
+        aggregations: [{type: "count", name: "event_count"}]
+      }.to_json,
+      {content_type: :json}
+    )
 
-  # If no MAC addresses found, return an empty array
-  if response_json.empty?
-    puts "No MAC addresses found in this time range."
-    return []
-  else
+    response_json = JSON.parse(curl_response)
+
+    # If no MAC addresses found, return an empty array
+    next [] if response_json.empty?
+
     # Extract MAC address information from the response
     response_json.map do |item|
       [item['event']['client_mac'], item['event']['lan_ip'], item['event']['client_mac_vendor']]
     end
-  end
+  end.flatten(1)
 end
 
 # Insert or update a MAC address in the database
@@ -168,10 +178,10 @@ def update_mac_name(conn, mac_address, resolved_ip)
 end
 
 # Process MAC addresses obtained from the curl query
-def process_mac_addresses(conn)
+def process_mac_addresses(conn, data_sources)
   puts "Processing..."
   total_mac_count = 0
-  fetch_mac_addresses(conn).each do |mac_address, lan_ip, client_mac_vendor|
+  fetch_mac_addresses(conn, data_sources).each do |mac_address, lan_ip, client_mac_vendor|
     if is_private_ip?(lan_ip)
       insert_result = insert_mac_address(conn, mac_address, resolve_ip(lan_ip, conn), detect_device_type(conn))
       total_mac_count += 1 if insert_result
@@ -182,9 +192,10 @@ end
 
 # Main execution - Execute the script
 begin
+  data_sources = ARGV
   db_config = load_db_config
   conn = connect_to_db(db_config)
-  total_mac_count = process_mac_addresses(conn)
+  total_mac_count = process_mac_addresses(conn, data_sources)
   puts "A total of #{total_mac_count} MAC addresses have been added in the database."
 rescue => e
   puts "Error: #{e.message}"
