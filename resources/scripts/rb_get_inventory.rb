@@ -93,50 +93,43 @@ def detect_device_type(conn)
 end
 
 # Fetch MAC addresses from curl query
-def fetch_mac_addresses(conn, data_sources)
+def fetch_mac_addresses(conn, data_source)
   start_time, end_time = calculate_time_interval
 
   intervals = ["#{start_time}/#{end_time}"]
+                    
+  curl_response = RestClient.post(
+    "http://localhost:8080/druid/v2",
+    {
+      queryType: "groupBy",
+      dataSource: data_source,
+      granularity: "all",
+      dimensions: ["client_mac", "client_mac_vendor", "lan_ip"],
+      context: {timeout: 90000, skipEmptyBuckets: true},
+      limitSpec: {type: "default", limit: 10000, columns: [{dimension: "client_mac", direction: "ascending"}]},
+      intervals: intervals,
+      aggregations: [{type: "count", name: "event_count"}]
+    }.to_json,
+    {content_type: :json}
+  )
 
-  data_sources << 'rb_flow'
+  response_json = JSON.parse(curl_response)
 
-  data_sources.map do |data_source|
-    actual_data_source = if data_source == 'rb_flow'
-                            'rb_flow'
-                        else
-                          "rb_flow_#{data_source}"
-                        end
-    puts "Searching in data source: #{actual_data_source}"
-    curl_response = RestClient.post(
-      "http://localhost:8080/druid/v2",
-      {
-        queryType: "groupBy",
-        dataSource: actual_data_source,
-        granularity: "all",
-        dimensions: ["client_mac", "client_mac_vendor", "lan_ip"],
-        context: {timeout: 90000, skipEmptyBuckets: true},
-        limitSpec: {type: "default", limit: 10000, columns: [{dimension: "client_mac", direction: "ascending"}]},
-        intervals: intervals,
-        aggregations: [{type: "count", name: "event_count"}]
-      }.to_json,
-      {content_type: :json}
-    )
-
-    response_json = JSON.parse(curl_response)
-
-    # If no MAC addresses found, return an empty array
-    next [] if response_json.empty?
+  # If no MAC addresses found, return an empty array
+  if response_json.empty?
+    puts "[INFO]: No MAC addresses found in this time range."
+    return []
+  else
 
     # Extract MAC address information from the response
     response_json.map do |item|
       [item['event']['client_mac'], item['event']['lan_ip'], item['event']['client_mac_vendor']]
     end
-  end.flatten(1)
+  end
 end
 
 # Insert or update a MAC address in the database
 def insert_mac_address(conn, mac_address, resolved_ip, device_type)
-  # puts "Insert MAC..."
   return false if invalid_mac_name?(resolved_ip)
 
   existing_mac = conn.exec_params("SELECT * FROM redborder_objects WHERE value = $1", [mac_address])
@@ -172,7 +165,6 @@ end
 
 # Update the name of the MAC address in the database
 def update_mac_name(conn, mac_address, resolved_ip)
-  # puts "Update MAC..."
   update_query = "UPDATE redborder_objects SET name = $1 WHERE value = $2"
   conn.exec_params(update_query, [resolved_ip, mac_address])
 end
@@ -181,12 +173,25 @@ end
 def process_mac_addresses(conn, data_sources)
   puts "Processing..."
   total_mac_count = 0
-  fetch_mac_addresses(conn, data_sources).each do |mac_address, lan_ip, client_mac_vendor|
-    if is_private_ip?(lan_ip)
-      insert_result = insert_mac_address(conn, mac_address, resolve_ip(lan_ip, conn), detect_device_type(conn))
-      total_mac_count += 1 if insert_result
+  data_sources.unshift('rb_flow')
+
+  data_sources.each do |data_source|
+    actual_data_source = data_source == 'rb_flow' ? 'rb_flow' : "rb_flow_#{data_source}"
+    puts "Searching in data source: #{actual_data_source}"
+    mac_count = 0
+
+    fetch_mac_addresses(conn, [actual_data_source]).each do |mac_address, lan_ip, client_mac_vendor|
+      if is_private_ip?(lan_ip)
+        insert_result = insert_mac_address(conn, mac_address, resolve_ip(lan_ip, conn), detect_device_type(conn))
+        mac_count += 1 if insert_result
+      end
     end
+
+    puts "MACs added from #{actual_data_source}: #{mac_count}"
+    puts "--------------------------------------------------------------"
+    total_mac_count += mac_count
   end
+
   total_mac_count
 end
 
