@@ -101,7 +101,7 @@ def fetch_mac_addresses(conn, data_source)
       queryType: "groupBy",
       dataSource: data_source,
       granularity: "all",
-      dimensions: ["client_mac", "client_mac_vendor", "lan_ip"],
+      dimensions: ["client_mac", "lan_ip"],
       context: {timeout: 90000, skipEmptyBuckets: true},
       limitSpec: {type: "default", limit: 10000, columns: [{dimension: "client_mac", direction: "ascending"}]},
       intervals: intervals,
@@ -120,7 +120,7 @@ def fetch_mac_addresses(conn, data_source)
 
     # Extract MAC address information from the response
     response_json.map do |item|
-      [item['event']['client_mac'], item['event']['lan_ip'], item['event']['client_mac_vendor']]
+      [item['event']['client_mac'], item['event']['lan_ip']]
     end
   end
 end
@@ -177,7 +177,7 @@ def process_mac_addresses(conn, data_sources)
     puts "Searching in data source: #{actual_data_source}"
     mac_count = 0
 
-    fetch_mac_addresses(conn, actual_data_source).each do |mac_address, lan_ip, client_mac_vendor|
+    fetch_mac_addresses(conn, actual_data_source).each do |mac_address, lan_ip|
       if is_private_ip?(lan_ip)
         insert_result = insert_mac_address(conn, mac_address, resolve_ip(lan_ip, conn), detect_device_type(conn))
         mac_count += 1 if insert_result
