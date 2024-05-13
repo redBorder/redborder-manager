@@ -1,9 +1,6 @@
 #!/usr/bin/env ruby
 #######################################################################
 ## Copyright (c) 2024 ENEO Tecnología S.L.
-## Authors :
-## Vicente Mesa Torres <vimesa@redborder.com>
-## Juan Sebastian Soto <jsoto@redborder.com>
 ## This file is part of redBorder.
 ## redBorder is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU Affero General Public License License as published by
