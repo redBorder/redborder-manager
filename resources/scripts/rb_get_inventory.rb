@@ -97,7 +97,7 @@ def fetch_mac_addresses(conn, data_source)
   start_time, end_time = calculate_time_interval
 
   intervals = ["#{start_time}/#{end_time}"]
-                    
+
   curl_response = RestClient.post(
     "http://localhost:8080/druid/v2",
     {
@@ -180,7 +180,7 @@ def process_mac_addresses(conn, data_sources)
     puts "Searching in data source: #{actual_data_source}"
     mac_count = 0
 
-    fetch_mac_addresses(conn, [actual_data_source]).each do |mac_address, lan_ip, client_mac_vendor|
+    fetch_mac_addresses(conn, actual_data_source).each do |mac_address, lan_ip, client_mac_vendor|
       if is_private_ip?(lan_ip)
         insert_result = insert_mac_address(conn, mac_address, resolve_ip(lan_ip, conn), detect_device_type(conn))
         mac_count += 1 if insert_result
