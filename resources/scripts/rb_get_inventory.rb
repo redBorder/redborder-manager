@@ -22,6 +22,17 @@ require 'pg'
 require 'yaml'
 require 'time'
 
+# Initialize flag to track if insert/update message has been printed for each data_source
+@messages_printed = Hash.new(false)
+
+# Function to print insert/update message if not already printed for the specific data_source
+def print_insert_message(data_source)
+  unless @messages_printed[data_source]
+    puts "[INFO]: Inserting/Updating MACs for data source #{data_source}."
+    @messages_printed[data_source] = true
+  end
+end
+
 puts "Start MAC INVENTORY JOB..."
 
 # Load database configuration from YAML file
@@ -148,11 +159,11 @@ def insert_new_mac(conn, mac_address, resolved_ip, device_type)
 
   # Insert the MAC address into redborder_objects
   insert_query = <<~SQL
-    INSERT INTO redborder_objects (name, value, type, object_type, created_at, updated_at, user_id)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    INSERT INTO redborder_objects (name, value, type, object_type, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6)
   SQL
 
-  conn.exec_params(insert_query, [resolved_ip, mac_address, 'MacObject', device_type, current_time, current_time, 1])
+  conn.exec_params(insert_query, [resolved_ip, mac_address, 'MacObject', device_type, current_time, current_time])
 end
 
 # Helper function to check if MAC name is invalid
@@ -177,14 +188,20 @@ def process_mac_addresses(conn, data_sources)
     puts "Searching in data source: #{actual_data_source}"
     mac_count = 0
 
-    fetch_mac_addresses(conn, actual_data_source).each do |mac_address, lan_ip|
-      if is_private_ip?(lan_ip)
-        insert_result = insert_mac_address(conn, mac_address, resolve_ip(lan_ip, conn), detect_device_type(conn))
-        mac_count += 1 if insert_result
+    mac_addresses = fetch_mac_addresses(conn, actual_data_source)
+
+    unless mac_addresses.empty?
+      print_insert_message(actual_data_source)
+
+      mac_addresses.each do |mac_address, lan_ip|
+        if is_private_ip?(lan_ip)
+          insert_result = insert_mac_address(conn, mac_address, resolve_ip(lan_ip, conn), detect_device_type(conn))
+          mac_count += 1 if insert_result
+        end
       end
     end
 
-    puts "MACs added from #{actual_data_source}: #{mac_count}"
+    puts "MACs added/updated from #{actual_data_source}: #{mac_count}"
     puts "--------------------------------------------------------------"
     total_mac_count += mac_count
   end
