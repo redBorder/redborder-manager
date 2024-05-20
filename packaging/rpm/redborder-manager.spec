@@ -66,6 +66,9 @@ firewall-cmd --zone=public --add-port=443/tcp --permanent
 #firewall-cmd --zone=public --add-port=7373/tcp --permanent
 #firewall-cmd --zone=public --add-port=5353/tcp --permanent
 firewall-cmd --reload
+# adjust kernel printk settings for the console
+echo "kernel.printk = 1 4 1 7" > /usr/lib/sysctl.d/99-redborder-printk.conf
+/sbin/sysctl --system > /dev/null 2>&1
 
 %posttrans
 update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "java"|head -n 1)
