@@ -6,9 +6,9 @@ Main package to install redborder manager in Rocky Linux 9
 
 - Rocky Linux 9
 
-#### Installation
+#### Installation
 
-1. Follow the steps to install redborder repo in https://repo.redborderc.om 
+1. Install the redborder repo following the steps described in https://repo.redborder.com 
 
 2. yum install redborder-manager
 
@@ -25,5 +25,6 @@ Main package to install redborder manager in Rocky Linux 9
 
 - Carlos J. Mateos <cjmateos@redborder.com>
 - Juan J. Prieto <jjprieto@redborder.com>
+- Miguel Negrón <manegron@redborder.com>
 
 LICENSE: AFFERO GENERAL PUBLIC LICENSE, Version 3, 19 November 2007
