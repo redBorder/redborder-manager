@@ -33,6 +33,81 @@ class WizConf
 
 end
 
+class LimitsConf < WizConf
+
+    attr_accessor :conf, :cancel
+
+    LIMITS_CONF = '/etc/security/limits.conf'
+    SOFT_LIMIT = 8192
+    HARD_LIMIT = 8192
+
+    def initialize()
+        @cancel = false
+        @conf = ""
+    end
+
+    def doit
+        need_reboot = false
+        
+        lines = File.read(LIMITS_CONF).lines.map do |line|
+          if line =~ /^\*\s+soft\s+nofile\s+\d+/
+            current_value = line.split.last.to_i
+            if current_value < SOFT_LIMIT
+              line = "*    soft    nofile    #{SOFT_LIMIT}\n"
+              need_reboot = true
+            end
+          elsif line =~ /^\*\s+hard\s+nofile\s+\d+/
+            current_value = line.split.last.to_i
+            if current_value < HARD_LIMIT
+              line = "*    hard    nofile    #{HARD_LIMIT}\n"
+              need_reboot = true
+            end
+          end
+          line
+        end
+
+        # Append new limits if not found
+        unless lines.any? { |line| line =~ /^\*\s+soft\s+nofile\s+/ }
+          lines << "*    soft    nofile    #{SOFT_LIMIT}\n"
+          need_reboot = true
+        end
+        unless lines.any? { |line| line =~ /^\*\s+hard\s+nofile\s+/ }
+          lines << "*    hard    nofile    #{HARD_LIMIT}\n"
+          need_reboot = true
+        end
+
+        File.write(LIMITS_CONF, lines.join)
+        need_reboot
+
+        dialog = MRDialog.new
+        dialog.clear = true
+        
+        if need_reboot
+          text = <<EOF
+
+The 'nofile' limits have been updated succesfully. 
+
+Please reboot your system to apply the changes.
+EOF
+        else
+          text = <<EOF
+
+The 'nofile' limits are already correctly configured.
+EOF
+        end
+
+        dialog.title = "REBOOT needed"
+        
+        dialog.msgbox(text, 15, 41)
+
+        if dialog.exit_code == dialog.dialog_ok && need_reboot
+            @cancel = true
+        else
+            @cancel = false
+        end
+    end
+end
+
 # Class to create a Network configuration box
 class NetConf < WizConf
 
