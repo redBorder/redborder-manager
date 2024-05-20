@@ -9,7 +9,9 @@ require 'netaddr'
 require 'base64'
 
 module Config_utils
-
+    LIMITS_CONF = '/etc/security/limits.conf'
+    SOFT_LIMIT = 8192
+    HARD_LIMIT = 8192
 
     @modelist_path="/usr/lib/redborder/mode-list.yml"
     #Function to check if mode is valid (if defined in mode-list.yml)
@@ -236,6 +238,27 @@ module Config_utils
    #TODO
    def self.check_elasticache_cfg_port(port)
        return true
+   end
+   
+   # Check if we need to update /etc/security/limits.conf
+   def self.need_to_update_limits?
+     need_update = false
+   
+     File.read(LIMITS_CONF).each_line do |line|
+       if line =~ /^\*\s+soft\s+nofile\s+(\d+)/
+         soft_value = $1.to_i
+         need_update = true if soft_value < SOFT_LIMIT
+       elsif line =~ /^\*\s+hard\s+nofile\s+(\d+)/
+         hard_value = $1.to_i
+         need_update = true if hard_value < HARD_LIMIT
+       end
+     end
+   
+     # If no relevant lines found, need to update
+     need_update ||= !File.read(LIMITS_CONF).include?('*    soft    nofile')
+     need_update ||= !File.read(LIMITS_CONF).include?('*    hard    nofile')
+   
+     need_update
    end
 
 end
