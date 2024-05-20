@@ -87,6 +87,34 @@ unless yesno # yesno is "yes" -> true
     cancel_wizard
 end
 
+if Config_utils.need_to_update_limits? 
+  text = <<EOF
+  
+  A misconfiguration of the system limits 'nofile' has been detected. 
+
+  Would you like to adjust the configuration? 
+
+  Note: A sytem reboot will be required after this operation.
+  
+EOF
+  
+  dialog = MRDialog.new
+  dialog.clear = true
+  dialog.title = "Configure Limits"
+  dialog.cancel_label = "SKIP"
+  dialog.no_label = "SKIP"
+  yesno = dialog.yesno(text,0,0)
+  
+  if yesno # yesno is "yes" -> true
+  
+      # Conf for system limits
+      limitsconf = LimitsConf.new
+      limitsconf.doit # launch wizard
+      cancel_wizard if limitsconf.cancel
+  end
+
+end
+
 text = <<EOF
 
 Next, you will be able to configure network settings. If you have
