@@ -85,7 +85,7 @@ class LimitsConf < WizConf
         if need_reboot
           text = <<EOF
 
-The 'nofile' limits have been updated successfully. 
+The 'nofile' limits have been successfully updated.
 
 Please reboot your system to apply the changes.
 EOF
