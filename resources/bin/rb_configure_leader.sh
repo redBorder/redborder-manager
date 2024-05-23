@@ -432,6 +432,7 @@ function set_external_service_names {
 ########
 # MAIN #
 ########
+start_script=$(date +%s) # Save init time
 
 CHEFUSER="admin" # Chef server admin user
 CHEFORG="redborder" # Chef org
@@ -533,6 +534,11 @@ rb_configure_cgroups &>/dev/null
 
 echo "Cgroups configured in /sys/fs/cgroup/redborder.slice/"
 
-e_title "Leader Node configured!"
+end_script=$(date +%s) # Save finish scrip time
+runtime=$((end_script-start_script)) # Calculate duration of script
+runtime_min=$(echo "scale=2; $runtime / 60" | bc -l) # Calculate duration of script in minutes
+
+e_title "Leader Node configured! ($runtime_min minutes)"
 
 date > /etc/redborder/cluster-installed.txt
+
