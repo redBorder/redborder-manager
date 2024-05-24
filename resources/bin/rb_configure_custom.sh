@@ -7,6 +7,7 @@ source $RBLIB/rb_manager_functions.sh
 ########
 # MAIN #
 ########
+start_script=$(date +%s) # Save init time
 
 CHEFORG="redborder"
 CLIENTNAME=$(hostname -s)
@@ -133,5 +134,9 @@ rb_configure_cgroups &>/dev/null
 
 echo "Cgroups configured in /sys/fs/cgroup/redborder.slice/"
 
-e_title "Custom Node configured!"
+end_script=$(date +%s) # Save finish scrip time
+runtime=$((end_script-start_script)) # Calculate duration of script
+runtime_min=$(echo "scale=2; $runtime / 60" | bc -l) # Calculate duration of script in minutes
+
+e_title "Custom Node configured! ($runtime_min minutes)"
 date > /etc/redborder/cluster-installed.txt
