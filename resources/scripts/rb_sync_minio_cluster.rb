@@ -20,7 +20,6 @@ require 'uri'
 require 'json'
 
 def is_cluster_leader
-  # Leader node will have always s3
   output = `serf members`
   leader = ''
   if $?.success?
@@ -36,6 +35,21 @@ def is_cluster_leader
   my_ips.include? leader
 end
 
+def get_cluster_leader
+  output = `serf members`
+  leader = ''
+  if $?.success?
+    leader_node = output.lines.find { |line| line.include?("leader=ready") }
+
+    if leader_node
+      parts = leader_node.split
+      leader = parts[0]
+    end
+  end
+
+  leader
+end
+
 def get_minio_credentials
   credentials = {}
   File.foreach('/etc/default/minio') do |line|
@@ -48,9 +62,9 @@ def get_minio_credentials
   credentials
 end
 
-def get_minio_session_id
+def get_minio_session_id(host="http://127.0.0.1:9001")
   cookie = ''
-  uri = URI.parse("http://127.0.0.1:9001/api/v1/login")
+  uri = URI.parse("#{host}/api/v1/login")
 
   credentials = get_minio_credentials
 
@@ -81,17 +95,94 @@ def get_s3_nodes_from_consul
     s3_nodes = JSON.parse(response.body).map do |node|
       {
         name: node['Node'],
-        endpoint: "http://#{node['Address']}:9000"
+        endpoint: "http://#{node['Address']}:9000",
+        api_endpoint: "http://#{node['Address']}:9001"
+
       }
     end
     return s3_nodes
-  else
-    puts "Failed to fetch S3 nodes from Consul: #{response.code} - #{response.message}"
-    return []
+  end
+  []
+end
+
+
+def clean_s3_replication
+  uri = URI.parse("http://127.0.0.1:9001/api/v1/admin/site-replication")
+
+  hosts = get_s3_nodes_from_consul
+
+  credentials = get_minio_credentials
+  cookie = get_minio_session_id
+  names = hosts.map { |node| node[:name] }
+
+  body = {
+    "all" => true,
+    "sites" => names
+  }.to_json
+
+  http = Net::HTTP.new(uri.host, uri.port)
+  request = Net::HTTP::Delete.new(uri.request_uri)
+  request['Content-Type'] = 'application/json'
+  request['Cookie'] = cookie unless cookie.empty?
+  request.body = body
+
+  response = http.request(request) rescue nil
+end
+
+def clean_s3_slaves_buckets
+  hosts = get_s3_nodes_from_consul
+
+  hosts.each do |host|
+    next if get_cluster_leader == host[:name]
+    cookie = get_minio_session_id(host[:api_endpoint])
+    uri = URI.parse("#{host[:api_endpoint]}/api/v1/buckets/bucket/delete-objects?all_versions=true")
+    body = [
+      {
+        "path" => "/",
+        "versionID" => "",
+        "recursive" => true
+      }
+    ].to_json
+
+    http = Net::HTTP.new(uri.host, uri.port)
+    request = Net::HTTP::Post.new(uri.request_uri)
+    request['Content-Type'] = 'application/json'
+    request['Cookie'] = cookie unless cookie.empty?
+    request.body = body
+
+    response = http.request(request) rescue nil
+  end
+end
+
+def delet_s3_slaves_buckets
+  hosts = get_s3_nodes_from_consul
+
+  hosts.each do |host|
+    next if get_cluster_leader == host[:name]
+    uri = URI.parse("#{host[:api_endpoint]}/api/v1/buckets/bucket")
+    cookie = get_minio_session_id(host[:api_endpoint])
+
+    credentials = get_minio_credentials
+    body = { "name" => "bucket" }.to_json
+
+    request = Net::HTTP::Delete.new(uri)
+    request['Content-Type'] = 'application/json'
+    request['Cookie'] = cookie unless cookie.empty?
+    request.body = body
+
+    response = Net::HTTP.start(uri.hostname, uri.port) do |http|
+      http.request(request) rescue nil
+    end
   end
 end
 
 def set_minio_replicas
+  puts "Restarting (for sync offset reset) minio (master)..."
+  system("service minio restart > /dev/null 2>&1")
+  system("sleep 30")
+  clean_s3_replication
+  clean_s3_slaves_buckets
+  delet_s3_slaves_buckets
   hosts = get_s3_nodes_from_consul
   uri = URI.parse("http://127.0.0.1:9001/api/v1/admin/site-replication")
 
