@@ -250,8 +250,6 @@ module RedBorder
     #
     # @return [Net::HTTPResponse] The HTTP response.
     def self.set_minio_replicas
-      return unless RedBorder::Serf.im_leader?
-
       cluster_data = RedBorder::Minio.init_cluster_sync
 
       body = cluster_data[:hosts].map do |host|
