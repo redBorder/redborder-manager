@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 # frozen_string_literal: true
 
 #######################################################################
@@ -48,7 +49,7 @@ module RedBorder
     def self.im_leader?
       output = `serf members`
       leader = ''
-      if $CHILD_STATUS.success?
+      if $?.success?
         leader_node = output.lines.find { |line| line.include?('leader=ready') }
 
         leader = leader_node.split[1].split(':')[0] if leader_node
@@ -64,7 +65,7 @@ module RedBorder
     def self.cluster_leader
       output = `serf members`
       leader = ''
-      if $CHILD_STATUS.success?
+      if $?.success?
         leader_node = output.lines.find { |line| line.include?('leader=ready') }
 
         if leader_node
@@ -256,6 +257,8 @@ module RedBorder
         { accessKey: cluster_data[:credentials][:accessKey], secretKey: cluster_data[:credentials][:secretKey],
           name: host[:name], endpoint: host[:console_endpoint] }
       end.to_json
+
+      hosts = RedBorder::Consul.s3_nodes_from_consul
 
       return unless hosts.size > MINIMUM_MINIO_HOSTS
 
