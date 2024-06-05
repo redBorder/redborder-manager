@@ -236,43 +236,43 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   system("firewall-cmd --zone=home --add-protocol=igmp &>/dev/null")
 
   #nginx
-  system("firewall-cmd --permanent --zone=home --add-port=443/tcp &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=443/tcp &>/dev/null") 
 
   # mDNS / serf
-  system("firewall-cmd --permanent --zone=home --add-source-port=5353/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-source-port=5353/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=5353/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=5353/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=7946/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=7946/udp &>/dev/null")
-
+  system("firewall-cmd --permanent --zone=home --add-source-port=5353/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=public --add-source-port=5353/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=5353/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=public --add-port=5353/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=7946/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=7946/udp &>/dev/null") 
+  
   #Consul ports
-  system("firewall-cmd --permanent --zone=home --add-port=8300/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8301/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8301/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8302/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8302/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8400/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8500/tcp &>/dev/null")
-
+  system("firewall-cmd --permanent --zone=home --add-port=8300/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=8301/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=8301/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=8302/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=8302/udp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=8400/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=8500/tcp &>/dev/null") 
+  
   #DNS
-  system("firewall-cmd --permanent --zone=home --add-port=53/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=53/udp &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=53/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=53/udp &>/dev/null") 
 
   #Chef server
-  system("firewall-cmd --permanent --zone=home --add-port=4443/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=5432/tcp &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=4443/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=5432/tcp &>/dev/null") 
 
   #zookeeper
-  system("firewall-cmd --permanent --zone=home --add-port=2888/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=3888/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=2181/tcp &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=2888/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=3888/tcp &>/dev/null") 
+  system("firewall-cmd --permanent --zone=home --add-port=2181/tcp &>/dev/null") 
 
   #kafka
-  system("firewall-cmd --permanent --zone=home --add-port=9092/tcp &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=9092/tcp &>/dev/null") 
 
   #http2k
-  system("firewall-cmd --permanent --zone=home --add-port=7980/tcp &>/dev/null")
+  system("firewall-cmd --permanent --zone=home --add-port=7980/tcp &>/dev/null") 
 
   #f2k
   system("firewall-cmd --permanent --zone=home --add-port=2055/udp &>/dev/null")
@@ -287,7 +287,7 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   system("firewall-cmd --permanent --zone=home --add-port=514/udp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=514/tcp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=514/udp &>/dev/null")
-
+ 
   #freeradius
   system("firewall-cmd --permanent --zone=home --add-port=1812/udp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=1812/udp &>/dev/null")
@@ -304,7 +304,7 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   system("firewall-cmd --permanent --zone=public --add-port=2057/tcp &>/dev/null")
   system("firewall-cmd --permanent --zone=home --add-port=2058/tcp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=2058/tcp &>/dev/null")
-
+ 
   #druid
   system("firewall-cmd --permanent --zone=home --add-port=8080/tcp &>/dev/null")
   system("firewall-cmd --permanent --zone=home --add-port=8081/tcp &>/dev/null")
