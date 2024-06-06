@@ -116,7 +116,13 @@ unless network.nil? # network will not be defined in cloud deployments
       else
         interface_info=Config_utils.get_ipv4_network(iface['device'])
         ip=interface_info[:ip]
-        f.puts "DEFROUTE=no" if network['interfaces'].count > 1 and Config_utils.network_contains(serf['sync_net'], ip)
+        if network['interfaces'].count >= 1 and Config_utils.network_contains(serf['sync_net'], ip)
+          if dev == management_interface
+            f.puts "DEFROUTE=yes"
+          else
+            f.puts "DEFROUTE=no"
+          end
+        end        
       end
     }
 
