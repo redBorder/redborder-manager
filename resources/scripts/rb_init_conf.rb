@@ -20,6 +20,7 @@ INITCONF="#{RBETC}/rb_init_conf.yml"
 
 init_conf = YAML.load_file(INITCONF)
 
+management_interface = init_conf['network']['management_interface'] if init_conf['network'] && init_conf['network']['management_interface']
 hostname = init_conf['hostname']
 cdomain = init_conf['cdomain']
 network = init_conf['network']
@@ -82,16 +83,31 @@ unless network.nil? # network will not be defined in cloud deployments
     dev = iface['device']
     iface_mode = iface['mode']
     open("/etc/sysconfig/network-scripts/ifcfg-#{dev}", 'w') { |f|
+      # Commom configuration to all interfaces
+      f.puts "BOOTPROTO=#{iface_mode}"
+      f.puts "DEVICE=#{dev}"
+      f.puts "ONBOOT=yes"
+      dev_uuid = File.read("/proc/sys/kernel/random/uuid").chomp
+      f.puts "UUID=#{dev_uuid}"
+
       if iface_mode != 'dhcp'
-        if Config_utils.check_ipv4({:ip => iface['ip'], :netmask => iface['netmask']})
-          f.puts "IPADDR=#{iface['ip']}"
-          f.puts "NETMASK=#{iface['netmask']}"
+          # Specific handling for static and management interfaces
+        if dev == management_interface || Config_utils.check_ipv4(ip: iface['ip'], netmask: iface['netmask'], gateway: iface['gateway'])
+          f.puts "IPADDR=#{iface['ip']}" if iface['ip']
+          f.puts "NETMASK=#{iface['netmask']}" if iface['netmask']
           unless iface['gateway'].nil? or iface['gateway'].empty? or not Config_utils.check_ipv4(:ip => iface['gateway'])
             if network['interfaces'].count > 1 and not Config_utils.network_contains(serf['sync_net'], iface['gateway'])
               f.puts "GATEWAY=#{iface['gateway']}"
             elsif network['interfaces'].count == 1
               f.puts "GATEWAY=#{iface['gateway']}"
             end
+
+            if dev == management_interface
+              f.puts "DEFROUTE=yes"
+            else
+              f.puts "DEFROUTE=no"
+            end
+
           end
         else
           p err_msg = "Invalid network configuration for device #{dev}. Please review #{INITCONF} file"
@@ -102,11 +118,6 @@ unless network.nil? # network will not be defined in cloud deployments
         ip=interface_info[:ip]
         f.puts "DEFROUTE=no" if network['interfaces'].count > 1 and Config_utils.network_contains(serf['sync_net'], ip)
       end
-      dev_uuid = File.read("/proc/sys/kernel/random/uuid").chomp
-      f.puts "BOOTPROTO=#{iface_mode}"
-      f.puts "DEVICE=#{dev}"
-      f.puts "ONBOOT=yes"
-      f.puts "UUID=#{dev_uuid}"
     }
 
     # if we have management and sync network
@@ -147,7 +158,6 @@ unless network.nil? # network will not be defined in cloud deployments
   # Enable network service
   system('ip route flush table main &> /dev/null')
   system('systemctl restart network &> /dev/null')
-
 end
 
 # TODO: check network connectivity. Try to resolve repo.redborder.com
