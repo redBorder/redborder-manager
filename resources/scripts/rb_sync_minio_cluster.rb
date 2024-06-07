@@ -257,10 +257,8 @@ module RedBorder
         { accessKey: cluster_data[:credentials][:accessKey], secretKey: cluster_data[:credentials][:secretKey],
           name: host[:name], endpoint: host[:console_endpoint] }
       end.to_json
-
-      hosts = RedBorder::Consul.s3_nodes_from_consul
-
-      return unless hosts.size > MINIMUM_MINIO_HOSTS
+      
+      return unless cluster_data[:hosts].size > MINIMUM_MINIO_HOSTS
 
       RedBorder::HTTP.request("#{LOCAL_MINIO_ENDPOINT}/api/v1/admin/site-replication", 'POST', body,
                               cluster_data[:cookie], log: true)
