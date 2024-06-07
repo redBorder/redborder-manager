@@ -151,7 +151,9 @@ unless network.nil? # network will not be defined in cloud deployments
         f.puts "#{metric} #{iface['device']}tbl" #if File.readlines("/etc/iproute2/rt_tables").grep(/#{metric} #{iface['device']}tbl/).any?
       }
       open("/etc/sysconfig/network-scripts/route-#{dev}", 'w') { |f|
-        f.puts "default via #{gateway} dev #{iface['device']} table #{iface['device']}tbl" unless gateway.nil? or gateway.empty?
+        if dev == management_interface
+          f.puts "default via #{gateway} dev #{iface['device']} table #{iface['device']}tbl" unless gateway.nil? or gateway.empty?
+        end
         f.puts "#{iprange} dev #{iface['device']} table #{iface['device']}tbl"
         f.puts "#{iprange} dev #{iface['device']} table main"
       }
