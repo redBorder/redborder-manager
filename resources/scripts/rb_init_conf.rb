@@ -311,6 +311,9 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   system("firewall-cmd --permanent --zone=home --add-port=162/udp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=162/udp &>/dev/null")
 
+  #webui
+  system("firewall-cmd --permanent --zone=home --add-port=8001/tcp &>/dev/null")
+
   # Reload firewalld configuration
   system("firewall-cmd --reload &>/dev/null")
 
