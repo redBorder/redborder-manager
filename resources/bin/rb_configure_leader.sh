@@ -275,6 +275,35 @@ _RBEOF_
 }
 _RBEOF_
 
+  ## Generating external virtual ip
+  mkdir -p /var/chef/data/data_bag/rBglobal
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-webui.json <<-_RBEOF_
+{
+  "id": "ipvirtual-external-webui"
+}
+_RBEOF_
+
+  mkdir -p /var/chef/data/data_bag/rBglobal
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-f2k.json <<-_RBEOF_
+{
+  "id": "ipvirtual-external-f2k"
+}
+_RBEOF_
+
+  mkdir -p /var/chef/data/data_bag/rBglobal
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-sfacctd.json <<-_RBEOF_
+{
+  "id": "ipvirtual-external-sfacctd"
+}
+_RBEOF_
+
+  mkdir -p /var/chef/data/data_bag/rBglobal
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-kafka.json <<-_RBEOF_
+{
+  "id": "ipvirtual-external-kafka"
+}
+_RBEOF_
+
 LICMODE=$(head -n 1 /etc/licmode 2>/dev/null)
   if [ "x$LICMODE" != "xglobal" -a "x$LICMODE" != "xorganization" ]; then
     LICMODE="global"
@@ -349,7 +378,7 @@ function configure_leader(){
                 hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner
                 f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
                 rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rblogstatter rb-arubacentral rbcgroup rb-exporter rb-proxy rb-postfix
-                snort barnyard2 rb-ips rbaioutliers rb-manager" # The order matters!
+                keepalived snort barnyard2 rb-ips rbaioutliers rb-manager" # The order matters!
 
   for n in $listCookbooks; do # cookbooks
     # rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
