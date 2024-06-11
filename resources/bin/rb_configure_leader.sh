@@ -345,10 +345,10 @@ function configure_leader(){
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
 
-  listCookbooks="rb-selinux cron zookeeper kafka druid http2k memcached chef-server consul
+  listCookbooks="rb-common rb-selinux cron zookeeper kafka druid http2k memcached chef-server consul
                 hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner
                 f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
-                rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rblogstatter rb-arubacentral rbcgroup rb-exporter rb-proxy
+                rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rblogstatter rb-arubacentral rbcgroup rb-exporter rb-proxy rb-postfix
                 snort barnyard2 rb-ips rbaioutliers rb-manager" # The order matters!
 
   for n in $listCookbooks; do # cookbooks
@@ -432,6 +432,7 @@ function set_external_service_names {
 ########
 # MAIN #
 ########
+start_script=$(date +%s) # Save init time
 
 CHEFUSER="admin" # Chef server admin user
 CHEFORG="redborder" # Chef org
@@ -533,6 +534,11 @@ rb_configure_cgroups &>/dev/null
 
 echo "Cgroups configured in /sys/fs/cgroup/redborder.slice/"
 
-e_title "Leader Node configured!"
+end_script=$(date +%s) # Save finish scrip time
+runtime=$((end_script-start_script)) # Calculate duration of script
+runtime_min=$(echo "scale=2; $runtime / 60" | bc -l) # Calculate duration of script in minutes
+
+e_title "Leader Node configured! ($runtime_min minutes)"
 
 date > /etc/redborder/cluster-installed.txt
+
