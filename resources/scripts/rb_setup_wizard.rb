@@ -112,6 +112,29 @@ if yesno # yesno is "yes" -> true
     cancel_wizard if netconf.cancel
     general_conf["network"]["interfaces"] = netconf.conf
 
+    if general_conf["network"]["interfaces"].size > 1
+        static_interface = general_conf["network"]["interfaces"].find { |i| i["mode"] == "static" }
+        dhcp_interfaces = general_conf["network"]["interfaces"].select { |i| i["mode"] == "dhcp" }
+        if static_interface.size == 1 && dhcp_interfaces.size >= 1
+            general_conf["network"]["management_interface"] = static_interface["device"]
+        else
+            interface_options = general_conf["network"]["interfaces"].map { |i| [i["device"]] }
+            text = <<EOF
+You have multiple network interfaces configured.
+Please select one to be used as the management interface.
+EOF
+            dialog = MRDialog.new
+            dialog.clear = true
+            dialog.title = "Select Management Interface"
+            management_iface = dialog.menu(text, interface_options, 10, 50)
+
+            if management_iface.nil? || management_iface.empty?
+                cancel_wizard
+            else
+                general_conf["network"]["management_interface"] = management_iface
+            end
+        end
+    end
     # Conf for DNS
     text = <<EOF
 
@@ -302,6 +325,12 @@ unless general_conf["network"]["interfaces"].empty?
         end
         text += "\n"
     end
+end
+
+unless general_conf["network"]["management_interface"].nil?
+    text += "- Management Interface:\n"
+    text += "    #{general_conf["network"]["management_interface"]}\n"
+    text += "\n"
 end
 
 unless general_conf["network"]["dns"].nil?
