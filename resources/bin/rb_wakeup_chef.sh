@@ -46,10 +46,10 @@ service=""
 while getopts "hcs:l" name
 do
   case $name in
-    h) usage;;
     c) wmanagers=1;;
     l) showlogs=1;;
     s) service="$OPTARG";;
+    *) usage;;
   esac
 done
 
