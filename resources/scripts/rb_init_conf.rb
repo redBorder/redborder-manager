@@ -322,8 +322,8 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   system("firewall-cmd --permanent --zone=public --add-port=162/udp &>/dev/null")
 
   # keepalived
-  system("firewall-cmd --zone=home --add-protocol=112 --permanent")
-  system("firewall-cmd --zone=home --add-rich-rule='rule family=\"ipv4\" source address=\"224.0.0.18\" accept' --permanent")
+  system("firewall-cmd --add-protocol=112 --permanent")
+  system("firewall-cmd --add-rich-rule='rule family=\"ipv4\" source address=\"224.0.0.18\" accept' --permanent")
 
   # Reload firewalld configuration
   system("firewall-cmd --reload &>/dev/null")
