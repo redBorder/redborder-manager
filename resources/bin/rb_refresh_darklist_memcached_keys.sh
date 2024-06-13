@@ -9,7 +9,7 @@ if [ ! -f DARK_LIST_FILE ]; then
   /usr/lib/redborder/bin/rb_update_darklist.sh
 fi
 
-entries=$(/usr/lib/redborder/scripts/red.rb memcached keys dark | grep -c darklist)
+entries=$(/usr/lib/redborder/scripts/rbcli.rb memcached keys dark | grep -c darklist)
 
 
 
