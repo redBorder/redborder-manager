@@ -46,16 +46,16 @@ service=""
 while getopts "hcs:l" name
 do
   case $name in
-    h) usage;;
     c) wmanagers=1;;
     l) showlogs=1;;
     s) service="$OPTARG";;
+    *) usage;;
   esac
 done
 
 if [ $wmanagers -eq 1 ]; then
   if [ "x$service" == "x" ]; then
-    /usr/bin/serf query -timeout=250ms -no-ack wakeup-chef &>/dev/null
+    /usr/bin/serf query -timeout=1000ms -no-ack wakeup-chef
   else
     # TODO
     wakeup_node_service $service &>/dev/null #Only wakeup in local node if the service exists

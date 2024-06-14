@@ -116,7 +116,13 @@ unless network.nil? # network will not be defined in cloud deployments
       else
         interface_info=Config_utils.get_ipv4_network(iface['device'])
         ip=interface_info[:ip]
-        f.puts "DEFROUTE=no" if network['interfaces'].count > 1 and Config_utils.network_contains(serf['sync_net'], ip)
+        if network['interfaces'].count >= 1
+          if dev == management_interface
+            f.puts "DEFROUTE=yes"
+          else
+            f.puts "DEFROUTE=no"
+          end
+        end        
       end
     }
 
@@ -145,7 +151,9 @@ unless network.nil? # network will not be defined in cloud deployments
         f.puts "#{metric} #{iface['device']}tbl" #if File.readlines("/etc/iproute2/rt_tables").grep(/#{metric} #{iface['device']}tbl/).any?
       }
       open("/etc/sysconfig/network-scripts/route-#{dev}", 'w') { |f|
-        f.puts "default via #{gateway} dev #{iface['device']} table #{iface['device']}tbl" unless gateway.nil? or gateway.empty?
+        if dev == management_interface
+          f.puts "default via #{gateway} dev #{iface['device']} table #{iface['device']}tbl" unless gateway.nil? or gateway.empty?
+        end
         f.puts "#{iprange} dev #{iface['device']} table #{iface['device']}tbl"
         f.puts "#{iprange} dev #{iface['device']} table main"
       }
@@ -321,9 +329,12 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   system("firewall-cmd --permanent --zone=home --add-port=162/udp &>/dev/null")
   system("firewall-cmd --permanent --zone=public --add-port=162/udp &>/dev/null")
 
-  # keepalived
+  #keepalived
   system("firewall-cmd --add-protocol=112 --permanent")
   system("firewall-cmd --add-rich-rule='rule family=\"ipv4\" source address=\"224.0.0.18\" accept' --permanent")
+  
+  #webui
+  system("firewall-cmd --permanent --zone=home --add-port=8001/tcp &>/dev/null")
 
   # Reload firewalld configuration
   system("firewall-cmd --reload &>/dev/null")
