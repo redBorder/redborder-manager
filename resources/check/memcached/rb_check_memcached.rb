@@ -17,7 +17,7 @@ require 'getopt/std'
 require_relative '/usr/lib/redborder/lib/check/check_functions.rb'
 require_relative 'rb_check_memcached_functions.rb'
 
-red = "/usr/lib/redborder/scripts/red.rb"
+rbcli = "/usr/lib/redborder/scripts/rbcli.rb"
 
 opt = Getopt::Std.getopts("cq")
 
@@ -37,14 +37,14 @@ nodes.each do |node|
 
   if status == 0
     subtitle("Keys", colorless, quiet)
-    output = execute_command_on_node(node,"#{red} memcached keys | grep -v '==\|--\|bytes' | wc -l").gsub("\n","")
+    output = execute_command_on_node(node,"#{rbcli} memcached keys | grep -v '==\|--\|bytes' | wc -l").gsub("\n","")
     return_value = $?.exitstatus
     has_errors = true if return_value != 0
     print_command_output(node + " " +  output + " keys", return_value, colorless, quiet)
 
 
     subtitle("Darklist keys", colorless, quiet)
-    output = execute_command_on_node(node,"#{red} memcached keys darklist | grep -c darklist").gsub("\n","")
+    output = execute_command_on_node(node,"#{rbcli} memcached keys darklist | grep -c darklist").gsub("\n","")
     return_value = $?.exitstatus
     has_errors = true if return_value != 0
     print_command_output(node + " " +  output + " darklist keys", return_value, colorless, quiet)
