@@ -377,7 +377,7 @@ function configure_leader(){
   listCookbooks="rb-common rb-selinux cron zookeeper kafka druid http2k memcached chef-server consul
                 hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner
                 f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
-                rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rblogstatter rb-arubacentral rbcgroup rb-exporter rb-proxy rb-postfix
+                rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rblogstatter rb-arubacentral rbcgroup rb-exporter rb-clamav rb-proxy rb-postfix
                 keepalived snort barnyard2 rb-ips rbaioutliers rb-manager" # The order matters!
 
   for n in $listCookbooks; do # cookbooks
