@@ -137,9 +137,9 @@ EOF
         end
     else
         if general_conf["network"]["interfaces"].size == 1
-            if static_interface.size >= 1
+            if !static_interface.nil?
               general_conf["network"]["management_interface"] = static_interface["device"]
-            elsif dhcp_interfaces.size >= 1
+            else
               general_conf["network"]["management_interface"] = dhcp_interfaces.first["device"]
             end
         end         
