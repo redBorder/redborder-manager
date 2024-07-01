@@ -80,6 +80,8 @@ module RedBorder
 
   # Module for making HTTP requests
   module HTTP
+    HTTP_OPEN_TIMEOUT = 900
+    HTTP_READ_TIMEOUT = 900
     # Sends an HTTP request.
     #
     # @param url [String] The URL to request.
@@ -91,6 +93,8 @@ module RedBorder
     def self.request(url, method, body = nil, cookie = nil, log: false)
       uri = URI.parse(url)
       http = Net::HTTP.new(uri.host, uri.port)
+      http.read_timeout = HTTP_READ_TIMEOUT
+      http.open_timeout = HTTP_OPEN_TIMEOUT
 
       request_class = { 'POST' => Net::HTTP::Post, 'DELETE' => Net::HTTP::Delete }[method.upcase] || Net::HTTP::Get
       request = request_class.new(uri.request_uri)
