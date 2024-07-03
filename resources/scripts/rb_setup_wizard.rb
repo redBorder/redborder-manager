@@ -136,9 +136,11 @@ EOF
             end
         end
     else
-        if general_conf["network"]["interfaces"].size == 1
-          general_conf["network"]["management_interface"] = unless static_interface.nil? ? dhcp_interfaces.first["device"] : static_interface["device"]
-        end
+      if !static_interface.nil?
+        general_conf["network"]["management_interface"] = static_interface["device"]
+      else
+        general_conf["network"]["management_interface"] = dhcp_interfaces.first["device"]
+      end
     end
     # Conf for DNS
     text = <<EOF
