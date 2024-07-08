@@ -116,7 +116,7 @@ if yesno # yesno is "yes" -> true
     dhcp_interfaces = general_conf["network"]["interfaces"].select { |i| i["mode"] == "dhcp" }
 
     if general_conf["network"]["interfaces"].size > 1
-        if static_interface.size == 1 && dhcp_interfaces.size >= 1
+        if static_interface && static_interface.size == 1 && dhcp_interfaces.size >= 1
             general_conf["network"]["management_interface"] = static_interface["device"]
         else
             interface_options = general_conf["network"]["interfaces"].map { |i| [i["device"]] }
