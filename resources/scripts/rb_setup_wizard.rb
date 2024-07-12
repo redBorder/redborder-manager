@@ -112,9 +112,10 @@ if yesno # yesno is "yes" -> true
     cancel_wizard if netconf.cancel
     general_conf["network"]["interfaces"] = netconf.conf
 
+    static_interface = general_conf["network"]["interfaces"].find { |i| i["mode"] == "static" }
+    dhcp_interfaces = general_conf["network"]["interfaces"].select { |i| i["mode"] == "dhcp" }
+
     if general_conf["network"]["interfaces"].size > 1
-        static_interface = general_conf["network"]["interfaces"].find { |i| i["mode"] == "static" }
-        dhcp_interfaces = general_conf["network"]["interfaces"].select { |i| i["mode"] == "dhcp" }
         if static_interface.size == 1 && dhcp_interfaces.size >= 1
             general_conf["network"]["management_interface"] = static_interface["device"]
         else
@@ -134,6 +135,14 @@ EOF
                 general_conf["network"]["management_interface"] = management_iface
             end
         end
+    else
+        if general_conf["network"]["interfaces"].size == 1
+            if !static_interface.nil?
+              general_conf["network"]["management_interface"] = static_interface["device"]
+            else
+              general_conf["network"]["management_interface"] = dhcp_interfaces.first["device"]
+            end
+        end         
     end
     # Conf for DNS
     text = <<EOF
