@@ -379,7 +379,7 @@ function configure_leader(){
                 f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
                 rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rblogstatter rb-arubacentral rbcgroup rb-exporter rb-clamav rb-postfix
                 keepalived snort barnyard2 rbaioutliers
-                mem2incident
+                mem2incident rb-ai
                 rb-proxy rb-ips rb-manager" # The order matters! (please keep proxy ips and manager at the end)
 
   for n in $listCookbooks; do # cookbooks
