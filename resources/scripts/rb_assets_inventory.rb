@@ -59,12 +59,13 @@ module DatabaseConnection
   rescue PG::Error => e
     Logger.error("Failed to connect to PostgreSQL: #{e.message}")
     nil
+    exit 1
   end
 end
 
 # Module to handle queries to Druid
 module DruidQuery
-  DRUID_URL = "http://localhost:8080/druid/v2"
+  DRUID_URL = "http://druid-broker.service:8080/druid/v2"
 
   # Execute a Druid query and return responses for each dimension
   def self.execute(data_source, dimensions, start_time, end_time)
@@ -82,9 +83,11 @@ module DruidQuery
   rescue RestClient::ExceptionWithResponse => e
     Logger.error("Error querying Druid: #{e.message}")
     raise
+    exit 1
   rescue JSON::ParserError => e
     Logger.error("Error parsing JSON response from Druid: #{e.message}")
     raise
+    exit 1
   end
 
   # Build the query payload for Druid
@@ -126,31 +129,35 @@ class MacIpInventory
     Logger.info("Processing...")
     total_mac_insert_count = 0
     total_ip_insert_count = 0
-
+  
     # Add 'rb_flow' as the default data source
     data_sources.unshift('rb_flow')
     data_sources.each do |data_source|
       actual_data_source = data_source == 'rb_flow' ? 'rb_flow' : "rb_flow_#{data_source}"
       Logger.info("Searching in data source: #{actual_data_source}")
-
+  
       # Fetch and process MAC addresses and IPs from the data source
       mac_insert_count, ip_insert_count = fetch_mac_addresses(conn, actual_data_source)
-
+  
+      # Ensure that mac_insert_count and ip_insert_count are not nil
+      mac_insert_count ||= 0
+      ip_insert_count ||= 0
+  
       # Print insertion message if not already printed
       print_insert_message(actual_data_source)
-
+  
       Logger.info("MACs inserted from #{actual_data_source}: #{mac_insert_count}")
       Logger.info("IPs inserted from #{actual_data_source}: #{ip_insert_count}")
       Logger.break_line
-
+  
       # Accumulate total counts
       total_mac_insert_count += mac_insert_count
       total_ip_insert_count += ip_insert_count
     end
-
+  
     Logger.info("Total MACs inserted: #{total_mac_insert_count}")
     Logger.info("Total IPs inserted: #{total_ip_insert_count}")
-
+  
     total_mac_insert_count + total_ip_insert_count
   end
 
@@ -167,6 +174,7 @@ class MacIpInventory
     dimensions = ["lan_ip", "wan_ip"]
     responses = DruidQuery.execute(data_source, dimensions, start_time, end_time)
     process_responses(conn, responses)
+    Logger.info("Time Range: #{start_time} - #{end_time}")
   end
 
   # Process responses for all dimensions
@@ -221,11 +229,11 @@ class MacIpInventory
     @messages_printed[data_source] = true
   end
 
-  # Calculate the 1-hour interval from the current time
+  # Calculate the 24-hours interval from the current time
   def calculate_time_interval
     current_time = Time.now
-    one_hour_ago = current_time - 3600
-    start_time = one_hour_ago.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    twenty_four_hours_ago = current_time - 24 * 3600
+    start_time = twenty_four_hours_ago.strftime("%Y-%m-%dT%H:%M:%S.000Z")
     end_time = current_time.strftime("%Y-%m-%dT%H:%M:%S.999Z")
     [start_time, end_time]
   end
@@ -284,7 +292,7 @@ end
 
 # Main execution block
 begin
-  Logger.info("Start - INVENTORY JOB...")
+  Logger.info("Start - ASSETS INVENTORY JOB...")
 
   # Get data sources from command line arguments
   data_sources = ARGV
@@ -305,12 +313,16 @@ begin
   end
 rescue PG::Error => e
   Logger.error("Database error: #{e.message}")
+  exit 1
 rescue RestClient::ExceptionWithResponse => e
   Logger.error("RestClient error: #{e.message}")
+  exit 1
 rescue JSON::ParserError => e
   Logger.error("JSON parsing error: #{e.message}")
+  exit 1
 rescue StandardError => e
   Logger.error("Error: #{e.message}")
+  exit 1
 ensure
   conn&.close
 end

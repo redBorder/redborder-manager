@@ -46,30 +46,47 @@ end
 # FileManager: Class to handle writing data to JSON files.
 class FileManager
   def self.save_to_file(data, file_path)
-    # Organize each host object by hostid within the 'result' array
-    result_data = data['result'].map do |host|
-      { host['hostid'] => host }
+    begin
+      # Verify that 'result' is present and is an array
+      unless data['result'].is_a?(Array)
+        raise TypeError, "'result' is not an Array or does not exist in the data"
+      end
+      
+      # Organize each host object by hostid within the 'result' array
+      result_data = data['result'].map do |host|
+        { host['hostid'] => host }
+      end
+  
+      # Construct the final data structure with 'jsonrpc' and 'result'
+      final_data = {
+        'jsonrpc' => data['jsonrpc'],
+        'result' => result_data
+      }
+  
+      # Save the structured data to file
+      File.open(file_path, 'w') { |f| f.write(JSON.pretty_generate(final_data)) }
+      Logger.info("Data saved to #{file_path}")
+    rescue TypeError => e
+      Logger.error("TypeError: #{e.message}")
+      exit 1
+    rescue NoMethodError => e
+      Logger.error("NoMethodError: #{e.message}")
+      exit 1
+    rescue StandardError => e
+      Logger.error("Error: #{e.message}")
+      exit 1
     end
-
-    # Construct the final data structure with 'jsonrpc' and 'result'
-    final_data = {
-      'jsonrpc' => data['jsonrpc'],
-      'result' => result_data
-    }
-
-    # Save the structured data to file
-    File.open(file_path, 'w') { |f| f.write(JSON.pretty_generate(final_data)) }
-    Logger.info("Data saved to #{file_path}")
   end
+  
 end
 
 # ZabbixAPI: Class to interact with the Zabbix API.
 class ZabbixAPI
-  attr_reader :zabbix_url, :auth_token, :zabbix_user, :zabbix_password
+  attr_reader :zabbix_url, :zabbix_token, :zabbix_user, :zabbix_password
 
-  def initialize(zabbix_url, auth_token, zabbix_user, zabbix_password)
+  def initialize(zabbix_url, zabbix_token, zabbix_user, zabbix_password)
     @zabbix_url = zabbix_url
-    @auth_token = auth_token
+    @zabbix_token = zabbix_token
     @zabbix_user = zabbix_user
     @zabbix_password = zabbix_password
   end
@@ -89,7 +106,7 @@ class ZabbixAPI
         selectInventory: "extend",
         selectItems: ["itemid", "name", "key_", "lastvalue"]
       },
-      auth: @auth_token,
+      auth: @zabbix_token,
       id: 2
     }
   
@@ -99,6 +116,7 @@ class ZabbixAPI
   rescue StandardError => e
     Logger.error("Error fetching data from Zabbix API: #{e.message}")
     nil
+    exit 1
   end
 
   private
@@ -118,15 +136,94 @@ end
 # DeviceClassifier: Class to classify device type.
 class DeviceClassifier
   DEVICE_TYPES = {
-    "router" => "Router",
-    "switch" => "Switch",
-    "server" => "Server",
-    "firewall" => "Firewall",
-    "printer" => "Printer",
-    "linux" => "Linux",
-    "windows" => "Windows",
-    "vmware" => "VMware",
-    "database" => "Database"
+  "router" => "Router",
+  "switch" => "Switch",
+  "firewall" => "Firewall",
+  "server" => "Server",
+  "printer" => "Printer",
+  "workstation" => "Workstation",
+  "nas" => "Network Attached Storage",
+  "database" => "Database",
+  "access_point" => "Access Point",
+  "gateway" => "Gateway",
+  "proxy" => "Proxy",
+  "vpn" => "VPN",
+  "load_balancer" => "Load Balancer",
+  "hypervisor" => "Hypervisor",
+  "virtual_machine" => "Virtual Machine",
+  "storage" => "Storage",
+  "monitor" => "Monitor",
+  "scanner" => "Scanner",
+  "projector" => "Projector",
+  "camera" => "Camera",
+  "security_camera" => "Security Camera",
+  "ups" => "Uninterruptible Power Supply",
+  "badge_reader" => "Badge Reader",
+  "access_control" => "Access Control",
+  "smart_tv" => "Smart TV",
+  "ip_phone" => "IP Phone",
+  "tablet" => "Tablet",
+  "smartphone" => "Smartphone",
+  "lab_equipment" => "Lab Equipment",
+  "medical_imaging" => "Medical Imaging Device",
+  "mri_machine" => "MRI Machine",
+  "ct_scanner" => "CT Scanner",
+  "x_ray_machine" => "X-Ray Machine",
+  "ultrasound_machine" => "Ultrasound Machine",
+  "patient_monitor" => "Patient Monitor",
+  "ecg_machine" => "ECG Machine",
+  "infusion_pump" => "Infusion Pump",
+  "ventilator" => "Ventilator",
+  "surgical_robot" => "Surgical Robot",
+  "blood_analyzer" => "Blood Analyzer",
+  "dna_sequencer" => "DNA Sequencer",
+  "electronic_health_record_system" => "EHR System",
+  "pacs" => "Picture Archiving and Communication System",
+  "ris" => "Radiology Information System",
+  "his" => "Hospital Information System",
+  "lis" => "Laboratory Information System",
+  "pharmacy_automation" => "Pharmacy Automation System",
+  "telemedicine_equipment" => "Telemedicine Equipment",
+  "nurse_call_system" => "Nurse Call System",
+  "patient_bed" => "Smart Patient Bed",
+  "temperature_sensor" => "Temperature Sensor",
+  "humidity_sensor" => "Humidity Sensor",
+  "smoke_detector" => "Smoke Detector",
+  "biometric_scanner" => "Biometric Scanner",
+  "glucose_meter" => "Glucose Meter",
+  "insulin_pump" => "Insulin Pump",
+  "wearable_device" => "Wearable Device",
+  "smart_light" => "Smart Light",
+  "smart_thermostat" => "Smart Thermostat",
+  "iot_device" => "IoT Device",
+  "body_temperature_sensor" => "Body Temperature Sensor",
+  "oxygen_tank" => "Oxygen Tank",
+  "emergency_button" => "Emergency Button",
+  "wristband_tracker" => "Wristband Tracker",
+  "kiosk" => "Patient Check-In Kiosk",
+  "defibrillator" => "Defibrillator",
+  "biomedical_equipment" => "Biomedical Equipment",
+  "disinfectant_robot" => "Disinfectant Robot",
+  "robotic_medication_dispenser" => "Robotic Medication Dispenser",
+  "healthcare_data_analytics_system" => "Healthcare Data Analytics System",
+  "clinical_decision_support_system" => "Clinical Decision Support System",
+  "telemetry_device" => "Telemetry Device",
+  "hemodialysis_machine" => "Hemodialysis Machine",
+  "radiation_therapy_machine" => "Radiation Therapy Machine",
+  "endoscope" => "Endoscope",
+  "syringe_pump" => "Syringe Pump",
+  "nebulizer" => "Nebulizer",
+  "spirometer" => "Spirometer",
+  "audiometer" => "Audiometer",
+  "ophthalmoscope" => "Ophthalmoscope",
+  "otoscope" => "Otoscope",
+  "treadmill" => "Treadmill",
+  "exercise_bike" => "Exercise Bike",
+  "ergometer" => "Ergometer",
+  "gait_trainer" => "Gait Trainer",
+  "pulse_oximeter" => "Pulse Oximeter",
+  "electronic_medical_record_system" => "EMR System",
+  "hospital_bed_management_system" => "Hospital Bed Management System"
   }.freeze
 
   # classify: Method to classify device type based on templates and tags.
@@ -286,18 +383,19 @@ class FileNotFoundError < StandardError; end
 
 # ZabbixHostManager: Main class for managing Zabbix hosts.
 class ZabbixHostManager
-  attr_reader :zabbix_url, :auth_token, :zabbix_user, :zabbix_password
+  attr_reader :zabbix_url, :zabbix_token, :zabbix_user, :zabbix_password
 
-  def initialize(zabbix_url, auth_token, zabbix_user, zabbix_password)
+  def initialize(zabbix_url, zabbix_token, zabbix_user, zabbix_password)
     @zabbix_url = zabbix_url
-    @auth_token = auth_token
+    @zabbix_token = zabbix_token
     @zabbix_user = zabbix_user
     @zabbix_password = zabbix_password
   end
 
   # execute: Method to execute the Zabbix data synchronization process.
   def execute
-    zabbix_api = ZabbixAPI.new(zabbix_url, auth_token, zabbix_user, zabbix_password)
+    Logger.info("Start - ZABBIX INVENTORY JOB...")
+    zabbix_api = ZabbixAPI.new(zabbix_url, zabbix_token, zabbix_user, zabbix_password)
     Logger.info("Connecting to Zabbix API...")
     zabbix_data = zabbix_api.fetch_data
     return if zabbix_data.nil?
@@ -312,20 +410,21 @@ class ZabbixHostManager
     end
   rescue StandardError => e
     Logger.error("Error: #{e.message}")
+    exit 1
   end
 end
 
 if __FILE__ == $0
   zabbix_url = ARGV[0]
-  auth_token = ARGV[1]
+  zabbix_token = ARGV[1]
   zabbix_user = ARGV[2]
   zabbix_password = ARGV[3]
 
-  if zabbix_url.nil? || auth_token.nil? || zabbix_user.nil? || zabbix_password.nil?
+  if zabbix_url.nil? || zabbix_token.nil? || zabbix_user.nil? || zabbix_password.nil?
     Logger.error('ERROR: Missing input parameters. You must provide url, token, user, and password.')
     exit 1
   end
   
-  manager = ZabbixHostManager.new(zabbix_url, auth_token, zabbix_user, zabbix_password)
+  manager = ZabbixHostManager.new(zabbix_url, zabbix_token, zabbix_user, zabbix_password)
   manager.execute
 end
