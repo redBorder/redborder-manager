@@ -332,13 +332,16 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   #keepalived
   system("firewall-cmd --add-protocol=112 --permanent")
   system("firewall-cmd --add-rich-rule='rule family=\"ipv4\" source address=\"224.0.0.18\" accept' --permanent")
-  
+
   #webui
   system("firewall-cmd --permanent --zone=home --add-port=8001/tcp &>/dev/null")
 
   #memcached
   system("firewall-cmd --permanent --zone=home --add-port=11211/tcp &>/dev/null")
   system("firewall-cmd --permanent --zone=home --add-port=11211/udp &>/dev/null")
+
+  # redborder-ai
+  system('firewall-cmd --permanent --zone=home --add-port=50505/tcp &>/dev/null')
 
   # Reload firewalld configuration
   system("firewall-cmd --reload &>/dev/null")
