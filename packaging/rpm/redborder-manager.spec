@@ -18,7 +18,6 @@ Requires: chef-workstation
 Requires: alternatives java-1.8.0-openjdk java-1.8.0-openjdk-devel
 Requires: network-scripts network-scripts-teamd
 Requires: redborder-cgroups rb-logstatter
-Requires: redborder-ai
 
 %description
 %{summary}
