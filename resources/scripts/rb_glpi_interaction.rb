@@ -239,7 +239,7 @@ end
 
 # Main script execution
 begin
-  user_token, app_token, api_url, user_id = ARGV
+  user_token, api_url, app_token, user_id = ARGV
   DatabaseConfig.setup
   DatabaseConfig.verify_connection
 
