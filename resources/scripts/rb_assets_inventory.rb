@@ -129,6 +129,7 @@ class MacIpInventory
     start_time, end_time = calculate_time_interval
     Logger.info("Time range for the query: #{start_time} to #{end_time}")
     Logger.info("Processing...")
+    Logger.break_line
     total_mac_insert_count = 0
     total_ip_insert_count = 0
 
