@@ -125,39 +125,37 @@ class MacIpInventory
   end
 
   # Process MAC addresses and IPs from data sources
-  def process_mac_addresses(conn, data_sources)
+  def data_process(conn, data_sources)
+    start_time, end_time = calculate_time_interval
+    Logger.info("Time range for the query: #{start_time} to #{end_time}")
     Logger.info("Processing...")
     total_mac_insert_count = 0
     total_ip_insert_count = 0
-  
+
     # Add 'rb_flow' as the default data source
     data_sources.unshift('rb_flow')
     data_sources.each do |data_source|
       actual_data_source = data_source == 'rb_flow' ? 'rb_flow' : "rb_flow_#{data_source}"
       Logger.info("Searching in data source: #{actual_data_source}")
-  
+
       # Fetch and process MAC addresses and IPs from the data source
-      mac_insert_count, ip_insert_count = fetch_mac_addresses(conn, actual_data_source)
-  
-      # Ensure that mac_insert_count and ip_insert_count are not nil
-      mac_insert_count ||= 0
-      ip_insert_count ||= 0
-  
+      mac_insert_count, ip_insert_count = fetch_data(conn, actual_data_source)
+
       # Print insertion message if not already printed
       print_insert_message(actual_data_source)
-  
+
       Logger.info("MACs inserted from #{actual_data_source}: #{mac_insert_count}")
       Logger.info("IPs inserted from #{actual_data_source}: #{ip_insert_count}")
       Logger.break_line
-  
+
       # Accumulate total counts
       total_mac_insert_count += mac_insert_count
       total_ip_insert_count += ip_insert_count
     end
-  
+
     Logger.info("Total MACs inserted: #{total_mac_insert_count}")
     Logger.info("Total IPs inserted: #{total_ip_insert_count}")
-  
+
     total_mac_insert_count + total_ip_insert_count
   end
 
@@ -169,12 +167,11 @@ class MacIpInventory
   end
 
   # Fetch MAC addresses and IPs from a specified data source
-  def fetch_mac_addresses(conn, data_source)
+  def fetch_data(conn, data_source)
     start_time, end_time = calculate_time_interval
     dimensions = ["lan_ip", "wan_ip"]
     responses = DruidQuery.execute(data_source, dimensions, start_time, end_time)
-    process_responses(conn, responses)
-    Logger.info("Time Range: #{start_time} - #{end_time}")
+    process_responses(conn, responses)    
   end
 
   # Process responses for all dimensions
@@ -305,7 +302,7 @@ begin
 
   if conn
     # Process MAC addresses and IPs for specified data sources
-    total_count = inventory.process_mac_addresses(conn, data_sources)
+    total_count = inventory.data_process(conn, data_sources)
     Logger.break_line
     Logger.info("A total of #{total_count} records (MACs and IPs) have been added to the database.")
   else
