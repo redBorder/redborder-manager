@@ -17,7 +17,7 @@ Requires: synthetic-producer darklist-updated tcpdump
 Requires: chef-workstation
 Requires: alternatives java-1.8.0-openjdk java-1.8.0-openjdk-devel
 Requires: network-scripts network-scripts-teamd
-Requires: redborder-cgroups rb-logstatter
+Requires: redborder-cgroups rb-logstatter redborder-pythonlibs
 
 %description
 %{summary}
@@ -32,6 +32,7 @@ mkdir -p %{buildroot}/etc/redborder
 mkdir -p %{buildroot}/usr/lib/redborder/bin
 mkdir -p %{buildroot}/usr/lib/redborder/scripts
 mkdir -p %{buildroot}/usr/lib/redborder/lib
+mkdir -p %{buildroot}/usr/lib/redborder/tools
 mkdir -p %{buildroot}/usr/lib/redborder/lib/check
 mkdir -p %{buildroot}/etc/profile.d
 mkdir -p %{buildroot}/var/chef/cookbooks
@@ -42,9 +43,11 @@ install -D -m 0644 resources/redborder-manager.sh %{buildroot}/etc/profile.d
 install -D -m 0644 resources/dialogrc %{buildroot}/etc/redborder
 cp resources/bin/* %{buildroot}/usr/lib/redborder/bin
 cp resources/scripts/* %{buildroot}/usr/lib/redborder/scripts
+cp resources/tools/* %{buildroot}/usr/lib/redborder/tools
 cp -r resources/check/* %{buildroot}/usr/lib/redborder/lib/check
 chmod 0755 %{buildroot}/usr/lib/redborder/bin/*
 chmod 0755 %{buildroot}/usr/lib/redborder/scripts/*
+chmod 0755 %{buildroot}/usr/lib/redborder/tools/*
 install -D -m 0644 resources/lib/rb_wiz_lib.rb %{buildroot}/usr/lib/redborder/lib
 install -D -m 0644 resources/lib/rb_config_utils.rb %{buildroot}/usr/lib/redborder/lib
 install -D -m 0644 resources/lib/rb_manager_functions.sh %{buildroot}/usr/lib/redborder/lib
@@ -77,6 +80,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %defattr(0755,root,root)
 /usr/lib/redborder/bin
 /usr/lib/redborder/scripts
+/usr/lib/redborder/tools
 /usr/lib/redborder/lib/check
 %defattr(0755,root,root)
 /etc/profile.d/redborder-manager.sh
@@ -95,6 +99,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Mon Jul 29 2024 Miguel Alvarez <malvarez@redborder.com> - 
+- Add redboder tools path
+
 * Fri Jan 19 2024 Miguel Negrón <manegron@redborder.com> - 1.0.7-1
 - Add journald script to configure logs storage
 
