@@ -374,17 +374,7 @@ function configure_leader(){
   e_title "Uploading cookbooks"
   mkdir -p /var/chef/cache/cookbooks/
 
-  listCookbooks="rb-common rb-selinux cron zookeeper kafka druid http2k memcached chef-server consul
-                hadoop samza nginx geoip webui snmp mongodb rbmonitor rbscanner
-                f2k logstash pmacct minio postgresql rbdswatcher rbevents-counter
-                rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rblogstatter rb-arubacentral rbcgroup rb-exporter rb-chrony rb-clamav rb-proxy rb-postfix
-                keepalived snort barnyard2 rb-ips rbaioutliers rb-manager" # The order matters!
-
-  for n in $listCookbooks; do # cookbooks
-    # rsync -a /var/chef/cookbooks/${n}/ /var/chef/cache/cookbooks/$n
-    # Uploadind cookbooks
-    knife cookbook upload $n
-  done
+  $RBBIN/rb_upload_cookbooks.sh
 
   e_title "Registering chef-client ..."
   chef-client

@@ -8,11 +8,7 @@
   },
   "chef_type": "role",
   "run_list": [
-    "recipe[snmp]",
-    "recipe[rsyslog]",
-    "recipe[redborder-common]",
-    "recipe[geodb]",
-    "recipe[redborder-IPS-sensor]"
+    "recipe[rb-ips]"
   ],
   "env_run_lists": {
   }
