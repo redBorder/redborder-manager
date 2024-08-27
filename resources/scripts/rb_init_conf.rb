@@ -340,11 +340,16 @@ if !network.nil? #Firewall rules are not needed in cloud environments
   system("firewall-cmd --permanent --zone=home --add-port=11211/tcp &>/dev/null")
   system("firewall-cmd --permanent --zone=home --add-port=11211/udp &>/dev/null")
 
+  #chrony
+  system("firewall-cmd --permanent --zone=home --add-port=123/udp &>/dev/null")
+  system("firewall-cmd --permanent --zone=public --add-port=123/udp &>/dev/null")
+
   # redborder-ai
   system('firewall-cmd --permanent --zone=home --add-port=50505/tcp &>/dev/null')
 
   #mongo
   system("firewall-cmd --permanent --zone=home --add-port=27017/tcp &>/dev/null")
+
 
   # Reload firewalld configuration
   system("firewall-cmd --reload &>/dev/null")
