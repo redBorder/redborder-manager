@@ -58,7 +58,7 @@ function print_result(){
 
 function usage(){
   echo "$0 [-h][-f filename][-r][-s][-t <path>] [-x start date] [-y stop date]"
-  echo "    default action is export the segments from the local s3 databasei (s3://bucket/)"
+  echo "    default action is export the segments from the local s3 database (s3://bucket/)"
   echo "    start and stop date should have following format : 2024-08-18T22:00:00.000Z"
   echo ""
   echo ""
@@ -274,10 +274,14 @@ if [ $import -eq 1 ]; then
                 if [ $restoredb -ne 1 ]; then
                   RET=0
                   echo -n "update druid segments table with the metadata"
-                  for rule in $(ls $tmpdir/segments/rb_flow/*/*/*/rule.json); do 
-                      rvm ruby-2.7.5@web 2>/dev/null do rb_druid_metadata -f $rule
-                      RET=$? || $RET
+
+                  for module in $(ls $tmpdir/segments); do
+                      for rule in $(find $tmpdir/segments/$module/*/*/*/ -name "rule.json"); do
+                          rvm ruby-2.7.5@web 2>/dev/null do rb_druid_metadata -f $rule
+                          RET=$? || $RET
+                      done
                   done
+
                   print_result $RET
                 fi
               fi
