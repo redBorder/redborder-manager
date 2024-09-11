@@ -24,7 +24,7 @@ require 'json/ext'
 def usage()
   printf "rb_druid_metadata.rb [-h] [-d <datasource>] [-s <start_time>] [-e <end_time>][-f <file>]\n"
   printf "   -h             : print this help\n"
-  printf "   -a             : get all metadata instead of first one\n"
+  printf "   -a             : show all metadata\n"
   printf "   -d <datasource>: filter by datasource or change to this datasource in recover mode\n"
   printf "   -p <partition> : filter by partition  (ignored on recover mode)\n"
   printf "   -s <start_time>: filter by start time (ignored on recover mode)\n"
@@ -64,7 +64,6 @@ if opt["h"].nil?
       end
   
       cmd="#{cmd} where #{conditions.join(" and ")}" if conditions.size>0
-      cmd="#{cmd} limit 1" if opt["a"].nil?
       res = conn.exec_params(cmd)
 
       unless res.none?
@@ -101,7 +100,7 @@ if opt["h"].nil?
         data["payload"]["identifier"] = data["id"]
 
         if !error
-          #isert data into database
+          #insert data into database
           res = conn.exec_params("SELECT * from druid_segments where id = '#{data["id"]}' limit 1")
           if res.none?
             cmd = "insert into druid_segments (id, datasource, created_date, start, \"end\", partitioned, version, used, payload ) VALUES ('#{data["id"]}', '#{data["datasource"]}', '#{data["created_date"]}', '#{data["start"]}', '#{data["end"]}', '#{data["partitioned"]}', '#{data["version"]}', '#{data["used"]}', '\\x#{data["payload"].to_json.unpack("H*")[0]}')"
@@ -111,14 +110,13 @@ if opt["h"].nil?
           res = conn.exec_params(cmd)
         end
       end
-      puts JSON.pretty_generate(data.to_hash)
+      puts JSON.pretty_generate(data.to_hash) unless opt["a"].nil?
 
     end
   end
 else
   usage
 end
-  
   
 #jsondata=JSON.parse(x.to_json)
 #p jsondata
