@@ -249,6 +249,8 @@ _RBEOF_
 }
 _RBEOF_
 
+  rb_druid_rules.rb -t rb_flow -p p1m -r 1 -d forever -i 1
+
   ## Domain
   cat > /var/chef/data/data_bag/rBglobal/domain.json <<-_RBEOF_
 {
