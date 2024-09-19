@@ -68,20 +68,23 @@ if datasource.nil? && opt['l'].nil?
   exit 1
 end
 
-# node = 'localhost:8081'
 zk_host = 'zookeeper.service:2181'
 zk = ZK.new(zk_host)
 
+# To remove?:
 coordinator = zk.children('/druid/discoveryPath/coordinator').map(&:to_s).uniq.shuffle
 zktdata, = zk.get("/druid/discoveryPath/coordinator/#{coordinator.first}")
-zktdata = YAML.safe_load(zktdata)
-node = "#{zktdata['address']}:#{zktdata['port']}" if zktdata['address'] && zktdata['port']
+YAML.safe_load(zktdata)
+# zktdata = YAML.safe_load(zktdata) in legacy
 
-if opt['l']
-  uri = URI("http://#{node}/druid/coordinator/v1/rules/#{datasource}")
+node = 'localhost:8081'
+# node = "#{zktdata['address']}:#{zktdata['port']}" if zktdata['address'] && zktdata['port'] in legacy
+
+uri = URI("http://#{node}/druid/coordinator/v1/rules/#{datasource}")
+if opt['l'] # list rules
   res = Net::HTTP.get(uri)
   puts JSON.pretty_generate(JSON.parse(res))
-else
+else # set a rule
   hot_replicants = opt['r'].to_i
   default_replicants = opt['i'].to_i
   hot_period = parse_period opt['p']
@@ -105,7 +108,7 @@ else
                   tieredReplicants: { '_default_tier' => default_replicants } },
                 { type: :dropForever }
               ]
-            else
+            else # hot_period != 'none' && default_period != 'forever'
               [
                 { type: :loadByPeriod, period: hot_period,
                   tieredReplicants: { hot: hot_replicants, '_default_tier' => 0 } },
@@ -116,7 +119,6 @@ else
             end
 
   # Build the request
-  uri = URI("http://#{node}/druid/coordinator/v1/rules/#{datasource}")
   req = Net::HTTP::Post.new(uri)
   req.content_type = 'application/json'
   req.body = JSON.generate payload
