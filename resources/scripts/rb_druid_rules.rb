@@ -23,6 +23,24 @@ require 'json'
 require 'zk'
 require 'yaml'
 
+def usage
+  puts 'rb_druid_rules.rb [-t datasource -p hotperiod -r hotreplicants -d defaultperiod -i defaultreplicants] [-t datasource -l] [-h]'
+  puts '       -t datasource          -> datasource to modify segments from (_default for the default datasource)'
+  puts '       -p hot period          -> config for the hot tier'
+  puts '       -r hot replicants      -> replicants for the hot tier'
+  puts '       -d default period      -> config for the default tier'
+  puts '       -i default replicants  -> replicants for the default tier'
+  puts '       -l list                -> asks for the current rules of a given datasource'
+  puts '       -h                     -> print this help'
+  puts ''
+  puts "period values: any iso 8601 period (i.e. p1m) plus 'none' and 'forever'"
+  puts 'Replicants values: Any integer greater than zero'
+  puts 'Examples: rb_druid_rules.rb -t rb_flow -p p1m -r 1 -d forever -i 1'
+  puts '          rb_druid_rules.rb -t _default -p pt12h -r 2 -d p1m -i 2'
+  puts '          rb_druid_rules.rb -t rb_event -p pt6h -r 2 -d p1y -i 1'
+  exit 0
+end
+
 def parse_period(period)
   if period.nil?
     puts "Periods can't be null. You need to specify -p and -d params."
@@ -42,25 +60,39 @@ def parse_period(period)
   end
 end
 
+def payload(hot_period, default_period, hot_replicants, default_replicants)
+  if hot_period == 'none' && default_period == 'forever'
+    [
+      { type: :loadForever,
+        tieredReplicants: { '_default_tier' => default_replicants } }
+    ]
+  elsif hot_period != 'none' && default_period == 'forever'
+    [
+      { type: :loadByPeriod, period: hot_period,
+        tieredReplicants: { hot: hot_replicants, '_default_tier' => 0 } },
+      { type: :loadForever,
+        tieredReplicants: { hot: 0, '_default_tier' => default_replicants } }
+    ]
+  elsif hot_period == 'none' && default_period != 'forever'
+    [
+      { type: :loadByPeriod, period: default_period,
+        tieredReplicants: { '_default_tier' => default_replicants } },
+      { type: :dropForever }
+    ]
+  else # hot_period != 'none' && default_period != 'forever'
+    [
+      { type: :loadByPeriod, period: hot_period,
+        tieredReplicants: { hot: hot_replicants, '_default_tier' => 0 } },
+      { type: :loadByPeriod, period: default_period,
+        tieredReplicants: { hot: 0, '_default_tier' => default_replicants } },
+      { type: :dropForever }
+    ]
+  end
+end
+
 opt = Getopt::Std.getopts('t:p:r:d:i:lh')
 
-if opt['h']
-  puts 'rb_druid_rules.rb [-t datasource -p hotperiod -r hotreplicants -d defaultperiod -i defaultreplicants] [-t datasource -l] [-h]'
-  puts '       -t datasource          -> datasource to modify segments from (_default for the default datasource)'
-  puts '       -p hot period          -> config for the hot tier'
-  puts '       -r hot replicants      -> replicants for the hot tier'
-  puts '       -d default period      -> config for the default tier'
-  puts '       -i default replicants  -> replicants for the default tier'
-  puts '       -l list                -> asks for the current rules of a given datasource'
-  puts '       -h                     -> print this help'
-  puts ''
-  puts "period values: any iso 8601 period (i.e. p1m) plus 'none' and 'forever'"
-  puts 'Replicants values: Any integer greater than zero'
-  puts 'Examples: rb_druid_rules.rb -t rb_flow -p p1m -r 1 -d forever -i 1'
-  puts '          rb_druid_rules.rb -t _default -p pt12h -r 2 -d p1m -i 2'
-  puts '          rb_druid_rules.rb -t rb_event -p pt6h -r 2 -d p1y -i 1'
-  exit 0
-end
+usage if opt['h']
 
 datasource = opt['t']
 if datasource.nil? && opt['l'].nil?
@@ -81,6 +113,7 @@ node = 'localhost:8081'
 # node = "#{zktdata['address']}:#{zktdata['port']}" if zktdata['address'] && zktdata['port'] in legacy
 
 uri = URI("http://#{node}/druid/coordinator/v1/rules/#{datasource}")
+
 if opt['l'] # list rules
   res = Net::HTTP.get(uri)
   puts JSON.pretty_generate(JSON.parse(res))
@@ -90,37 +123,10 @@ else # set a rule
   hot_period = parse_period opt['p']
   default_period = parse_period opt['d']
 
-  payload = if hot_period == 'none' && default_period == 'forever'
-              [
-                { type: :loadForever,
-                  tieredReplicants: { '_default_tier' => default_replicants } }
-              ]
-            elsif hot_period != 'none' && default_period == 'forever'
-              [
-                { type: :loadByPeriod, period: hot_period,
-                  tieredReplicants: { hot: hot_replicants, '_default_tier' => 0 } },
-                { type: :loadForever,
-                  tieredReplicants: { hot: 0, '_default_tier' => default_replicants } }
-              ]
-            elsif hot_period == 'none' && default_period != 'forever'
-              [
-                { type: :loadByPeriod, period: default_period,
-                  tieredReplicants: { '_default_tier' => default_replicants } },
-                { type: :dropForever }
-              ]
-            else # hot_period != 'none' && default_period != 'forever'
-              [
-                { type: :loadByPeriod, period: hot_period,
-                  tieredReplicants: { hot: hot_replicants, '_default_tier' => 0 } },
-                { type: :loadByPeriod, period: default_period,
-                  tieredReplicants: { hot: 0, '_default_tier' => default_replicants } },
-                { type: :dropForever }
-              ]
-            end
-
   # Build the request
   req = Net::HTTP::Post.new(uri)
   req.content_type = 'application/json'
+  payload = payload(hot_period, default_period, hot_replicants, default_replicants)
   req.body = JSON.generate payload
 
   # Get the response
