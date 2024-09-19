@@ -68,19 +68,14 @@ if datasource.nil? && opt['l'].nil?
   exit 1
 end
 
-# zk_host = 'localhost:2181'
-node = 'localhost:8081'
-config = YAML.load_file('/opt/rb/etc/managers.yml')
-unless config['zookeeper'].nil? && config['zookeeper2'].nil?
-  zk_host = ((config['zookeeper'].nil? ? [] : config['zookeeper'].map { |x| "#{x}:2181" }) +
-             (config['zookeeper2'].nil? ? [] : config['zookeeper2'].map { |x| "#{x}:2182" })).join(',')
+# node = 'localhost:8081'
+zk_host = 'zookeeper.service:2181'
+zk = ZK.new(zk_host)
 
-  zk = ZK.new(zk_host)
-  coordinator = zk.children('/druid/discoveryPath/coordinator').map(&:to_s).uniq.shuffle
-  zktdata, = zk.get("/druid/discoveryPath/coordinator/#{coordinator.first}")
-  zktdata = YAML.safe_load(zktdata)
-  node = "#{zktdata['address']}:#{zktdata['port']}" if zktdata['address'] && zktdata['port']
-end
+coordinator = zk.children('/druid/discoveryPath/coordinator').map(&:to_s).uniq.shuffle
+zktdata, = zk.get("/druid/discoveryPath/coordinator/#{coordinator.first}")
+zktdata = YAML.safe_load(zktdata)
+node = "#{zktdata['address']}:#{zktdata['port']}" if zktdata['address'] && zktdata['port']
 
 if opt['l']
   uri = URI("http://#{node}/druid/coordinator/v1/rules/#{datasource}")
