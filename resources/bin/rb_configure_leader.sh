@@ -249,7 +249,7 @@ _RBEOF_
 }
 _RBEOF_
 
-  rb_druid_rules.rb -t _default -p none -d p1m -i 1
+  rb_druid_rules -t _default -p none -d p1m -i 1
 
   ## Domain
   cat > /var/chef/data/data_bag/rBglobal/domain.json <<-_RBEOF_
