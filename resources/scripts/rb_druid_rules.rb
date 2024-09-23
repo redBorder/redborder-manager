@@ -101,7 +101,12 @@ if datasource.nil? && opt['l'].nil?
 end
 
 zk_host = 'zookeeper.service:2181'
-zk = ZK.new(zk_host)
+begin
+  zk = ZK.new(zk_host)
+rescue ZK::Exceptions::ConnectionLoss => e
+  puts "Failed to connect to ZooKeeper: #{e.message}"
+  exit 1
+end
 
 # To remove?:
 coordinator = zk.children('/druid/discoveryPath/coordinator').map(&:to_s).uniq.shuffle
