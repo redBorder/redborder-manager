@@ -110,7 +110,7 @@ end
 
 # To remove?:
 if zk
-  _coordinator = zk.children('/druid/discoveryPath/coordinator').map(&:to_s).uniq.shuffle
+  coordinator = zk.children('/druid/discoveryPath/coordinator').map(&:to_s).uniq.shuffle
   zktdata, = zk.get("/druid/discoveryPath/coordinator/#{coordinator.first}")
   YAML.safe_load(zktdata)
 end
