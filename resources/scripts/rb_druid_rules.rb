@@ -109,9 +109,11 @@ rescue ZK::Exceptions::ConnectionLoss => e
 end
 
 # To remove?:
-coordinator = zk.children('/druid/discoveryPath/coordinator').map(&:to_s).uniq.shuffle
-zktdata, = zk.get("/druid/discoveryPath/coordinator/#{coordinator.first}")
-YAML.safe_load(zktdata)
+if zk
+  _coordinator = zk.children('/druid/discoveryPath/coordinator').map(&:to_s).uniq.shuffle
+  zktdata, = zk.get("/druid/discoveryPath/coordinator/#{coordinator.first}")
+  YAML.safe_load(zktdata)
+end
 # zktdata = YAML.safe_load(zktdata) in legacy
 
 node = 'localhost:8081'
