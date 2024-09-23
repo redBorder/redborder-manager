@@ -103,7 +103,7 @@ end
 zk_host = 'zookeeper.service:2181'
 begin
   zk = ZK.new(zk_host)
-rescue ZK::Exceptions::ConnectionLoss => e
+rescue ZK::Exceptions::ConnectionLoss, StandardError => e
   puts "Failed to connect to ZooKeeper: #{e.message}"
   exit 1
 end
