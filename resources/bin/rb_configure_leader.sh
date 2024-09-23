@@ -427,17 +427,25 @@ function configure_leader(){
     done
   fi
 
+  rb_druid_rules -t _default -p none -d p1m -i 1
+
   e_title "redborder install run (2/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
+  
+  rb_druid_rules -t _default -p none -d p1m -i 1
   
   e_title "redborder install run (3/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
 
   e_title "Creating database structure $(date)"
   chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
+
+  rb_druid_rules -t _default -p none -d p1m -i 1
   
   e_title "redborder install run (4/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
+
+  rb_druid_rules -t _default -p none -d p1m -i 1
 }
 
 function set_external_service_names {
