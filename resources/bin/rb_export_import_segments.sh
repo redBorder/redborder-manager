@@ -583,6 +583,12 @@ else
         for n in $(echo ${!localfile[@]}|tr ' ' '\n' | sort -r|sed "s/^${s3basekey}\///"); do
           timestamp=$(echo "$n" | awk -F '/' '{print $3}')
           tocopy=1
+          if [[ -n $startdate && "$timestamp" < "$startdate" ]]; then
+              tocopy=0
+          fi
+          if [[ -n $stopdate && "$timestamp" > "$stopdate" ]]; then
+              tocopy=0
+          fi
 
           if [[ $tocopy -eq 1 ]]; then
             echo -n "Copying $n: "
