@@ -249,7 +249,6 @@ _RBEOF_
 }
 _RBEOF_
 
-  rb_druid_rules -t _default -p none -d p1m -i 1
 
   ## Domain
   cat > /var/chef/data/data_bag/rBglobal/domain.json <<-_RBEOF_
@@ -432,7 +431,6 @@ function configure_leader(){
   e_title "redborder install run (2/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
   
-  rb_druid_rules -t _default -p none -d p1m -i 1
   
   e_title "redborder install run (3/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
@@ -440,12 +438,10 @@ function configure_leader(){
   e_title "Creating database structure $(date)"
   chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
 
-  rb_druid_rules -t _default -p none -d p1m -i 1
   
   e_title "redborder install run (4/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
 
-  rb_druid_rules -t _default -p none -d p1m -i 1
 }
 
 function set_external_service_names {
@@ -570,4 +566,3 @@ runtime_min=$(echo "scale=2; $runtime / 60" | bc -l) # Calculate duration of scr
 e_title "Leader Node configured! ($runtime_min minutes)"
 
 date > /etc/redborder/cluster-installed.txt
-
