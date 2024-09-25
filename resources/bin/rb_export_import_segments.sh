@@ -678,6 +678,16 @@ else
         fi
 
         for n in $(echo ${!localfile[@]}|tr ' ' '\n' | sort -r); do
+          timestamp=$(echo "$n" | awk -F '/' '{print $3}')
+          if [[ -n $startdate && "$timestamp" < "$startdate" ]]; then
+	    echo "Skipping $n"
+            continue
+          fi
+          if [[ -n $stopdate && "$timestamp" > "$stopdate" ]]; then
+	    echo "Skipping $n"
+            continue
+          fi
+
           if [ "x${remotefile[$n]}" == "x" ]; then
             f=$(basename $n)
             rm -f $f
