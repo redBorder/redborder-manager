@@ -14,14 +14,14 @@
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
 
-require 'pg'
 require 'json'
-require 'iso8601'
-require 'fileutils'
+require 'socket'
 require 'aws'
 require 'aws-sdk-s3'
 require 'zk'
-require 'socket'
+require 'pg'
+require 'iso8601'
+require 'fileutils'
 
 def removeFiles(path, limitDate)
   files = Dir[path]
