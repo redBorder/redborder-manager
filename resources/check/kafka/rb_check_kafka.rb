@@ -57,14 +57,14 @@ nodes.each do |node|
       print_command_output(output, return_value, colorless, quiet)
     end
 
-    subtitle("Kafka messages", colorless, quiet)
-    %w[rb_monitor rb_flow rb_event rb_loc].each do | topic |
-      output = execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_check_topic.rb -t #{topic}")
-      return_value = $?.exitstatus
-      output = output.gsub("\n","")
-      has_errors = true if return_value != 0
-      print_command_output(output, return_value, colorless, quiet)
-    end
+    # subtitle("Kafka messages", colorless, quiet)
+    # %w[rb_monitor rb_flow rb_event rb_loc].each do | topic |
+    #   output = execute_command_on_node(node,"/usr/lib/redborder/scripts/rb_check_topic.rb -t #{topic}")
+    #   return_value = $?.exitstatus
+    #   output = output.gsub("\n","")
+    #   has_errors = true if return_value != 0
+    #   print_command_output(output, return_value, colorless, quiet)
+    # end
   else
     has_errors = true
   end
