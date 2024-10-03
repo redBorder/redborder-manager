@@ -80,8 +80,8 @@ module RedBorder
 
   # Module for making HTTP requests
   module HTTP
-    HTTP_OPEN_TIMEOUT = 900
-    HTTP_READ_TIMEOUT = 900
+    HTTP_OPEN_TIMEOUT = 8600
+    HTTP_READ_TIMEOUT = 8600
     # Sends an HTTP request.
     #
     # @param url [String] The URL to request.
