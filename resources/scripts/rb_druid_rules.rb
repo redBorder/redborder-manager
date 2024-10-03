@@ -17,11 +17,12 @@
 ########################################################################
 
 require 'getopt/std'
-require 'iso8601'
 require 'net/http'
-require 'json'
-require 'zk'
+
 require 'yaml'
+require 'zk'
+require 'iso8601'
+
 
 def usage
   puts 'rb_druid_rules.rb [-t datasource -p hotperiod -r hotreplicants -d defaultperiod -i defaultreplicants] [-t datasource -l] [-h]'
@@ -101,6 +102,7 @@ if datasource.nil? && opt['l'].nil?
 end
 
 zk_host = 'zookeeper.service:2181'
+
 begin
   zk = ZK.new(zk_host)
 rescue ZK::Exceptions::ConnectionLoss, StandardError => e
@@ -108,16 +110,14 @@ rescue ZK::Exceptions::ConnectionLoss, StandardError => e
   exit 1
 end
 
-# To remove?:
+node = 'druid-coordinator.service:8081'
+
 if zk
   coordinator = zk.children('/druid/discoveryPath/coordinator').map(&:to_s).uniq.shuffle
-  zktdata, = zk.get("/druid/discoveryPath/coordinator/#{coordinator.first}")
-  YAML.safe_load(zktdata)
+  zktdata,stat = zk.get("/druid/discoveryPath/coordinator/#{coordinator.first}")
+  zktdata = YAML.load(zktdata)
+  node = "#{zktdata['address']}:#{zktdata['port']}" if zktdata['address'] && zktdata['port']
 end
-# zktdata = YAML.safe_load(zktdata) in legacy
-
-node = 'localhost:8081'
-# node = "#{zktdata['address']}:#{zktdata['port']}" if zktdata['address'] && zktdata['port'] in legacy
 
 uri = URI("http://#{node}/druid/coordinator/v1/rules/#{datasource}")
 
@@ -137,7 +137,7 @@ else # set a rule
   req.body = JSON.generate payload
 
   # Get the response
-  _res = Net::HTTP.start(uri.hostname, uri.port) do |http|
+  res = Net::HTTP.start(uri.hostname, uri.port) do |http|
     http.request(req)
   end
 end
