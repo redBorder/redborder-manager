@@ -18,7 +18,7 @@
 
 require 'getopt/std'
 require 'net/http'
-
+require 'json'
 require 'yaml'
 require 'zk'
 require 'iso8601'
@@ -105,39 +105,38 @@ zk_host = 'zookeeper.service:2181'
 
 begin
   zk = ZK.new(zk_host)
+
+  if zk
+    coordinator = zk.children('/druid/discoveryPath/coordinator').map(&:to_s).uniq.shuffle
+    zktdata,stat = zk.get("/druid/discoveryPath/coordinator/#{coordinator.first}")
+    zktdata = YAML.load(zktdata)
+    node = "#{zktdata['address']}:#{zktdata['port']}" if zktdata['address'] && zktdata['port']
+    uri = URI("http://#{node}/druid/coordinator/v1/rules/#{datasource}")
+  
+    if opt['l'] # list rules
+      res = Net::HTTP.get(uri)
+      puts JSON.pretty_generate(JSON.parse(res))
+    else # set a rule
+      hot_replicants = opt['r'].to_i
+      default_replicants = opt['i'].to_i
+      hot_period = parse_period opt['p']
+      default_period = parse_period opt['d']
+    
+      # Build the request
+      req = Net::HTTP::Post.new(uri)
+      req.content_type = 'application/json'
+      payload = payload(hot_period, default_period, hot_replicants, default_replicants)
+      req.body = JSON.generate payload
+    
+      # Get the response
+      res = Net::HTTP.start(uri.hostname, uri.port) do |http|
+        http.request(req)
+      end
+    end
+  end
+  
 rescue ZK::Exceptions::ConnectionLoss, StandardError => e
   puts "Failed to connect to ZooKeeper: #{e.message}"
   exit 1
 end
 
-node = 'druid-coordinator.service:8081'
-
-if zk
-  coordinator = zk.children('/druid/discoveryPath/coordinator').map(&:to_s).uniq.shuffle
-  zktdata,stat = zk.get("/druid/discoveryPath/coordinator/#{coordinator.first}")
-  zktdata = YAML.load(zktdata)
-  node = "#{zktdata['address']}:#{zktdata['port']}" if zktdata['address'] && zktdata['port']
-end
-
-uri = URI("http://#{node}/druid/coordinator/v1/rules/#{datasource}")
-
-if opt['l'] # list rules
-  res = Net::HTTP.get(uri)
-  puts JSON.pretty_generate(JSON.parse(res))
-else # set a rule
-  hot_replicants = opt['r'].to_i
-  default_replicants = opt['i'].to_i
-  hot_period = parse_period opt['p']
-  default_period = parse_period opt['d']
-
-  # Build the request
-  req = Net::HTTP::Post.new(uri)
-  req.content_type = 'application/json'
-  payload = payload(hot_period, default_period, hot_replicants, default_replicants)
-  req.body = JSON.generate payload
-
-  # Get the response
-  res = Net::HTTP.start(uri.hostname, uri.port) do |http|
-    http.request(req)
-  end
-end
