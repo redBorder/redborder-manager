@@ -139,4 +139,3 @@ rescue ZK::Exceptions::ConnectionLoss, StandardError => e
   puts "Failed to connect to ZooKeeper: #{e.message}"
   exit 1
 end
-
