@@ -14,13 +14,14 @@
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
 
-require 'pg'
 require 'json'
+require 'socket'
+require 'aws'
+require 'aws-sdk-s3'
+require 'zk'
+require 'pg'
 require 'iso8601'
 require 'fileutils'
-require 'aws'
-require 'zk'
-require 'socket'
 
 def removeFiles(path, limitDate)
   files = Dir[path]
@@ -46,7 +47,9 @@ def logit(text)
   printf("%s\n", text)
 end
 
-AWS.config(ssl_verify_peer: false)
+Aws.config.update({ssl_verify_peer: false,
+                 force_path_style: true
+                 })
 
 zk_config = YAML.load_file("/var/www/rb-rails/config/rbdruid_config.yml")
 zk = ZK.new zk_config["production"]["zk_connect"]
@@ -145,16 +148,18 @@ if !remove_only_indexCache
   # Remove segments from S3 if necessary
   if File.exist? "/var/www/rb-rails/config/aws.yml"
     s3_config = YAML.load_file("/var/www/rb-rails/config/aws.yml")
-    s3 = AWS::S3.new(access_key_id: s3_config["production"]["access_key_id"],
+    s3 = Aws::S3::Client.new(access_key_id: s3_config["production"]["access_key_id"],
       secret_access_key: s3_config["production"]["secret_access_key"],
-      s3_endpoint: s3_config["production"]["s3_host_name"],
-      s3_protocol: s3_config["production"]["s3_protocol"])
-  
-    bucket = s3.buckets[s3_config["production"]["bucket"]]
+      region: 'us-east-1',
+      endpoint: s3_config["production"]["s3_protocol"] +"://"+ s3_config["production"]["s3_host_name"]
+       )
+    bucket_name = s3_config["production"]["bucket"].chomp!('/')
+
   
     # Get all the segments from S3
     segments_to_delete_from_s3 = []
-    segments_on_s3 = bucket.objects.with_prefix('rbdata/').collect(&:key)
+    segments_on_s3 = s3.list_objects_v2(bucket: bucket_name, prefix: "rbdata/")
+    segments_on_s3 = segments_on_s3.contents.map(&:key)
     segments_on_s3.each do |segment|
       date = Time.parse segment.split("/")[2].split("_")[0]
       if date < limitDate
@@ -165,10 +170,10 @@ if !remove_only_indexCache
     # Remove segments from S3
     if segments_to_delete_from_s3.size > 0
       puts "#{segments_to_delete_from_s3.size} objects marked for removing on S3"
-      segments_to_delete_from_s3.each do |object|
-        puts "Removing S3 object with path #{object}"
+      segments_to_delete_from_s3.each do |object_key|
+        puts "Removing S3 object with path #{object_key}"
         # Delete the object
-        bucket.objects[object].delete
+        s3.delete_object(bucket: bucket_name, key: object_key)
       end
     else
       puts "No segments must be removed from S3"

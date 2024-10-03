@@ -93,7 +93,7 @@ def get_nodes_with_service(service=nil)
   else
     members.each do |node|
       node_info = get_node(node)
-      node_services = node_info.attributes.redborder.services
+      node_services = node_info.attributes['redborder']['services']
       nodes.push(node) if node_services.include? service
     end
   end
