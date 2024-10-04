@@ -426,7 +426,7 @@ function configure_leader(){
     done
   fi
 
-  rb_druid_rules.sh -t _default -p none -d p1m -i 1
+  rb_druid_rules -t _default -p none -d p1m -i 1
 
   e_title "redborder install run (2/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
