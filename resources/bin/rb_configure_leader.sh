@@ -412,7 +412,6 @@ function configure_leader(){
   e_title "redborder install run (1/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
 
-
   # Replace chef-server SV init scripts by systemd scripts
   /usr/bin/chef-server-ctl graceful-kill &>/dev/null
   if [ "$(ls -A /opt/opscode/service)" ]; then
@@ -544,6 +543,10 @@ configure_leader
 #rm -f /etc/opscode/chef-server.rb
 rm -f /var/lock/leader-configuring.lock
 
+# Configure default druid rule (load 1 month, drop forever)
+e_title "Configuring default druid rule"
+/usr/lib/redborder/bin/rb_druid_rules -t _default -p none -d p1m -i 1
+
 # Copy dhclient hook
 cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
@@ -560,4 +563,3 @@ runtime_min=$(echo "scale=2; $runtime / 60" | bc -l) # Calculate duration of scr
 e_title "Leader Node configured! ($runtime_min minutes)"
 
 date > /etc/redborder/cluster-installed.txt
-
