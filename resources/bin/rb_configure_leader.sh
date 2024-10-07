@@ -249,7 +249,6 @@ _RBEOF_
 }
 _RBEOF_
 
-
   ## Domain
   cat > /var/chef/data/data_bag/rBglobal/domain.json <<-_RBEOF_
 {
@@ -428,13 +427,11 @@ function configure_leader(){
   e_title "redborder install run (2/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
   
-  
   e_title "redborder install run (3/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
 
   e_title "Creating database structure $(date)"
   chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
-
   
   e_title "redborder install run (4/4) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
@@ -547,6 +544,7 @@ configure_leader
 rm -f /var/lock/leader-configuring.lock
 
 # Configure default druid rule (load 1 month, drop forever)
+e_title "Configuring default druid rule"
 /usr/lib/redborder/bin/rb_druid_rules -t _default -p none -d p1m -i 1
 
 # Copy dhclient hook
