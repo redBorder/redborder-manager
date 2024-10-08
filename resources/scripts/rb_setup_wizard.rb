@@ -233,11 +233,14 @@ unless hshnet.empty?
     if syncconf.conf == "Manual"
         flag_serfsyncmanual = true
     else
+        general_conf["network"]["sync_interface"] = syncconf.interface_name
         general_conf["serf"]["sync_net"] = syncconf.conf
     end
 else
     flag_serfsyncmanual = true
 end
+
+# TODO: Get the name of the sync interface when selecting manual option 
 
 if flag_serfsyncmanual
     # Conf synchronization network
@@ -339,6 +342,12 @@ end
 unless general_conf["network"]["management_interface"].nil?
     text += "- Management Interface:\n"
     text += "    #{general_conf["network"]["management_interface"]}\n"
+    text += "\n"
+end
+
+unless general_conf["network"]["sync_interface"].nil?
+    text += "- Synchronism Interface:\n"
+    text += "    #{general_conf["network"]["sync_interface"]}\n"
     text += "\n"
 end
 
