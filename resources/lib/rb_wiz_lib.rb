@@ -555,12 +555,13 @@ end
 
 class SerfSyncDevConf < WizConf
 
-    attr_accessor :conf, :cancel, :networks
+    attr_accessor :conf, :cancel, :networks, :interface_name
 
     def initialize()
         @cancel = false
         @conf = ""
         @networks = {}
+        @interface_name = ""
     end
 
     def doit
@@ -611,6 +612,7 @@ EOF
                 @conf = "Manual"
             else
                 @conf = networks[selected_item]
+                @interface_name = selected_item
             end
         else
             @cancel = true
