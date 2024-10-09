@@ -16,6 +16,9 @@
 import json
 from pyattck import Attck
 
+# This script downloads this json: https://swimlane-pyattck.s3.us-west-2.amazonaws.com/merged_enterprise_attck_v1.json
+# and parses it as a json too
+
 attack = Attck()
 
 data = []
