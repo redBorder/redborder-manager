@@ -111,72 +111,8 @@ if yesno # yesno is "yes" -> true
     netconf.doit # launch wizard
     cancel_wizard if netconf.cancel
     general_conf["network"]["interfaces"] = netconf.conf
-
-    static_interface = general_conf["network"]["interfaces"].find { |i| i["mode"] == "static" }
-    dhcp_interfaces = general_conf["network"]["interfaces"].select { |i| i["mode"] == "dhcp" }
-
-    if general_conf["network"]["interfaces"].size > 1
-        if static_interface && static_interface.size == 1 && dhcp_interfaces.size >= 1
-            general_conf["network"]["management_interface"] = static_interface["device"]
-        else
-            interface_options = general_conf["network"]["interfaces"].map { |i| [i["device"]] }
-            text = <<EOF
-You have multiple network interfaces configured.
-Please select one to be used as the management interface.
-EOF
-            dialog = MRDialog.new
-            dialog.clear = true
-            dialog.title = "Select Management Interface"
-            management_iface = dialog.menu(text, interface_options, 10, 50)
-
-            if management_iface.nil? || management_iface.empty?
-                cancel_wizard
-            else
-                general_conf["network"]["management_interface"] = management_iface
-            end
-        end
-    else
-        if general_conf["network"]["interfaces"].size == 1
-            if !static_interface.nil?
-              general_conf["network"]["management_interface"] = static_interface["device"]
-            else
-              general_conf["network"]["management_interface"] = dhcp_interfaces.first["device"]
-            end
-        end         
-    end
-    # Conf for DNS
-    text = <<EOF
-
-Do you want to configure DNS servers?
-
-If you have configured the network as Dynamic and
-you get the DNS servers via DHCP, you should say
-'No' to this  question.
-
-EOF
-
-    dialog = MRDialog.new
-    dialog.clear = true
-    dialog.title = "CONFIGURE DNS"
-    yesno = dialog.yesno(text,0,0)
-
-    if yesno # yesno is "yes" -> true
-        # configure dns
-        dnsconf = DNSConf.new
-        dnsconf.doit # launch wizard
-        cancel_wizard if dnsconf.cancel
-        general_conf["network"]["dns"] = dnsconf.conf
-    else
-        general_conf["network"].delete("dns")
-    end
+    general_conf["network"]["management_interface"] = netconf.management_iface
 end
-
-# Conf for hostname and domain
-hostconf = HostConf.new
-hostconf.doit # launch wizard
-cancel_wizard if hostconf.cancel
-general_conf["hostname"] = hostconf.conf[:hostname]
-general_conf["cdomain"] = hostconf.conf[:domainname]
 
 text = <<EOF
 
@@ -259,6 +195,39 @@ cryptconf.doit # launch wizard
 cancel_wizard if cryptconf.cancel
 general_conf["serf"]["encrypt_key"] = cryptconf.conf
 
+# Conf for hostname and domain
+hostconf = HostConf.new
+hostconf.doit # launch wizard
+cancel_wizard if hostconf.cancel
+general_conf["hostname"] = hostconf.conf[:hostname]
+general_conf["cdomain"] = hostconf.conf[:domainname]
+
+# Conf for DNS
+    text = <<EOF
+
+Do you want to configure DNS servers?
+
+If you have configured the network as Dynamic and
+you get the DNS servers via DHCP, you should say
+'No' to this  question.
+
+EOF
+
+dialog = MRDialog.new
+dialog.clear = true
+dialog.title = "CONFIGURE DNS"
+yesno = dialog.yesno(text,0,0)
+
+if yesno # yesno is "yes" -> true
+    # configure dns
+    dnsconf = DNSConf.new
+    dnsconf.doit # launch wizard
+    cancel_wizard if dnsconf.cancel
+    general_conf["network"]["dns"] = dnsconf.conf
+else
+    general_conf["network"].delete("dns")
+end
+
 # External S3 storage
 text = <<EOF
 
@@ -339,14 +308,6 @@ end
 unless general_conf["network"]["management_interface"].nil?
     text += "- Management Interface:\n"
     text += "    #{general_conf["network"]["management_interface"]}\n"
-    text += "\n"
-end
-
-unless general_conf["network"]["dns"].nil?
-    text += "- DNS:\n"
-    general_conf["network"]["dns"].each do |dns|
-        text += "    #{dns}\n"
-    end
 end
 
 unless general_conf["s3"].nil?
@@ -370,7 +331,14 @@ text += "    mode: #{general_conf["serf"]["multicast"] ? "multicast" : "unicast"
 text += "    sync net: #{general_conf["serf"]["sync_net"]}\n"
 text += "    encrypt key: #{general_conf["serf"]["encrypt_key"]}\n"
 
-text += "\n- Mode: #{general_conf["mode"]}\n"
+text += "\n- Mode: #{general_conf["mode"]}\n\n"
+
+unless general_conf["network"]["dns"].nil?
+    text += "- DNS:\n"
+    general_conf["network"]["dns"].each do |dns|
+        text += "    #{dns}\n"
+    end
+end
 
 text += "\nPlease, is this configuration ok?\n \n"
 
