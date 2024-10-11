@@ -1,7 +1,7 @@
 #!/bin/bash
 
-PGUSER="redborder"  # Database user for redborder
-PGDB="redborder"    # Redborder database
+PGUSER="redborder"
+PGDB="redborder"
 
 # Retrieve database details from the configuration file
 line=$(awk '/redborder/{ print NR; exit }' /var/www/rb-rails/config/database.yml)
