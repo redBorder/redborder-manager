@@ -543,6 +543,10 @@ configure_leader
 #rm -f /etc/opscode/chef-server.rb
 rm -f /var/lock/leader-configuring.lock
 
+e_title "Enabling chef-client service"
+systemctl enable chef-client
+systemctl start chef-client
+
 # Configure default druid rule (load 1 month, drop forever)
 e_title "Configuring default druid rule"
 /usr/lib/redborder/bin/rb_druid_rules -t _default -p none -d p1m -i 1
