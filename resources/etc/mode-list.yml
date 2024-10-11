@@ -29,9 +29,6 @@
   name: 'http2k'
   description: 'Http2k node'
 -
-  name: 'samza'
-  description: 'Samza node'
--
   name: 'f2k'
   description: 'f2k flow collector node'
 -

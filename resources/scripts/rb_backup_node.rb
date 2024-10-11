@@ -328,7 +328,7 @@ elsif opt['r']
     end
 
     # Stop chef-client
-    check_oper("rb_service stop chef druid awslogs rb-cloudwatch rb-monitor rb-workers rb-webui nprobe n2klocd memcached kafka hadoop_ stanchion riak zookeeper pgpool nginx freeradius postgresql keepalived", verbose, type, "Stoping all services ... ")
+    check_oper("rb_service stop chef druid awslogs rb-cloudwatch rb-monitor rb-workers rb-webui nprobe n2klocd memcached kafka stanchion riak zookeeper pgpool nginx freeradius postgresql keepalived", verbose, type, "Stoping all services ... ")
     # Restore the node
     check_oper("#{tar} #{path} -C /", verbose, type, "Restoring files ... ")
     `sed -i '/rb_aws_secondary_ip.sh/d' /etc/keepalived/keepalived.conf`
@@ -430,7 +430,7 @@ elsif opt['r']
       end
 
       # empty virtual ips on new environment
-      ["ipvirtual-external-erchef", "ipvirtual-external-freeradius", "ipvirtual-external-kafka", "ipvirtual-external-n2klocd", "ipvirtual-external-n2kmobiled", "ipvirtual-external-nprobe", "ipvirtual-external-rb-reputation", "ipvirtual-external-rb-webui", "ipvirtual-external-riak", "ipvirtual-external-trap2kafka", "ipvirtual-internal-cep", "ipvirtual-internal-drill", "ipvirtual-internal-erchef", "ipvirtual-internal-hadoop_namenode", "ipvirtual-internal-hadoop_resourcemanager", "ipvirtual-internal-kafka", "ipvirtual-internal-n2kmetricd", "ipvirtual-internal-oozie", "ipvirtual-internal-postgresql"].each do |x|
+      ["ipvirtual-external-erchef", "ipvirtual-external-freeradius", "ipvirtual-external-kafka", "ipvirtual-external-n2klocd", "ipvirtual-external-n2kmobiled", "ipvirtual-external-nprobe", "ipvirtual-external-rb-reputation", "ipvirtual-external-rb-webui", "ipvirtual-external-riak", "ipvirtual-external-trap2kafka", "ipvirtual-internal-cep", "ipvirtual-internal-drill", "ipvirtual-internal-erchef", "ipvirtual-internal-kafka", "ipvirtual-internal-n2kmetricd", "ipvirtual-internal-oozie", "ipvirtual-internal-postgresql"].each do |x|
         db_temp = Chef::DataBagItem.load('rBglobal', x ) rescue db_temp = nil
         if !db_temp.nil? and !db_temp["ip"].nil? and db_temp["ip"]!=""
           db_temp["ip"] = ""
