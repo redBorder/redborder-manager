@@ -1,6 +1,5 @@
 {
   "run_list" : [
-    "recipe[webui::configure_server_key_trial_license]",
     "recipe[webui::configure_modules]"
   ]
 }
