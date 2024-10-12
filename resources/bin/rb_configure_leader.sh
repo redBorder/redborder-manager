@@ -409,7 +409,7 @@ function configure_leader(){
   # Multiple runs of chef-client
   e_title "Configuring Chef-Client. Please wait...  "
 
-  e_title "redborder install run (1/3) $(date)" | tee -a /root/.install-chef-client.log
+  e_title "redborder install run (1/2) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
 
   e_title "Configuring webui (server key, trial license and default modules) $(date)"
@@ -427,10 +427,7 @@ function configure_leader(){
     done
   fi
 
-  e_title "redborder install run (2/3) $(date)" | tee -a /root/.install-chef-client.log
-  chef-client | tee -a /root/.install-chef-client.log
-  
-  e_title "redborder install run (3/3) $(date)" | tee -a /root/.install-chef-client.log
+  e_title "redborder install run (2/2) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
 }
 
@@ -545,7 +542,7 @@ systemctl enable chef-client
 systemctl start chef-client
 
 # Configure default druid rule (load 1 month, drop forever)
-e_title "Configuring default druid rule"
+e_title "Configuring default 1 month data retention"
 /usr/lib/redborder/bin/rb_druid_rules -t _default -p none -d p1m -i 1
 
 # Copy dhclient hook
@@ -553,7 +550,7 @@ cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
 e_title "Configuring cgroups (first time), please wait..."
 
-rb_configure_cgroups &>/dev/null
+/usr/lib/redborder/bin/rb_configure_cgroups
 
 echo "Cgroups configured in /sys/fs/cgroup/redborder.slice/"
 
