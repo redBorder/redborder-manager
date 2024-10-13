@@ -539,7 +539,7 @@ systemctl enable chef-client
 systemctl start chef-client
 
 e_title "Starting default services"
-for service in logstash webui rb-workers sfacctd f2k; do
+for service in logstash webui rb-workers sfacctd f2k redborder-mem2incident; do
   [ "$(systemctl is-enabled $service 2>/dev/null)" = "enabled" ] && systemctl start $service &>/dev/null &
 done
 
