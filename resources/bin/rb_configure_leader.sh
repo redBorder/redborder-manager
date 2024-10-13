@@ -539,7 +539,9 @@ systemctl enable chef-client
 systemctl start chef-client
 
 e_title "Starting default services"
-systemctl start logstash sfacctd webui rb-workers &>/dev/null
+for service in logstash webui rb-workers sfacctd; do
+  [ "$(systemctl is-enabled $service 2>/dev/null)" = "enabled" ] && systemctl start $service &>/dev/null &
+done
 
 # Configure default druid rule (load 1 month, drop forever)
 e_title "Configuring default 1 month data retention"
