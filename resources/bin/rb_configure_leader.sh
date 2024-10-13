@@ -538,6 +538,9 @@ e_title "Enabling chef-client service"
 systemctl enable chef-client
 systemctl start chef-client
 
+e_title "Starting default services"
+systemctl start logstash sfacctd webui rb-workers &>/dev/null
+
 # Configure default druid rule (load 1 month, drop forever)
 e_title "Configuring default 1 month data retention"
 /usr/lib/redborder/bin/rb_druid_rules -t _default -p none -d p1m -i 1
