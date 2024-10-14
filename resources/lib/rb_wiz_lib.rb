@@ -56,7 +56,7 @@ class NetConf < WizConf
         dialog.clear = true
         dialog.title = "Management Interface Selection"
         loop do
-            @management_iface = dialog.menu("Please select an interface to use as the management interface:", network_interfaces, 0, 0, 4)
+            @management_iface = dialog.radiolist("Please select an interface to use as the management interface:", network_interfaces, 0, 0, 4)
             return cancel_wizard unless @management_iface
             configure_interface(@management_iface)
             break if !@returning_from_cancel
@@ -69,8 +69,8 @@ class NetConf < WizConf
 
     def get_network_interfaces()
         network_interfaces = []
-        menu_data = Struct.new(:tag, :item)
-        data = menu_data.new
+        radiolist_data = Struct.new(:tag, :item, :select)
+        first_interface = true
         # loop over list of net devices
         listnetdev = Dir.entries("/sys/class/net/").select {|f| !File.directory? f}
         listnetdev.each do |netdev|
@@ -78,10 +78,17 @@ class NetConf < WizConf
             next if netdev == "lo"
             netdevprop = netdev_property(netdev)
             next unless (netdevprop["ID_BUS"] == "pci" and !netdevprop["MAC"].nil?)
+            data = radiolist_data.new
             data.tag = netdev
             # set default value
             @confdev[netdev] = {"mode" => "dhcp"} if @confdev[netdev].nil?  # TODO: Retrieve default value from interface config file
             data.item = "MAC: "+netdevprop["MAC"]+", Vendor: "+netdevprop["ID_MODEL_FROM_DATABASE"]
+            if first_interface
+                data.select = true
+                first_interface = false
+            else
+                data.select = false
+            end
             network_interfaces.push(data.to_a)
         end
         return network_interfaces
