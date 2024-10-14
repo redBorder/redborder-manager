@@ -73,7 +73,8 @@ rules = []
 db.exec("SELECT * FROM druid_rules") do |result|
   result.each do |row|
     # Decode the payload of the rule
-    rules =JSON.parse(row["payload"][2..-1].gsub(/../) { |pair| pair.hex.chr }) if row["payload"]
+    decoded_payload =JSON.parse(row["payload"][2..-1].gsub(/../) { |pair| pair.hex.chr }) if row["payload"]
+    rules << decoded_payload unless decoded_payload.empty?
   end
 end
   
@@ -81,9 +82,9 @@ end
 if rules.empty?
   puts 'Unacceptable druid rules format on PG'
   exit
-elsif not rules.first["tieredReplicants"].nil?
-  tieredReplicants = rules.first.fetch("tieredReplicants", {}).fetch("_default_tier", 0).to_i
-  type = rules.first["type"]
+elsif not rules.first.first["tieredReplicants"].nil?
+  tieredReplicants = rules.first.first.fetch("tieredReplicants", {}).fetch("_default_tier", 0).to_i
+  type = rules.first.first["type"]
     
   #if tieredReplicants == 1 and type == "loadForever"
   if type == "loadForever"
@@ -93,7 +94,7 @@ elsif not rules.first["tieredReplicants"].nil?
 end
   
 # Get default tier data and the period to mantain the data
-defaultTier = rules.select{|x| 
+defaultTier = rules.first.select{|x| 
                            #x["tier"] == "_default_tier" if !x["tier"].nil?
                            x["tieredReplicants"].first.first == "_default_tier" if !x["tieredReplicants"].nil?                        
                           }.first
