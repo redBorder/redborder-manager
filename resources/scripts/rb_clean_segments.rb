@@ -158,13 +158,22 @@ if !remove_only_indexCache
   
     # Get all the segments from S3
     segments_to_delete_from_s3 = []
-    segments_on_s3 = s3.list_objects_v2(bucket: bucket_name, prefix: "rbdata/")
-    segments_on_s3 = segments_on_s3.contents.map(&:key)
+    segments_on_s3 = []
+    continuation_token = nil
+
+    begin
+      response = s3.list_objects_v2(bucket: bucket_name, prefix: "rbdata/",continuation_token: continuation_token)
+      segments_on_s3.concat(response.contents.map(&:key))
+      continuation_token = response.next_continuation_token
+    end while continuation_token
+
+    # Filter by date
     segments_on_s3.each do |segment|
       date = Time.parse segment.split("/")[2].split("_")[0]
       if date < limitDate
         segments_to_delete_from_s3 << segment
       end
+
     end
     #end
     # Remove segments from S3
