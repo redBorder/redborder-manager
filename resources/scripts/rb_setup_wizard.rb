@@ -30,9 +30,8 @@ EOF
 
 end
 
-check_chef_command = `knife role list | grep manager`
 
-unless check_chef_command.strip.empty?
+unless File.exist?('/etc/redborder/cluster-installed.txt')
 
     dialog = MRDialog.new
     dialog.clear = true
