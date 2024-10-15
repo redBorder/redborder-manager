@@ -30,6 +30,24 @@ EOF
 
 end
 
+
+if File.exist?('/etc/redborder/cluster-installed.txt')
+
+    dialog = MRDialog.new
+    dialog.clear = true
+    dialog.title = "Manager already installed"
+    text = <<EOF
+
+Redborder manager is already installed in this machine.
+
+EOF
+
+result = dialog.msgbox(text, 11, 41)
+cancel_wizard
+
+end
+
+
 puts "\033]0;redborder - setup wizard\007"
 
 general_conf = {
