@@ -31,7 +31,7 @@ EOF
 end
 
 
-unless File.exist?('/etc/redborder/cluster-installed.txt')
+if File.exist?('/etc/redborder/cluster-installed.txt')
 
     dialog = MRDialog.new
     dialog.clear = true
