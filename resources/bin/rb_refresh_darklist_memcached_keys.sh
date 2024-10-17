@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script to download the darklist.json file needed to enrichment of rb_flow and rb_event on logstash/samza
+# Script to download the darklist.json file needed to enrichment of rb_flow and rb_event on logstash
 
 source /etc/profile.d/rvm.sh
 
