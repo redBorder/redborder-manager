@@ -125,6 +125,10 @@ chmod a+r /etc/chef/client.pem
 #Add client to admins group
 knife group add client `hostname -s` admins &>/dev/null
 
+e_title "Enabling chef-client service"
+systemctl enable chef-client
+systemctl start chef-client
+
 # Copy dhclient hook
 cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 

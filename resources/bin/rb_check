@@ -28,7 +28,6 @@ fi
 
 EXITRET=0
 RES_COL=120
-SAMZA=0
 MOVE_TO_COL="echo -en \\033[${RES_COL}G"
 SCRIPTS_PATH="/etc/rb_check.d"
 
@@ -41,9 +40,6 @@ upload=""
 extended=0
 waitfinish=0
 s=""
-
-grep -q samza /etc/topicmode/*
-[ $? -eq 0 ] && SAMZA=1
 
 # Auxiliar functions to check if exists another rb_check process launched
 LOCKFILE="/tmp/rb_check.lock"
@@ -358,14 +354,6 @@ e_title "          DATE: $(date)    "
 [ -f ${SCRIPTS_PATH}/*druid* ] && [ "x$s" == "x" -o "x$s" == "xdruid" -o "x$s" == "xhistorical" -o "x$s" == "xdruid_historical" ] && check_druid_historical
 [ -f ${SCRIPTS_PATH}/*druid* ] && [ "x$s" == "x" -o "x$s" == "xdruid" -o "x$s" == "xbroker" -o "x$s" == "xdruid_broker" ] && check_druid_broker
 [ -f ${SCRIPTS_PATH}/*webui* ] && [ "x$s" == "x" -o "x$s" == "xrb_webui" -o "x$s" == "xwebui" -o "x$s" == "xrb-webui" ] && check_webui
-[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xresourcemanager" -o "x$s" == "xhadoop_resourcemanager" ] && check_hadoop_resourcemanager
-[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xnodemanager" -o "x$s" == "xhadoop_nodemanager" ] && check_hadoop_nodemanager
-[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xnamenode" -o "x$s" == "xhadoop_namenode" ] && check_hadoop_namenode
-[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xjournalnode" -o "x$s" == "xhadoop_journalnode" ] && check_hadoop_journalnode
-[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xdatanode" -o "x$s" == "xhadoop_datanode" ] && check_hadoop_datanode
-[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xhistoryserver" -o "x$s" == "xhadoop_historyserver" ] && check_hadoop_historyserver
-[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xzkfc" -o "x$s" == "xhadoop_zkfc" ] && check_hadoop_zkfc
-[ -f ${SCRIPTS_PATH}/*hadoop* ] && [ "x$s" == "x" -o "x$s" == "xhadoop" -o "x$s" == "xhdfs" -o "x$s" == "xhadoop_hdfs" ] && check_hadoop_hdfs 
 [ -f ${SCRIPTS_PATH}/*keepalived* ] && [ "x$s" == "x" -o "x$s" == "xkeepalived" ] && check_keepalived
 [ -f ${SCRIPTS_PATH}/*aerospike* ] && [ "x$s" == "x" -o "x$s" == "xaerospike" ] && check_aerospike
 [ -f ${SCRIPTS_PATH}/*drill* ] && [ "x$s" == "x" -o "x$s" == "xdrill" ] && check_drill
@@ -384,10 +372,6 @@ if [ $extended -eq 1 ]; then
   e_title "Extended INFO: rb_get_topics.rb"
   eval $CMDBEGIN /usr/lib/redborder/scripts/rb_get_topics.rb
 
-  if [ $SAMZA -eq 1 ]; then
-    e_title "Extended INFO: rb_get_topics.rb"
-    timeout 30 /usr/lib/redborder/bin/rb_samza.sh -l
-  fi
 fi
 
 if [ "x$upload" != "x" ]; then
