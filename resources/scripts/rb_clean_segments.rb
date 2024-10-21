@@ -90,8 +90,8 @@ rules.each do |rule|
     puts "Unacceptable druid rules format on PG"
     next
   elsif not rules_set.first["tieredReplicants"].nil?
-    tieredReplicants = rules.first.fetch("tieredReplicants", {}).fetch("_default_tier", 0).to_i
-    type = rules.first["type"]
+    tieredReplicants = rules_set.first.fetch("tieredReplicants", {}).fetch("_default_tier", 0).to_i
+    type = rules_set.first["type"]
       
     #if tieredReplicants == 1 and type == "loadForever"
     if type == "loadForever"
@@ -144,7 +144,7 @@ rules.each do |rule|
       puts "#{segments_to_delete_from_pg.size} segments marked for removing on PG"
     
       segments_to_delete_from_pg.each do |segment|
-        puts "Removing PG segment id #{segment['id']}"
+        #puts "Removing PG segment id #{segment['id']}"
     
         # Remove it from PG
         db.exec("DELETE FROM druid_segments WHERE id = '#{segment['id']}'")
@@ -188,7 +188,7 @@ rules.each do |rule|
       if segments_to_delete_from_s3.size > 0
         puts "#{segments_to_delete_from_s3.size} objects marked for removing on S3"
         segments_to_delete_from_s3.each do |object_key|
-          puts "Removing S3 object with path #{object_key}"
+          # puts "Removing S3 object with path #{object_key}"
           # Delete the object
           s3.delete_object(bucket: bucket_name, key: object_key)
         end
