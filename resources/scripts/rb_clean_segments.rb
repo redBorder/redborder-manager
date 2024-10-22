@@ -34,13 +34,13 @@ def removeFiles(path, limitDate)
     return if (split.length - 2) < 0
     date = Time.parse split[split.length - 2]
     if date < limitDate
-      puts "Removing directory #{file}"
+      #puts "Removing directory #{file}"
       FileUtils.rm_rf(file)
       removed += 1
     end
   end
 
-  puts "#{removed} directories removed"
+  logit "#{removed} directories removed"
 end
 
 def logit(text)
@@ -58,7 +58,7 @@ remove_only_indexCache = false
 
 # Do nothing if path exists
 if zk.exists? '/cleanDruidSegments'
-  puts "Another node have the lock. Only remove local data..."
+  logit "Another node have the lock. Only remove local data..."
   remove_only_indexCache = true
 else
   zk.create('/cleanDruidSegments', '', :ephemeral => false)
@@ -72,11 +72,24 @@ db =  PG.connect(dbname: druid_config["druid"]["database"], user: druid_config["
   
 # Get rules info from PG
 rules = []
-db.exec("SELECT * FROM druid_rules") do |result|
+db.exec("SELECT DISTINCT ON (datasource) *
+  FROM druid_rules
+  ORDER BY datasource, version DESC") do |result|
   result.each do |row|
-    # Decode the payload of the rule
-    decoded_payload =JSON.parse(row["payload"][2..-1].gsub(/../) { |pair| pair.hex.chr }) if row["payload"]
-    rules << {rules_set: decoded_payload, datasource: row["datasource"]} unless decoded_payload.empty?
+    if row["payload"] && !row["payload"].empty?
+      # Decode the payload of the rule
+      begin
+        decoded_payload = JSON.parse(row["payload"][2..-1].gsub(/../) { |pair| pair.hex.chr })
+        # Only add if the decoded payload is not empty
+        unless decoded_payload.empty?
+          rules << {rules_set: decoded_payload, datasource: row["datasource"]}
+        end
+      rescue JSON::ParserError => e
+        logit "Failed to parse payload for datasource #{row["datasource"]}: #{e.message}"
+      end
+    else
+      logit "Skipping row due to empty or invalid payload for datasource #{row["datasource"]}"
+    end
   end
 end
   
@@ -84,18 +97,18 @@ rules.each do |rule|
   rules_set = rule[:rules_set]
   datasource = rule[:datasource]
 
-  puts "Segments from datasource: #{datasource}"
+  logit("---------------------Segments from datasource: #{datasource}---------------------")
   # Fast exit if rules are not correct
   if rules_set.empty?
-    puts "Unacceptable druid rules format on PG"
+    logit "Unacceptable druid rules format on PG"
     next
   elsif not rules_set.first["tieredReplicants"].nil?
     tieredReplicants = rules_set.first.fetch("tieredReplicants", {}).fetch("_default_tier", 0).to_i
+    logit "tieredReplicants = #{tieredReplicants}"
     type = rules_set.first["type"]
-      
     #if tieredReplicants == 1 and type == "loadForever"
     if type == "loadForever"
-      puts "No segments must be removed because druid period is 'forever'"
+      logit "No segments must be removed because druid period is 'forever'"
       next
     end
   end
@@ -105,20 +118,19 @@ rules.each do |rule|
                             #x["tier"] == "_default_tier" if !x["tier"].nil?
                             x["tieredReplicants"].first.first == "_default_tier" if !x["tieredReplicants"].nil?                        
                             }.first
-  puts "defaultTier is #{defaultTier}"
+  logit "defaultTier is #{defaultTier}"
   if defaultTier.nil?
-    puts "No default tier exists on PG. Exiting..."
+    logit "No default tier exists on PG. Exiting..."
     next
   end
-    
     
   period = defaultTier["period"].upcase
   periodInSecs = ISO8601::Duration.new(period).to_seconds
   limitDate = Time.now - periodInSecs
-  puts "limitDate for datasource #{datasource} is #{limitDate}"
+  logit "limitDate is #{limitDate}"
     
   if period == "P5000Y"
-    puts "No segments must be removed because druid period is 'forever'"
+    logit "No segments must be removed because druid period is 'forever'"
     next
   end
 
@@ -126,7 +138,7 @@ rules.each do |rule|
     # Create the lock
     path = zk.create("/cleanDruidSegments/#{datasource}", ephemeral: true)
     
-    puts "Deleting segments from #{datasource} older than #{limitDate} (Period #{period})"
+    logit "Deleting segments older than #{limitDate} (Period #{period})"
     
     # Get all the segments from PG
     segments_to_delete_from_pg = []
@@ -141,7 +153,7 @@ rules.each do |rule|
     
     # Remove segments from PG
     if segments_to_delete_from_pg.size > 0
-      puts "#{segments_to_delete_from_pg.size} segments marked for removing on PG"
+      logit "#{segments_to_delete_from_pg.size} segments marked for removing on PG"
     
       segments_to_delete_from_pg.each do |segment|
         #puts "Removing PG segment id #{segment['id']}"
@@ -150,7 +162,7 @@ rules.each do |rule|
         db.exec("DELETE FROM druid_segments WHERE id = '#{segment['id']}'")
       end
     else
-      puts "No segments must be removed from PG"
+      logit "No segments must be removed from PG"
     end
     
     # Remove segments from S3 if necessary
@@ -159,7 +171,7 @@ rules.each do |rule|
       s3 = Aws::S3::Client.new(access_key_id: s3_config["production"]["access_key_id"],
         secret_access_key: s3_config["production"]["secret_access_key"],
         region: 'us-east-1',
-        endpoint: s3_config["production"]["s3_protocol"] +"://"+ s3_config["production"]["s3_host_name"]
+        endpoint: endpoint = s3_config["production"]["s3_protocol"].concat("://", s3_config["production"]["s3_host_name"])
         )
       bucket_name = s3_config["production"]["bucket"].chomp!('/')
 
@@ -186,14 +198,14 @@ rules.each do |rule|
       #end
       # Remove segments from S3
       if segments_to_delete_from_s3.size > 0
-        puts "#{segments_to_delete_from_s3.size} objects marked for removing on S3"
+        logit "#{segments_to_delete_from_s3.size} objects marked for removing on S3"
         segments_to_delete_from_s3.each do |object_key|
           # puts "Removing S3 object with path #{object_key}"
           # Delete the object
           s3.delete_object(bucket: bucket_name, key: object_key)
         end
       else
-        puts "No segments must be removed from S3"
+        logit "No segments must be removed from S3"
       end
     end
 
@@ -203,10 +215,10 @@ rules.each do |rule|
   end
 
   # Remove segments from historical indexCache
-  puts "Removing files from druid historical indexCache"
+  logit "Removing files from druid historical indexCache"
   removeFiles("/var/druid/historical/indexCache/#{datasource}/*", limitDate)
   # Remove segments from localStorage
-  puts "Removing files from localStorage"
+  logit "Removing files from localStorage"
   removeFiles("/var/druid/data/#{datasource}/*", limitDate)
 end
 zk.delete ('/cleanDruidSegments')
