@@ -409,9 +409,8 @@ function configure_leader(){
   # Multiple runs of chef-client
   e_title "Configuring Chef-Client. Please wait...  "
 
-  e_title "redborder install run (1/4) $(date)" | tee -a /root/.install-chef-client.log
+  e_title "redborder install run (1/2) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
-
 
   # Replace chef-server SV init scripts by systemd scripts
   /usr/bin/chef-server-ctl graceful-kill &>/dev/null
@@ -425,16 +424,7 @@ function configure_leader(){
     done
   fi
 
-  e_title "redborder install run (2/4) $(date)" | tee -a /root/.install-chef-client.log
-  chef-client | tee -a /root/.install-chef-client.log
-  
-  e_title "redborder install run (3/4) $(date)" | tee -a /root/.install-chef-client.log
-  chef-client | tee -a /root/.install-chef-client.log
-
-  e_title "Creating database structure $(date)"
-  chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
-  
-  e_title "redborder install run (4/4) $(date)" | tee -a /root/.install-chef-client.log
+  e_title "redborder install run (2/2) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
 }
 
@@ -544,12 +534,25 @@ configure_leader
 #rm -f /etc/opscode/chef-server.rb
 rm -f /var/lock/leader-configuring.lock
 
+e_title "Enabling chef-client service"
+systemctl enable chef-client
+systemctl start chef-client
+
+e_title "Starting default services"
+for service in logstash webui rb-workers sfacctd f2k redborder-mem2incident; do
+  [ "$(systemctl is-enabled $service 2>/dev/null)" = "enabled" ] && systemctl start $service &>/dev/null &
+done
+
+# Configure default druid rule (load 1 month, drop forever)
+e_title "Configuring default 1 month data retention"
+/usr/lib/redborder/bin/rb_druid_rules -t _default -p none -d p1m -i 1
+
 # Copy dhclient hook
 cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
 e_title "Configuring cgroups (first time), please wait..."
 
-rb_configure_cgroups &>/dev/null
+/usr/lib/redborder/bin/rb_configure_cgroups
 
 echo "Cgroups configured in /sys/fs/cgroup/redborder.slice/"
 
@@ -560,4 +563,3 @@ runtime_min=$(echo "scale=2; $runtime / 60" | bc -l) # Calculate duration of scr
 e_title "Leader Node configured! ($runtime_min minutes)"
 
 date > /etc/redborder/cluster-installed.txt
-
