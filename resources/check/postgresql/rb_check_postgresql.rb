@@ -37,10 +37,6 @@ nodes.each do |node|
   print_service_status(service, node, status_postgres, colorless, quiet)
   status = 1 if status_postgres != 0
 
-  status_redborder_postgres = get_service_status(service,node)
-  print_service_status("redborder-postgresql", node, status_postgres, colorless, quiet)
-  status = 1 if status_redborder_postgres != 0
-
   if status == 0
     subtitle("Databases", colorless, quiet)
     %w[druid opscode_chef radius redborder].each do |database|

@@ -30,7 +30,6 @@ if [ "x$?" == "x0" ]; then
   # Check if chef-server is registered in consul
   ret=$(curl $CONSULIP:8500/v1/catalog/services 2> /dev/null | jq .erchef)
   s3_ret=$(curl $CONSULIP:8500/v1/catalog/services 2> /dev/null | jq .s3)
-  pg_ret=$(curl $CONSULIP:8500/v1/catalog/services 2> /dev/null | jq .postgresql)
 else
   ret="null"
   s3_ret="null"
