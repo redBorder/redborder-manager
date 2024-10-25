@@ -93,28 +93,45 @@ end
 
 text = <<EOF
 
-In the following step, you will be able to configure the network settings for your device.
 
-If your network is already configured manually, you can choose to "SKIP" this step and proceed to the next configuration step.
+In the next step, you'll configure your device's network settings.
+
+First, you'll be asked to choose one of your interfaces to serve as the management interface. Then, you'll be prompted to select an interface for synchronization.
 
 EOF
 
 dialog = MRDialog.new
 dialog.clear = true
 dialog.title = "Configure Network"
-dialog.cancel_label = "SKIP"
-dialog.no_label = "SKIP"
-yesno = dialog.yesno(text,0,0)
+dialog.msgbox(text,0,0)
 
-if yesno # yesno is "yes" -> true
+netconf = NetConf.new
+network_interfaces = netconf.get_network_interfaces()
 
-    # Conf for network
-    netconf = NetConf.new
-    netconf.doit # launch wizard
-    cancel_wizard if netconf.cancel
-    general_conf["network"]["interfaces"] = netconf.conf
-    general_conf["network"]["management_interface"] = netconf.management_iface
+if network_interfaces.empty?
+    dialog = MRDialog.new
+    dialog.clear = true
+    dialog.title = "Error"
+    
+    dialog.msgbox("Error: No network interfaces found. The script will now exit.", 0, 0)
+    exit
 end
+
+netconf.doit(network_interfaces)
+cancel_wizard if netconf.cancel
+
+network_interfaces.delete_if { |iface| iface[0] == netconf.management_iface }
+
+netconf.doitsync(network_interfaces)
+cancel_wizard if netconf.cancel
+
+netconf.confdev.each_key do |interface|
+    netconf.conf << netconf.confdev[interface].merge("device" => interface)
+end
+
+general_conf["network"]["management_interface"] = netconf.management_iface
+general_conf["network"]["sync_interface"] = netconf.sync_interface
+general_conf["network"]["interfaces"] = netconf.conf
 
 text = <<EOF
 
@@ -131,58 +148,57 @@ EOF
 dialog = MRDialog.new
 dialog.clear = true
 dialog.title = "Configure Cluster Service (Serf)"
-dialog.no_label = "SKIP"
+dialog.no_label = "Cancel"
 yesno = dialog.yesno(text,0,0)
 
-if yesno
-    # Initialize hshnet for using in SerfSync configuration
-    hshnet = {}
-    listnetdev = Dir.entries("/sys/class/net/").select {|f| !File.directory? f}
-    listnetdev.each do |netdev|
-        # loopback and devices with no pci nor mac are not welcome!
-        next if netdev == "lo"
-        general_conf["network"]["interfaces"].each do |i|
-            if i["device"] == netdev
-                # found device!
-                next unless i["mode"] == "static"
+cancel_wizard unless yesno
+
+# Initialize hshnet for using in SerfSync configuration
+hshnet = {}
+listnetdev = Dir.entries("/sys/class/net/").select {|f| !File.directory? f}
+listnetdev.each do |netdev|
+    # loopback and devices with no pci nor mac are not welcome!
+    next if netdev == "lo"
+    general_conf["network"]["interfaces"].each do |i|
+        if i["device"] == netdev && netdev != general_conf["network"]["management_interface"]
+            begin
                 n = NetAddr::CIDRv4.create("#{i["ip"]}/#{i["netmask"]}") # get network address from device ipaddr
                 hshnet[netdev] = "#{n.network}#{n.netmask}" # format 192.168.1.0/24
-                break
+            rescue NetAddr::ValidationError => e
+                hshnet[netdev] = nil
             end
-        end
-        # this netdev not configured via wizard? ... getting from system
-        if hshnet[netdev].nil?
-            hshnet[netdev] = Config_utils.get_first_route(netdev)[:prefix]
-        end
-        # No setting from wizard nor systems ... strange! better remove from the list.
-        if hshnet[netdev].nil? or hshnet[netdev].empty?
-            hshnet.delete(netdev)
+            break
         end
     end
+    if hshnet[netdev].nil? or hshnet[netdev].empty?
+        hshnet.delete(netdev)
+    end
+end
 
-    flag_serfsyncmanual = false
-    unless hshnet.empty?
-        # Conf synchronization network
-        syncconf = SerfSyncDevConf.new
-        syncconf.networks = hshnet
-        syncconf.doit # launch wizard
-        cancel_wizard if syncconf.cancel
-        if syncconf.conf == "Manual"
-            flag_serfsyncmanual = true
-        else
-            general_conf["serf"]["sync_net"] = syncconf.conf
-        end
-    else
-        flag_serfsyncmanual = true
-    end
+if !hshnet.empty?
 
-    if flag_serfsyncmanual
-        # Conf synchronization network
-        syncconf = SerfSyncConf.new
-        syncconf.doit # launch wizard
-        cancel_wizard if syncconf.cancel
-        general_conf["serf"]["sync_net"] = syncconf.conf
-    end
+text = <<EOF
+
+Please configure the synchronism network.
+
+Select one of the device networks to designate as the synchronism network. This network is essential for connecting nodes and building the cluster. It also facilitates communication between internal services.
+        
+In some cases, the synchronism network may not have a default gateway and could be isolated from other networks.
+
+EOF
+
+    dialog = MRDialog.new
+    dialog.clear = true
+    dialog.title = "Configure Sync Network"
+    yesno = dialog.msgbox(text,0,0)
+
+    syncconf = SerfSyncDevConf.new
+    syncconf.networks = hshnet
+    syncconf.doit(general_conf["network"]["sync_interface"])
+    cancel_wizard if syncconf.cancel
+    general_conf["serf"]["sync_net"] = syncconf.conf
+else
+    general_conf["serf"]["sync_net"] = general_conf["network"]["management_interface"]
 end
 
 # Select multicast or unicast
@@ -308,6 +324,12 @@ end
 unless general_conf["network"]["management_interface"].nil?
     text += "- Management Interface:\n"
     text += "    #{general_conf["network"]["management_interface"]}\n"
+    text += "\n"
+end
+
+unless general_conf["network"]["sync_interface"].nil?
+    text += "- Synchronism Interface:\n"
+    text += "    #{general_conf["network"]["sync_interface"]}\n"
 end
 
 unless general_conf["s3"].nil?
@@ -327,10 +349,10 @@ unless general_conf["postgresql"].nil?
 end
 
 text += "\n- Serf:\n"
+text += "    mode: #{general_conf["serf"]["multicast"] ? "multicast" : "unicast"}\n"
 unless general_conf["serf"]["sync_net"].nil? || general_conf["serf"]["sync_net"].empty?
     text += "    sync net: #{general_conf["serf"]["sync_net"]}\n"
 end
-text += "    mode: #{general_conf["serf"]["multicast"] ? "multicast" : "unicast"}\n"
 text += "    encrypt key: #{general_conf["serf"]["encrypt_key"]}\n"
 
 text += "\n- Mode: #{general_conf["mode"]}\n\n"

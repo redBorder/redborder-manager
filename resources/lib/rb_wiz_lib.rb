@@ -36,7 +36,7 @@ end
 # Class to create a Network configuration box
 class NetConf < WizConf
 
-    attr_accessor :conf, :cancel, :management_iface
+    attr_accessor :conf, :confdev, :cancel, :management_iface, :sync_interface
 
     def initialize()
         @cancel = false
@@ -45,29 +45,57 @@ class NetConf < WizConf
         @confdev = {}
         @devmode = { "dhcp" => "Dynamic", "static" => "Static" }
         @devmodereverse = { "Dynamic" => "dhcp", "Static" => "static" }
-        @management_iface = nil 
+        @management_iface = nil
+        @sync_interface = nil 
     end
 
-    def doit
-        network_interfaces = get_network_interfaces()
-        return if network_interfaces.empty?
-
+    def doit(network_interfaces)
         dialog = MRDialog.new
         dialog.clear = true
         dialog.title = "Management Interface Selection"
         loop do
-            @management_iface = dialog.radiolist("Please select an interface to use as the management interface:", network_interfaces, 0, 0, 4)
-            return cancel_wizard unless @management_iface
-            configure_interface(@management_iface)
+            self.management_iface = dialog.radiolist("Please select an interface to use as the management interface:", network_interfaces, 0, 0, 4)
+            return cancel_wizard unless management_iface
+            selected_interface = network_interfaces.find { |iface| iface[0] == management_iface }
+            if selected_interface[1].include?("IP: ")
+                dialog = MRDialog.new
+                dialog.clear = true
+                dialog.title = "Skip Network Configuration"
+                if dialog.yesno("The interface '#{selected_interface[0]}' already has an IP. Do you want to skip network configuration?", 6, 60)
+                    return
+                end
+            end
+            configure_interface(management_iface)
             break if !@returning_from_cancel
             @returning_from_cancel = false
         end
-        @confdev.each_key do |interface|
-            @conf << @confdev[interface].merge("device" => interface)
+    end
+
+    def doitsync(network_interfaces)
+        return if network_interfaces.empty?
+
+        dialog = MRDialog.new
+        dialog.clear = true
+        dialog.title = "Synchronism Interface Selection"
+        loop do
+            self.sync_interface = dialog.radiolist("Please select an interface to use as the synchronism interface:", network_interfaces, 0, 0, 4)
+            return cancel_wizard unless sync_interface
+            selected_interface = network_interfaces.find { |iface| iface[0] == sync_interface }
+            if selected_interface[1].include?("IP: ")
+                dialog = MRDialog.new
+                dialog.clear = true
+                dialog.title = "Skip Network Configuration"
+                if dialog.yesno("The interface '#{selected_interface[0]}' already has an IP. Do you want to skip network configuration?", 6, 60)
+                    return
+                end
+            end
+            configure_sync_interface(sync_interface)
+            break if !@returning_from_cancel
+            @returning_from_cancel = false
         end
     end
 
-    def get_network_interfaces()
+    def get_network_interfaces
         network_interfaces = []
         radiolist_data = Struct.new(:tag, :item, :select)
         first_interface = true
@@ -78,20 +106,32 @@ class NetConf < WizConf
             next if netdev == "lo"
             netdevprop = netdev_property(netdev)
             next unless (netdevprop["ID_BUS"] == "pci" and !netdevprop["MAC"].nil?)
+    
+            # Fetch network scripts to get IP information
+            ip = get_ip_for_interface(netdev)
+            get_network_scripts(netdev)
+
             data = radiolist_data.new
             data.tag = netdev
-            # set default value
-            @confdev[netdev] = {"mode" => "dhcp"} if @confdev[netdev].nil?  # TODO: Retrieve default value from interface config file
-            data.item = "MAC: "+netdevprop["MAC"]+", Vendor: "+netdevprop["ID_MODEL_FROM_DATABASE"]
-            if first_interface
-                data.select = true
-                first_interface = false
-            else
-                data.select = false
-            end
+            data.item = "MAC: " + netdevprop["MAC"] + ", Vendor: " + netdevprop["ID_MODEL_FROM_DATABASE"]
+            data.item += ", IP: #{ip}" unless ip.nil? # Add IP if available
+            data.select = first_interface ? true : false
+            first_interface = false if first_interface
+    
             network_interfaces.push(data.to_a)
         end
         return network_interfaces
+    end
+    
+    # Helper method to extract the IPv4 address from the network script
+    def get_ip_for_interface(netdev)
+        if File.exist?("/etc/sysconfig/network-scripts/ifcfg-#{netdev}")
+            config_file = File.read("/etc/sysconfig/network-scripts/ifcfg-#{netdev}")
+            if config_file.match(/^IPADDR=/)
+                return config_file.match(/^IPADDR=(?<ip>.*)$/)[:ip]
+            end
+        end
+        return nil # Return nil if no IP found
     end
 
     def configure_interface(interface)
@@ -109,9 +149,59 @@ class NetConf < WizConf
                 "gateway" => dev.conf['Gateway:'].to_s.empty? ? "" : dev.conf['Gateway:']
             } unless dev.conf.empty?
             if dev.conf.empty?
+                get_network_scripts(interface)
                 @returning_from_cancel = true
                 return
             end
+        end
+    end
+
+    def configure_sync_interface(interface)
+        dialog = MRDialog.new
+        dialog.clear = true
+        dialog.title = "Interface Configuration"
+        if dialog.yesno("\nWould you like to assign a static IP to this interface?\n\nIf you choose not to, you will have to select a different interface or assign an IP to this interface before running the script.\n", 0, 0)
+            dev = DevConf.new(interface, self)
+            dev.conf = @confdev[interface] if @confdev[interface]
+            dev.doit
+            @confdev[interface] = {
+                "mode" => "static",
+                "ip" => dev.conf['IP:'],
+                "netmask" => dev.conf['Netmask:'],
+                "gateway" => dev.conf['Gateway:'].to_s.empty? ? "" : dev.conf['Gateway:']
+            } unless dev.conf.empty?
+            if dev.conf.empty?
+                get_network_scripts(interface)
+                @returning_from_cancel = true
+                return
+            end
+        else
+            get_network_scripts(interface)
+            @returning_from_cancel = true
+            return
+        end
+    end
+
+    def get_network_scripts(netdev)
+        if File.exist?("/etc/sysconfig/network-scripts/ifcfg-#{netdev}")
+            config_file = File.read("/etc/sysconfig/network-scripts/ifcfg-#{netdev}")
+            
+            if config_file.match(/^IPADDR=/)
+                ip = config_file.match(/^IPADDR=(?<ip>.*)$/)[:ip]
+                netmask = config_file.match(/^NETMASK=(?<netmask>.*)$/)[:netmask]
+                gateway = config_file.match(/^GATEWAY=(?<gateway>.*)$/)[:gateway]
+
+                @confdev[netdev] = {
+                    "mode" => "static", 
+                    "ip" => ip, 
+                    "netmask" => netmask,
+                    "gateway" => gateway
+                }
+            else
+                @confdev[netdev] = {"mode" => "dhcp"}
+            end
+        else
+            @confdev[netdev] = {"mode" => "dhcp"}
         end
     end
 end
@@ -463,11 +553,12 @@ class SerfSyncDevConf < WizConf
 
     def initialize()
         @cancel = false
+        @returning_from_cancel = false
         @conf = ""
         @networks = {}
     end
 
-    def doit
+    def doit(sync_interface)
 
         dialog = MRDialog.new
         dialog.clear = true
@@ -482,37 +573,48 @@ In some cases, the synchronism network may not have a default gateway and could 
 
 EOF
 
-        items = []
+        network_interfaces = []
         radiolist_data = Struct.new(:tag, :item, :select)
 
         select = true
         networks.each do |k,v|
             data = radiolist_data.new
             data.tag = k
-            data.item = v
+            data.item = v 
             data.select = select
-            if select == true
-                select = false # only the first is true -> default value
+            if k == sync_interface
+                data.select = true
+                select = false
+            else
+                data.select = false
             end
-            items.push(data.to_a)
+            network_interfaces.push(data.to_a)
         end
 
-        data = radiolist_data.new
-        data.tag = "Manual"
-        data.item = "Set network manually"
-        items.push(data.to_a)
+        network_interfaces.push(radiolist_data.new("Custom", "Set a custom network", false).to_a)
 
-        dialog.title = "Sync Network configuration"
-        selected_item = dialog.radiolist(text, items)
+        dialog.title = "Synchronism Network configuration"
 
-        if dialog.exit_code == dialog.dialog_ok
-            if selected_item == "Manual"
-                @conf = "Manual"
-            else
-                @conf = networks[selected_item]
-            end
+        loop do
+            sync_interface = dialog.radiolist("Please select a network to use as the synchronism network:", 
+                                                network_interfaces, 10, 80, 0)
+            return cancel_wizard unless sync_interface
+            sync_network = network_interfaces.find { |ni| ni[0] == sync_interface }[1]
+            self.conf = configure_interface(sync_network)
+            break unless @returning_from_cancel
+            @returning_from_cancel = false
+        end
+    end
+
+    def configure_interface(sync_network)
+        synchronism_network_config = SerfSyncConf.new(sync_network)
+        synchronism_network_config.doit()
+        cancel_wizard if synchronism_network_config.cancel
+        if synchronism_network_config.conf.empty?
+            @returning_from_cancel = true
+            return
         else
-            @cancel = true
+            return synchronism_network_config.conf
         end
     end
 end
@@ -522,12 +624,18 @@ class SerfSyncConf < WizConf
 
     attr_accessor :conf, :cancel
 
-    def initialize()
+    def initialize(sync_network)
         @cancel = false
+        @returning_from_cancel = false
         @conf = {}
+        @sync_network = sync_network
     end
 
     def doit
+        if Config_utils.check_ipv4(@sync_network)
+            sync_netaddr = NetAddr::CIDRv4.create(@sync_network)
+            return self.conf = "#{sync_netaddr.network}#{sync_netaddr.netmask}"
+        end
 
         sync = {}
 
@@ -578,7 +686,7 @@ EOF
                 end
             else
                 # Cancel button pushed
-                @cancel = true
+                @returning_from_cancel = true
                 break
             end
 
@@ -594,15 +702,14 @@ Please review the settings and ensure that the IPv4 address is in dot notation, 
 
 EOF
             dialog.msgbox(text, 15, 41)
-
         end
 
-        # normalizing
-        sync_netaddr = NetAddr::CIDRv4.create(sync["Sync Network:"]) # TODO: Fix, it throws an exception when cancelling the configuration
-        @conf = "#{sync_netaddr.network}#{sync_netaddr.netmask}"
-
+        begin
+            sync_netaddr = NetAddr::CIDRv4.create(sync["Sync Network:"])
+            self.conf = "#{sync_netaddr.network}#{sync_netaddr.netmask}"
+        rescue
+        end
     end
-
 end
 
 class SerfMcastConf < WizConf
@@ -1054,6 +1161,5 @@ EOF
 
 end
 
-
-
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
+
