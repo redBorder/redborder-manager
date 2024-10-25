@@ -80,29 +80,34 @@ db.exec("SELECT DISTINCT ON (datasource) *
       # Decode the payload of the rule
       begin
         decoded_payload = JSON.parse(row["payload"][2..-1].gsub(/../) { |pair| pair.hex.chr })
-        # Only add if the decoded payload is not empty
-        unless decoded_payload.empty?
-          rules << {rules_set: decoded_payload, datasource: row["datasource"]}
-        end
+        rules << {rules_set: decoded_payload, datasource: row["datasource"]}
       rescue JSON::ParserError => e
-        logit "Failed to parse payload for datasource #{row["datasource"]}: #{e.message}"
+        logit "Unacceptable druid rules format for datasource #{row["datasource"]}: #{e.message}"
       end
     else
       logit "Skipping row due to empty or invalid payload for datasource #{row["datasource"]}"
     end
   end
 end
-  
+
+default_rules_set = rules.find { |rule| rule[:datasource] == '_default' }&.dig(:rules_set)
+
+if default_rules_set.empty?
+  logit "Unacceptable druid rules format"
+  exit
+end
+
 rules.each do |rule|
   rules_set = rule[:rules_set]
   datasource = rule[:datasource]
 
   logit("---------------------Segments from datasource: #{datasource}---------------------")
-  # Fast exit if rules are not correct
+
   if rules_set.empty?
-    logit "Unacceptable druid rules format on PG"
-    next
-  elsif not rules_set.first["tieredReplicants"].nil?
+    logit "No rules set found for datasource, applying default rules set"
+    rules_set = default_rules_set
+  end
+  if not rules_set.first["tieredReplicants"].nil?
     tieredReplicants = rules_set.first.fetch("tieredReplicants", {}).fetch("_default_tier", 0).to_i
     logit "tieredReplicants = #{tieredReplicants}"
     type = rules_set.first["type"]
