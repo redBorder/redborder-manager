@@ -65,7 +65,7 @@ class NetConf < WizConf
                     return
                 end
             end
-            configure_interface(management_iface)
+            configure_interface(management_iface, network_interfaces)
             break if !@returning_from_cancel
             @returning_from_cancel = false
         end
@@ -134,11 +134,11 @@ class NetConf < WizConf
         return nil # Return nil if no IP found
     end
 
-    def configure_interface(interface)
+    def configure_interface(interface, network_interfaces)
         dialog = MRDialog.new
         dialog.clear = true
         dialog.title = "Interface Configuration"
-        if dialog.yesno("\nWould you like to assign a static IP to this interface?\n\nIf you choose not to, the interface will default to DHCP for automatic IP configuration.\n", 0, 0)
+        if network_interfaces.length == 1 || dialog.yesno("\nWould you like to assign a static IP to this interface?\n\nIf you choose not to, the interface will default to DHCP for automatic IP configuration.\n", 0, 0)
             dev = DevConf.new(interface, self)
             dev.conf = @confdev[interface] if @confdev[interface]
             dev.doit
