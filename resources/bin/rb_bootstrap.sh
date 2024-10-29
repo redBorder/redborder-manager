@@ -11,4 +11,4 @@ serf-choose-leader.sh			\
 	-r 	"consul=ready"			\
 	-t 	"leader=wait"			\
 	-l 	"rb_bootstrap_leader /etc/redborder/rb_init_conf.yml"	\
-	-f  "rb_bootstrap_custom.sh"
+	-f  "rb_bootstrap_custom"
