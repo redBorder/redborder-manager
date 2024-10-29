@@ -49,8 +49,8 @@ if [ "x$s3_ret" == "xnull" -o "x$s3_ret" == "x" ]; then #If not s3 registered
   [ $? -ne 0 ] && echo "$IP_S3   s3.service.${cdomain}" >> /etc/hosts
 fi
 
-IP_PG=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
-echo "$IP_PG master.postgresql.service master.postgresql.service.${cdomain}" >> /etc/hosts
+IP_PG=$(serf members -tag postgresql=ready | awk {'print $2'} | cut -d ":" -f 1 | head -n1)
+echo "$IP_PG master.postgresql.service master.postgresql.service.${cdomain}" | sudo tee -a /etc/hosts > /dev/null
 
 # Get chef validator and admin certificates
 $RBBIN/serf-query-file -q certificate-validator > /tmp/cert && mv /tmp/cert /etc/chef/redborder-validator.pem
