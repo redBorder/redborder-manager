@@ -197,8 +197,6 @@ EOF
     syncconf.doit(general_conf["network"]["sync_interface"])
     cancel_wizard if syncconf.cancel
     general_conf["serf"]["sync_net"] = syncconf.conf
-else
-    general_conf["serf"]["sync_net"] = general_conf["network"]["interfaces"].at(0).fetch("ip")
 end
 
 # Select multicast or unicast
