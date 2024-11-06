@@ -72,9 +72,7 @@ db =  PG.connect(dbname: druid_config["druid"]["database"], user: druid_config["
   
 # Get rules info from PG
 rules = []
-db.exec("SELECT DISTINCT ON (datasource) *
-  FROM druid_rules
-  ORDER BY datasource, version DESC") do |result|
+db.exec("SELECT DISTINCT ON (datasource) * FROM druid_rules  ORDER BY datasource, version DESC") do |result|
   result.each do |row|
     if row["payload"] && !row["payload"].empty?
       # Decode the payload of the rule
@@ -91,6 +89,8 @@ db.exec("SELECT DISTINCT ON (datasource) *
 end
 
 default_rules_set = rules.find { |rule| rule[:datasource] == '_default' }&.dig(:rules_set)
+
+# TODO: SELECT DISTINCT ON (datasource) datasource FROM druid_segments; Add datasources without rules to rules array
 
 if default_rules_set.empty?
   logit "Unacceptable druid rules format"
