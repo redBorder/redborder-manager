@@ -90,12 +90,28 @@ end
 
 default_rules_set = rules.find { |rule| rule[:datasource] == '_default' }&.dig(:rules_set)
 
-# TODO: SELECT DISTINCT ON (datasource) datasource FROM druid_segments; Add datasources without rules to rules array
-
 if default_rules_set.empty?
   logit "Unacceptable druid rules format"
   exit
 end
+
+# Add datasources without rules to rules array
+
+logit "Adding datasources without rules"
+db.exec("SELECT DISTINCT ON (datasource) datasource FROM druid_segments") do |result|
+  result.each do |row|
+    datasource_exists_on_db_rules = rules.any? { |rule| rule[:datasource] == row["datasource"] }
+    if datasource_exists_on_db_rules
+      logit "#{row["datasource"]} already has rules"
+      next
+    else
+      logit "Create empty druid rules set for #{row["datasource"]} datasource"
+      rules << {rules_set: [], datasource: row["datasource"]}
+    end
+  end
+end
+
+# Delete segments for each datasource
 
 rules.each do |rule|
   rules_set = rule[:rules_set]
