@@ -62,7 +62,7 @@ if zk.exists? '/cleanDruidSegments'
   remove_only_indexCache = true
 else
   # Create the lock
-  path = zk.create('/cleanDruidSegments', ephemeral: true)
+  zk.create('/cleanDruidSegments', ephemeral: true)
 end
 
 # PG connection
@@ -238,8 +238,8 @@ rules.each do |rule|
   removeFiles("/var/druid/data/#{datasource}/*", limitDate)
 end
 
-if path
+if !remove_only_indexCache
   # Remove zk node and unlock
-  zk.delete path
+  zk.delete ('/cleanDruidSegments')
   zk.close!
 end
