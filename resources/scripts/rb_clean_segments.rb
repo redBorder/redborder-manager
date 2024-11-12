@@ -61,7 +61,8 @@ if zk.exists? '/cleanDruidSegments'
   logit "Another node have the lock. Only remove local data..."
   remove_only_indexCache = true
 else
-  zk.create('/cleanDruidSegments', '', :ephemeral => false)
+  # Create the lock
+  path = zk.create('/cleanDruidSegments', ephemeral: true)
 end
 
 # PG connection
@@ -156,8 +157,6 @@ rules.each do |rule|
   end
 
   if !remove_only_indexCache
-    # Create the lock
-    path = zk.create("/cleanDruidSegments/#{datasource}", ephemeral: true)
     
     logit "Deleting segments older than #{limitDate} (Period #{period})"
     
@@ -229,10 +228,6 @@ rules.each do |rule|
         logit "No segments must be removed from S3"
       end
     end
-
-    # Remove zk node
-    # zk.delete("/clean_segments/barrier")
-    zk.delete path
   end
 
   # Remove segments from historical indexCache
@@ -242,5 +237,9 @@ rules.each do |rule|
   logit "Removing files from localStorage"
   removeFiles("/var/druid/data/#{datasource}/*", limitDate)
 end
-zk.delete ('/cleanDruidSegments')
-zk.close!
+
+if path
+  # Remove zk node and unlock
+  zk.delete path
+  zk.close!
+end
