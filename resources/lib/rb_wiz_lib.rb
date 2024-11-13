@@ -36,92 +36,172 @@ end
 # Class to create a Network configuration box
 class NetConf < WizConf
 
-    attr_accessor :conf, :cancel
+    attr_accessor :conf, :confdev, :cancel, :management_iface, :sync_interface
 
-    def initialize
+    def initialize()
         @cancel = false
+        @returning_from_cancel = false
         @conf = []
         @confdev = {}
         @devmode = { "dhcp" => "Dynamic", "static" => "Static" }
         @devmodereverse = { "Dynamic" => "dhcp", "Static" => "static" }
+        @management_iface = nil
+        @sync_interface = nil 
     end
 
-    def doit
+    def doit(network_interfaces)
         dialog = MRDialog.new
         dialog.clear = true
-        dialog.title = "CONFIGURE NETWORK"
+        dialog.title = "Management Interface Selection"
         loop do
-            text = <<EOF
-
-This is the network device configuration box.
-
-Please, choose a network device to configure. Once you
-have entered and configured all devices, you must select
-last choise (Finalize) and 'Accept' to continue.
-
-Any device not configured will be set to Dynamic (DHCP)
-mode by default.
-
-EOF
-            items = []
-            menu_data = Struct.new(:tag, :item)
-            data = menu_data.new
-            # loop over list of net devices
-            listnetdev = Dir.entries("/sys/class/net/").select {|f| !File.directory? f}
-            listnetdev.each do |netdev|
-                # loopback and devices with no pci nor mac are not welcome!
-                next if netdev == "lo"
-                netdevprop = netdev_property(netdev)
-                next unless (netdevprop["ID_BUS"] == "pci" and !netdevprop["MAC"].nil?)
-                data.tag = netdev
-                # set default value
-                @confdev[netdev] = {"mode" => "dhcp"} if @confdev[netdev].nil?
-                data.item = "MAC: "+netdevprop["MAC"]+", Vendor: "+netdevprop["ID_MODEL_FROM_DATABASE"]
-                items.push(data.to_a)
-            end
-            data.tag = "Finalize"
-            data.item = "Finalize network device configuration"
-            items.push(data.to_a)
-            height = 0
-            width = 0
-            menu_height = 4
-            selected_item = dialog.menu(text, items, height, width, menu_height)
-
-            if selected_item
-                unless selected_item == "Finalize"
-                    dev = DevConf.new(selected_item)
-                    unless @confdev[selected_item].nil?
-                        dev.conf = {'IP:' => @confdev[selected_item]["ip"],
-                                    'Netmask:' => @confdev[selected_item]["netmask"],
-                                    'Gateway:' => @confdev[selected_item]["gateway"],
-                                    'Mode:' => @devmode[@confdev[selected_item]["mode"]]}
-                    end
-                    dev.doit
-                    unless dev.conf.empty?
-                        @confdev[selected_item] = {}
-                        @confdev[selected_item]["mode"] = @devmodereverse[dev.conf['Mode:']]
-                        if dev.conf['Mode:'] == "Static"
-                            @confdev[selected_item]["ip"] = dev.conf['IP:']
-                            @confdev[selected_item]["netmask"] = dev.conf['Netmask:']
-                            unless dev.conf['Gateway:'].nil? or dev.conf['Gateway:'].empty?
-                                @confdev[selected_item]["gateway"] = dev.conf['Gateway:']
-                            else
-                                @confdev[selected_item]["gateway"] = ""
-                            end
-
-                        end
-                    end
-                else
-                    break
+            self.management_iface = dialog.radiolist("Please select an interface to use as the management interface:", network_interfaces, 0, 0, 4)
+            return cancel_wizard unless management_iface
+            selected_interface = network_interfaces.find { |iface| iface[0] == management_iface }
+            if selected_interface[1].include?("IP: ")
+                dialog = MRDialog.new
+                dialog.clear = true
+                dialog.title = "Skip Network Configuration"
+                if dialog.yesno("The interface '#{selected_interface[0]}' already has an IP. Do you want to skip network configuration?", 6, 60)
+                    return
                 end
-            else
-                # Cancel pressed
-                @cancel = true
-                break
+            end
+            configure_interface(management_iface, network_interfaces)
+            break if !@returning_from_cancel
+            @returning_from_cancel = false
+        end
+    end
+
+    def doitsync(network_interfaces)
+        return if network_interfaces.empty?
+
+        dialog = MRDialog.new
+        dialog.clear = true
+        dialog.title = "Synchronism Interface Selection"
+        loop do
+            self.sync_interface = dialog.radiolist("Please select an interface to use as the synchronism interface:", network_interfaces, 0, 0, 4)
+            return cancel_wizard unless sync_interface
+            selected_interface = network_interfaces.find { |iface| iface[0] == sync_interface }
+            if selected_interface[1].include?("IP: ")
+                dialog = MRDialog.new
+                dialog.clear = true
+                dialog.title = "Skip Network Configuration"
+                if dialog.yesno("The interface '#{selected_interface[0]}' already has an IP. Do you want to skip network configuration?", 6, 60)
+                    return
+                end
+            end
+            configure_sync_interface(sync_interface)
+            break if !@returning_from_cancel
+            @returning_from_cancel = false
+        end
+    end
+
+    def get_network_interfaces
+        network_interfaces = []
+        radiolist_data = Struct.new(:tag, :item, :select)
+        first_interface = true
+        # loop over list of net devices
+        listnetdev = Dir.entries("/sys/class/net/").select {|f| !File.directory? f}
+        listnetdev.each do |netdev|
+            # loopback and devices with no pci nor mac are not welcome!
+            next if netdev == "lo"
+            netdevprop = netdev_property(netdev)
+            next unless (netdevprop["ID_BUS"] == "pci" and !netdevprop["MAC"].nil?)
+    
+            # Fetch network scripts to get IP information
+            ip = get_ip_for_interface(netdev)
+            get_network_scripts(netdev)
+
+            data = radiolist_data.new
+            data.tag = netdev
+            data.item = "MAC: " + netdevprop["MAC"] + ", Vendor: " + netdevprop["ID_MODEL_FROM_DATABASE"]
+            data.item += ", IP: #{ip}" unless ip.nil? # Add IP if available
+            data.select = first_interface ? true : false
+            first_interface = false if first_interface
+    
+            network_interfaces.push(data.to_a)
+        end
+        return network_interfaces
+    end
+    
+    # Helper method to extract the IPv4 address from the network script
+    def get_ip_for_interface(netdev)
+        if File.exist?("/etc/sysconfig/network-scripts/ifcfg-#{netdev}")
+            config_file = File.read("/etc/sysconfig/network-scripts/ifcfg-#{netdev}")
+            if config_file.match(/^IPADDR=/)
+                return config_file.match(/^IPADDR=(?<ip>.*)$/)[:ip]
             end
         end
-        @confdev.each_key do |interface|
-            @conf << @confdev[interface].merge("device" => interface)
+        return nil # Return nil if no IP found
+    end
+
+    def configure_interface(interface, network_interfaces)
+        dialog = MRDialog.new
+        dialog.clear = true
+        dialog.title = "Interface Configuration"
+        if network_interfaces.length == 1 || dialog.yesno("\nWould you like to assign a static IP to this interface?\n\nIf you choose not to, the interface will default to DHCP for automatic IP configuration.\n", 0, 0)
+            dev = DevConf.new(interface, self)
+            dev.conf = @confdev[interface] if @confdev[interface]
+            dev.doit
+            @confdev[interface] = {
+                "mode" => "static",
+                "ip" => dev.conf['IP:'],
+                "netmask" => dev.conf['Netmask:'],
+                "gateway" => dev.conf['Gateway:'].to_s.empty? ? "" : dev.conf['Gateway:']
+            } unless dev.conf.empty?
+            if dev.conf.empty?
+                get_network_scripts(interface)
+                @returning_from_cancel = true
+                return
+            end
+        end
+    end
+
+    def configure_sync_interface(interface)
+        dialog = MRDialog.new
+        dialog.clear = true
+        dialog.title = "Interface Configuration"
+        if dialog.yesno("\nWould you like to assign a static IP to this interface?\n\nIf you choose not to, you will have to select a different interface or assign an IP to this interface before running the script.\n", 0, 0)
+            dev = DevConf.new(interface, self)
+            dev.conf = @confdev[interface] if @confdev[interface]
+            dev.doit
+            @confdev[interface] = {
+                "mode" => "static",
+                "ip" => dev.conf['IP:'],
+                "netmask" => dev.conf['Netmask:'],
+                "gateway" => dev.conf['Gateway:'].to_s.empty? ? "" : dev.conf['Gateway:']
+            } unless dev.conf.empty?
+            if dev.conf.empty?
+                get_network_scripts(interface)
+                @returning_from_cancel = true
+                return
+            end
+        else
+            get_network_scripts(interface)
+            @returning_from_cancel = true
+            return
+        end
+    end
+
+    def get_network_scripts(netdev)
+        if File.exist?("/etc/sysconfig/network-scripts/ifcfg-#{netdev}")
+            config_file = File.read("/etc/sysconfig/network-scripts/ifcfg-#{netdev}")
+            
+            if config_file.match(/^IPADDR=/)
+                ip = config_file.match(/^IPADDR=(?<ip>.*)$/)[:ip]
+                netmask = config_file.match(/^NETMASK=(?<netmask>.*)$/)[:netmask]
+                gateway = config_file.match(/^GATEWAY=(?<gateway>.*)$/)[:gateway]
+
+                @confdev[netdev] = {
+                    "mode" => "static", 
+                    "ip" => ip, 
+                    "netmask" => netmask,
+                    "gateway" => gateway
+                }
+            else
+                @confdev[netdev] = {"mode" => "dhcp"}
+            end
+        else
+            @confdev[netdev] = {"mode" => "dhcp"}
         end
     end
 end
@@ -130,187 +210,109 @@ class DevConf < WizConf
 
     attr_accessor :device_name, :conf, :cancel
 
-    def initialize(x)
+    def initialize(x, parent)
         @cancel = false
         @device_name = x
         @conf = {}
+        @parent = parent
     end
 
     def doit
-        # first, set mode dynamic or static
         dialog = MRDialog.new
         dialog.clear = true
         text = <<EOF
 
-Please, select type of configuration:
-
-Dynamic: set dynamic IP/Netmask and Gateway
-         via DHCP client.
-Static: You will provide configuration for
-        IP/Netmask and Gateway, if needed.
-
+You are about to configure the network device #{@device_name}, which has the following properties:
 EOF
-        items = []
-        radiolist_data = Struct.new(:tag, :item, :select)
-        data = radiolist_data.new
-        data.tag = "Dynamic"
-        data.item = "IP/Netmask and Gateway via DHCP"
-        if @conf['Mode:'].nil?
-            data.select = true # default
-        else
-            if @conf['Mode:'] == "Dynamic"
-                data.select = true
+        netdevprop = netdev_property(@device_name)
+
+        text += " \n"
+        text += "MAC: #{netdevprop["MAC"]}\n"
+        text += "DRIVER: #{netdevprop["ID_NET_DRIVER"]}\n" unless netdevprop["ID_NET_DRIVER"].nil?
+        text += "PCI PATH: #{netdevprop["ID_PATH"]}\n" unless netdevprop["ID_PATH"].nil?
+        text += "VENDOR: #{netdevprop["ID_VENDOR_FROM_DATABASE"]}\n" unless netdevprop["ID_VENDOR_FROM_DATABASE"].nil?
+        text += "MODEL: #{netdevprop["ID_MODEL_FROM_DATABASE"]}\n" unless netdevprop["ID_MODEL_FROM_DATABASE"].nil?
+        text += "STATUS: #{netdevprop["STATUS"]}\n" unless netdevprop["STATUS"].nil?
+        text += " \n"
+
+        @conf['IP:'] = Config_utils.get_ipv4_network(@device_name)[:ip] if @conf['IP:'].nil?
+        @conf['Netmask:'] = Config_utils.get_ipv4_network(@device_name)[:netmask] if @conf['Netmask:'].nil?
+        @conf['Gateway:'] = Config_utils.get_ipv4_network(@device_name)[:gateway] if @conf['Gateway:'].nil?
+
+        flen = 20
+        form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen)
+
+        loop do
+            items = []
+            label = "IP:"
+            data = form_data.new
+            data.label = label
+            data.ly = 1
+            data.lx = 1
+            data.item = @conf[label]
+            data.iy = 1
+            data.ix = 10
+            data.flen = flen
+            data.ilen = 0
+            items.push(data.to_a)
+
+            label = "Netmask:"
+            data = form_data.new
+            data.label = label
+            data.ly = 2
+            data.lx = 1
+            data.item = @conf[label]
+            data.iy = 2
+            data.ix = 10
+            data.flen = flen
+            data.ilen = 0
+            items.push(data.to_a)
+
+            label = "Gateway:"
+            data = form_data.new
+            data.label = label
+            data.ly = 3
+            data.lx = 1
+            data.item = @conf[label]
+            data.iy = 3
+            data.ix = 10
+            data.flen = flen
+            data.ilen = 0
+            items.push(data.to_a)
+
+            dialog.title = "Network configuration for #{@device_name}"
+            @conf = dialog.form(text, items, 20, 60, 0)
+
+            # need to check result
+            if @conf.empty?
+                # Cancel was pressed
+                break
             else
-                data.select = false
-            end
-        end
-        items.push(data.to_a)
-
-        data = radiolist_data.new
-        data.tag = "Static"
-        data.item = "IP/Netamsk and Gateway static values"
-        if @conf['Mode:'].nil?
-            data.select = false # default
-        else
-            if @conf['Mode:'] == "Static"
-                data.select = true
-            else
-                data.select = false
-            end
-        end
-        items.push(data.to_a)
-
-        dialog.title = "Network Device Mode"
-        selected_item = dialog.radiolist(text, items)
-        exit_code = dialog.exit_code
-
-        case exit_code
-        when dialog.dialog_ok
-            # OK Pressed
-
-            # TODO ipv6 support
-            if selected_item == "Static"
-                dialog = MRDialog.new
-                dialog.clear = true
-                text = <<EOF
-
-You are about to configure the network device #{@device_name}. It has the following propierties:
-EOF
-                netdevprop = netdev_property(@device_name)
-
-                text += " \n"
-                text += "MAC: #{netdevprop["MAC"]}\n"
-                text += "DRIVER: #{netdevprop["ID_NET_DRIVER"]}\n" unless netdevprop["ID_NET_DRIVER"].nil?
-                text += "PCI PATH: #{netdevprop["ID_PATH"]}\n" unless netdevprop["ID_PATH"].nil?
-                text += "VENDOR: #{netdevprop["ID_VENDOR_FROM_DATABASE"]}\n" unless netdevprop["ID_VENDOR_FROM_DATABASE"].nil?
-                text += "MODEL: #{netdevprop["ID_MODEL_FROM_DATABASE"]}\n" unless netdevprop["ID_MODEL_FROM_DATABASE"].nil?
-                text += "STATUS: #{netdevprop["STATUS"]}\n" unless netdevprop["STATUS"].nil?
-                text += " \n"
-
-                @conf['IP:'] = Config_utils.get_ipv4_network(@device_name)[:ip] if @conf['IP:'].nil?
-                @conf['Netmask:'] = Config_utils.get_ipv4_network(@device_name)[:netmask] if @conf['Netmask:'].nil?
-                @conf['Gateway:'] = Config_utils.get_ipv4_network(@device_name)[:gateway] if @conf['Gateway:'].nil?
-
-                flen = 20
-                form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen)
-
-                loop do
-                    items = []
-                    label = "IP:"
-                    data = form_data.new
-                    data.label = label
-                    data.ly = 1
-                    data.lx = 1
-                    data.item = @conf[label]
-                    data.iy = 1
-                    data.ix = 10
-                    data.flen = flen
-                    data.ilen = 0
-                    items.push(data.to_a)
-
-                    label = "Netmask:"
-                    data = form_data.new
-                    data.label = label
-                    data.ly = 2
-                    data.lx = 1
-                    data.item = @conf[label]
-                    data.iy = 2
-                    data.ix = 10
-                    data.flen = flen
-                    data.ilen = 0
-                    items.push(data.to_a)
-
-                    label = "Gateway:"
-                    data = form_data.new
-                    data.label = label
-                    data.ly = 3
-                    data.lx = 1
-                    data.item = @conf[label]
-                    data.iy = 3
-                    data.ix = 10
-                    data.flen = flen
-                    data.ilen = 0
-                    items.push(data.to_a)
-
-                    dialog.title = "Network configuration for #{@device_name}"
-                    @conf = dialog.form(text, items, 20, 60, 0)
-
-                    # need to check result
-                    ret = true
-                    if @conf.empty?
-                        # Cancel was pressed
-                        break
-                    else
-                        # ok pressed
-                        @conf['Mode:'] = "Static"
-                        if Config_utils.check_ipv4({:ip => @conf['IP:']}) and Config_utils.check_ipv4({:netmask => @conf['Netmask:']})
-                            # seems to be ok
-                            unless @conf['Gateway:'] == ""
-                                if Config_utils.check_ipv4({:ip => @conf['Gateway:']})
-                                    # seems to be ok
-                                    ret = false
-                                end
-                            else
-                                ret = false
-                            end
-                        else
-                            # error!
-                            ret = true
-                        end
+                # ok pressed
+                @conf['Mode:'] = "Static"
+                if Config_utils.check_ipv4({:ip => @conf['IP:']}) and Config_utils.check_ipv4({:netmask => @conf['Netmask:']})
+                    # seems to be ok
+                    unless @conf['Gateway:'] == "" || Config_utils.check_ipv4({:ip => @conf['Gateway:']})
+                        next
                     end
-                    if ret
-                        # error detected
-                        dialog = MRDialog.new
-                        dialog.clear = true
-                        dialog.title = "ERROR in network configuration"
-                        text = <<EOF
+                else
+                    # error detected
+                    dialog = MRDialog.new
+                    dialog.clear = true
+                    dialog.title = "Network Configuration Error"
+                    text = <<EOF
 
-We have detected an error in network configuration.
+An error has been detected in the network configuration.
 
-Please, review IP/Netmask and/or Gateway address configuration.
+Please review the IP, Netmask, and Gateway address settings.
 EOF
-                        dialog.msgbox(text, 10, 41)
-                    else
-                        # all it is ok, breaking loop
-                        break
-                    end
+                    dialog.msgbox(text, 10, 41)
+                    next
                 end
-            else
-                # selected_item == "Dynamic"
-                @conf['Mode:'] = "Dynamic"
+                break
             end
-
-        when dialog.dialog_cancel
-            # Cancel Pressed
-
-        when dialog.dialog_esc
-            # Escape Pressed
-
         end
-
-
     end
-
 end
 
 class HostConf < WizConf
@@ -343,19 +345,13 @@ class HostConf < WizConf
             dialog.insecure = true
             text = <<EOF
 
-Please, set hostname and domain name.
+Please enter the hostname and domain name for the device.
 
-The hostname may only contain ASCII letters 'a'
-through 'z' (in a case-insensitive manner), the
-digits '0' through '9' and the hyphen ('-').
+The hostname can include only ASCII letters ('a' to 'z', case-insensitive), digits ('0' to '9'), and hyphens ('-'). According to RFC1123, hostname labels can begin with a letter or digit but cannot start or end with a hyphen.
 
-The RFC1123 permits hostname labels to start with digits
-or letters but not to start or end with hyphen.
-Also, the hostname and each label of the domain name
-must be between 1 and 63 characters, and the entire
-hostname has a maximum of 253 ASCII characters.
+Additionally, each label in the hostname and domain name must be between 1 and 63 characters, and the entire hostname must not exceed 253 ASCII characters.
 
-Please, consult RFC1178 to choose an appropiate hostname.
+For guidance on choosing an appropriate hostname, please refer to RFC1178.
 
 EOF
             items = []
@@ -388,8 +384,8 @@ EOF
             data.attr = 0
             items.push(data.to_a)
 
-            dialog.title = "Hostname and domain name configuration"
-            host = dialog.mixedform(text, items, 24, 60, 0)
+            dialog.title = "Hostname and Domain Name Configuration"
+            host = dialog.mixedform(text, items, 20, 80, 0)
 
             if host.empty?
                 # Cancel button pushed
@@ -407,14 +403,14 @@ EOF
             # error, do another loop
             dialog = MRDialog.new
             dialog.clear = true
-            dialog.title = "ERROR in name configuration"
+            dialog.title = "Hostname or Domain Name Configuration Error"
             text = <<EOF
 
-We have detected an error in hostname or domain name configuration.
+            An error has been detected in the hostname or domain name configuration.
 
-Please, review character set and length for name configuration.
+            Please review the character set and length to ensure they meet the required standards.
 EOF
-            dialog.msgbox(text, 10, 41)
+            dialog.msgbox(text, 0, 0)
 
         end
 
@@ -454,7 +450,7 @@ Please, set DNS servers.
 You can set up to 3 DNS servers, but only one is mandatory. Set DNS values in order, first, second (optional) and then third (optional).
 
 Please, insert each value fo IPv4 address in dot notation.
-
+ 
 EOF
             items = []
             form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen, :attr)
@@ -499,8 +495,8 @@ EOF
             data.attr = 0
             items.push(data.to_a)
 
-            dialog.title = "DNS configuration"
-            dns = dialog.mixedform(text, items, 20, 42, 0)
+            dialog.title = "DNS Configuration"
+            dns = dialog.mixedform(text, items, 20, 60, 0)
 
             if dns.empty?
                 # Cancel button pushed
@@ -527,16 +523,14 @@ EOF
             # error, do another loop
             dialog = MRDialog.new
             dialog.clear = true
-            dialog.title = "ERROR in DNS or search configuration"
+            dialog.title = "DNS Configuration Error"
             text = <<EOF
 
-We have detected an error in DNS configuration.
+An error has been detected in the DNS or search configuration.
 
-Please, review content for DNS configuration. Remember, you
-must introduce only IPv4 address in dot notation.
+Please review the DNS settings and ensure that only IPv4 addresses in dot notation are used.
 EOF
-            dialog.msgbox(text, 12, 41)
-
+            dialog.msgbox(text, 12, 60)
         end
 
         unless dns.empty?
@@ -559,63 +553,69 @@ class SerfSyncDevConf < WizConf
 
     def initialize()
         @cancel = false
+        @returning_from_cancel = false
         @conf = ""
         @networks = {}
         @interface_name = ""
     end
 
-    def doit
+    def doit(sync_interface)
 
         dialog = MRDialog.new
         dialog.clear = true
 
         text = <<EOF
 
-Please, set the synchronism network.
+Please configure the synchronism network.
 
-You must select one of the device networks to set the synchronism
-network associated to it.
-
-This network is needed to connect nodes and build the cluster. Also,
-internal services will use it to communicate between them.
-
-In some cases, this network has no default gateway and it is isolated from
-rest of the networks.
+Select one of the device networks to designate as the synchronism network. This network is essential for connecting nodes and building the cluster. It also facilitates communication between internal services.
+        
+In some cases, the synchronism network may not have a default gateway and could be isolated from other networks.
 
 EOF
 
-        items = []
+        network_interfaces = []
         radiolist_data = Struct.new(:tag, :item, :select)
 
         select = true
         networks.each do |k,v|
             data = radiolist_data.new
             data.tag = k
-            data.item = v
+            data.item = v 
             data.select = select
-            if select == true
-                select = false # only the first is true -> default value
+            if k == sync_interface
+                data.select = true
+                select = false
+            else
+                data.select = false
             end
-            items.push(data.to_a)
+            network_interfaces.push(data.to_a)
         end
 
-        data = radiolist_data.new
-        data.tag = "Manual"
-        data.item = "Set network manually"
-        items.push(data.to_a)
+        network_interfaces.push(radiolist_data.new("Custom", "Set a custom network", false).to_a)
 
-        dialog.title = "Sync Network configuration"
-        selected_item = dialog.radiolist(text, items)
+        dialog.title = "Synchronism Network configuration"
 
-        if dialog.exit_code == dialog.dialog_ok
-            if selected_item == "Manual"
-                @conf = "Manual"
-            else
-                @conf = networks[selected_item]
-                @interface_name = selected_item
-            end
+        loop do
+            sync_interface = dialog.radiolist("Please select a network to use as the synchronism network:", 
+                                                network_interfaces, 10, 80, 0)
+            return cancel_wizard unless sync_interface
+            sync_network = network_interfaces.find { |ni| ni[0] == sync_interface }[1]
+            self.conf = configure_interface(sync_network)
+            break unless @returning_from_cancel
+            @returning_from_cancel = false
+        end
+    end
+
+    def configure_interface(sync_network)
+        synchronism_network_config = SerfSyncConf.new(sync_network)
+        synchronism_network_config.doit()
+        cancel_wizard if synchronism_network_config.cancel
+        if synchronism_network_config.conf.empty?
+            @returning_from_cancel = true
+            return
         else
-            @cancel = true
+            return synchronism_network_config.conf
         end
     end
 end
@@ -625,12 +625,18 @@ class SerfSyncConf < WizConf
 
     attr_accessor :conf, :cancel
 
-    def initialize()
+    def initialize(sync_network)
         @cancel = false
+        @returning_from_cancel = false
         @conf = {}
+        @sync_network = sync_network
     end
 
     def doit
+        if Config_utils.check_ipv4(@sync_network)
+            sync_netaddr = NetAddr::CIDRv4.create(@sync_network)
+            return self.conf = "#{sync_netaddr.network}#{sync_netaddr.netmask}"
+        end
 
         sync = {}
 
@@ -640,17 +646,16 @@ class SerfSyncConf < WizConf
             dialog.insecure = true
             text = <<EOF
 
-Please, set the synchronism network.
+Please configure the synchronism network.
 
-You must set a synchronism network in two formats:
-- IPv4 CIDR format: i.e. 192.168.1.0/24
-- IPv4 mask format: i.e. 192.168.1.0/255.255.255.0
+You need to provide the synchronism network in two formats:
 
-This network is needed to connect nodes and build the cluster. Also,
-internal services will use it to communicate between them.
+IPv4 CIDR format (e.g., 192.168.1.0/24)
+IPv4 mask format (e.g., 192.168.1.0/255.255.255.0)
 
-In some cases, this network has no default gateway and it is isolated from
-rest of the networks.
+This network is essential for connecting nodes and building the cluster, as it enables communication between internal services.
+
+In some cases, this network may not have a default gateway and could be isolated from other networks.
 
 EOF
             items = []
@@ -670,8 +675,8 @@ EOF
             data.attr = 0
             items.push(data.to_a)
 
-            dialog.title = "Sync Network configuration"
-            sync = dialog.mixedform(text, items, 24, 54, 0)
+            dialog.title = "Sync Network Configuration"
+            sync = dialog.mixedform(text, items, 24, 80, 0)
 
             if dialog.exit_code == dialog.dialog_ok
                 if Config_utils.check_ipv4(sync["Sync Network:"])
@@ -682,33 +687,30 @@ EOF
                 end
             else
                 # Cancel button pushed
-                @cancel = true
+                @returning_from_cancel = true
                 break
             end
 
             # error, do another loop
             dialog = MRDialog.new
             dialog.clear = true
-            dialog.title = "ERROR in Sync Network configuration"
+            dialog.title = "Sync Network Configuration Error"
             text = <<EOF
 
-We have detected an error in Sync Network configuration.
+An error has been detected in the Sync Network configuration.
 
-Please, review content for Sync Network configuration. Remember, you
-must introduce only IPv4 address in dot notation followed by mask
-length or netmask, i.e. 192.168.100.0./24.
+Please review the settings and ensure that the IPv4 address is in dot notation, followed by either the mask length or the netmask. For example: 192.168.100.0/24.
 
 EOF
             dialog.msgbox(text, 15, 41)
-
         end
 
-        # normalizing
-        sync_netaddr = NetAddr::CIDRv4.create(sync["Sync Network:"])
-        @conf = "#{sync_netaddr.network}#{sync_netaddr.netmask}"
-
+        begin
+            sync_netaddr = NetAddr::CIDRv4.create(sync["Sync Network:"])
+            self.conf = "#{sync_netaddr.network}#{sync_netaddr.netmask}"
+        rescue
+        end
     end
-
 end
 
 class SerfMcastConf < WizConf
@@ -726,18 +728,14 @@ class SerfMcastConf < WizConf
         dialog.clear = true
         text = <<EOF
 
-Please, select type of configuration:
+Please select the configuration type:
 
-Multicast: set Multicast mode of operation for serf agent.
-           In this mode, serf autodiscover the cluster using
-           a multicast address and the domain name as cluster domain.
-Unicast:   set Unicast mode of operation for serf agent.
-           In this mode, serf try to join to an existing cluster
-           scanning via ARP using the Synchronism network.
+    - Multicast: Configures the Serf agent to operate in Multicast mode. In this mode, Serf automatically discovers the cluster using a multicast address and the domain name as the cluster domain.
 
-In both cases, the Synchronism network is used to find the correct
-network device and bind to it.
+    - Unicast: Configures the Serf agent to operate in Unicast mode. In this mode, Serf attempts to join an existing cluster by scanning via ARP over the Synchronism network.
 
+In both modes, the Synchronism network is used to identify and bind to the appropriate network device.
+        
 EOF
         items = []
         radiolist_data = Struct.new(:tag, :item, :select)
@@ -753,8 +751,8 @@ EOF
         data.select = false # default
         items.push(data.to_a)
 
-        dialog.title = "Communication cluster mode"
-        selected_item = dialog.radiolist(text, items)
+        dialog.title = "Communication Cluster Mode"
+        selected_item = dialog.radiolist(text, items, 22, 80, 0)
 
         if dialog.exit_code == dialog.dialog_ok
             @conf = ( selected_item == "Multicast" ? true : false )
@@ -782,13 +780,13 @@ class SerfCryptConf < WizConf
             dialog = MRDialog.new
             dialog.clear = true
             dialog.insecure = true
-            dialog.title = "Serf encryption key"
+            dialog.title = "Serf Encryption Key"
             text = <<EOF
 
-Please, provide a password for encryption of serf network traffic.
+Please provide a password to encrypt Serf network traffic.
 
-This password will avoid not allowed connection from nodes not belonging to the cluster. Any printable character is allowed, and you can use from 6 to 20 characters.
-
+This password will prevent unauthorized nodes from connecting to the cluster. You may use any printable characters, with a length of 6 to 20 characters.
+ 
 EOF
 
             flen = 20
@@ -821,7 +819,7 @@ EOF
             items.push(data.to_a)
 
 
-            result = dialog.passwordform(text, items, 20, 60, 0)
+            result = dialog.passwordform(text, items, 16, 60, 0)
 
             if dialog.exit_code == dialog.dialog_ok
                 if result["Password:"] == result["Enter again:"]
@@ -842,15 +840,15 @@ EOF
             # error, do another loop
             dialog = MRDialog.new
             dialog.clear = true
-            dialog.title = "ERROR in the Serf encryption key"
+            dialog.title = "Serf Encryption Key Error"
             text = <<EOF
 
-We have detected an error in Serf encryption key.
+An error has been detected in the Serf encryption key.
 
-Please, remember that the minimum length is 6 and maximum is 20 characters. Also, both fields must match.
+Please ensure the key is between 6 and 20 characters long, and that both fields match.
 
 EOF
-            dialog.msgbox(text, 15, 41)
+            dialog.msgbox(text, 12, 60)
 
         end
 
@@ -884,11 +882,11 @@ class ModeConf < WizConf
         dialog.clear = true
         text = <<EOF
 
-Please, select mode of operation of the manager node.
+Please select the mode of operation for the manager node.
 
-If this is the first installation of a redborder manager, and you are planning to create a cluster based on multiple nodes, you should select 'core' mode. For the rest of nodes, you should select 'custom' mode.
-
-If this is an stand alone manager installation, you should select 'full' mode.
+    - If this is the first installation of a Redborder manager and you plan to create a cluster with multiple nodes, select 'core' mode.
+    - For additional nodes in the cluster, choose 'custom' mode.
+    - If this is a standalone manager installation, select 'full' mode.
 
 EOF
         items = []
@@ -902,7 +900,7 @@ EOF
             items.push(data.to_a)
         end
 
-        dialog.title = "Set manager mode"
+        dialog.title = "Manager Mode"
         selected_item = dialog.radiolist(text, items)
 
         if dialog.exit_code == dialog.dialog_ok
@@ -942,16 +940,14 @@ class RDSConf < WizConf
             dialog.insecure = true
             text = <<EOF
 
-You need to provide some paratemeters in order to use
-Amazon RDS database Service or external PostgreSQL:
+You need to provide the following parameters to use the Amazon RDS database service or an external PostgreSQL database:
 
-Superuser: User allowed to create and manage databases, users
-           and permissions.
-Password: Needed to access with superuser.
-Host: IP address or hostname of the database service.
-Port: Port of the database service (default: 5432).
-
-Please, set these PostgreSQL parameters:
+    - Superuser: The user with privileges to create and manage databases, users, and permissions.
+    - Password: The password for the superuser account.
+    - Host: The IP address or hostname of the database service.
+    - Port: The port for the database service (default: 5432).
+   
+Please enter these PostgreSQL parameters:
 
 EOF
             items = []
@@ -1010,7 +1006,7 @@ EOF
             data.attr = 0
             items.push(data.to_a)
 
-            dialog.title = "RDS or PostgreSQL configuration"
+            dialog.title = "RDS/PostgreSQL Configuration"
             rdsconf = dialog.mixedform(text, items, 0, 0, 0)
 
             if dialog.exit_code == dialog.dialog_ok
@@ -1029,12 +1025,12 @@ EOF
             # error, do another loop
             dialog = MRDialog.new
             dialog.clear = true
-            dialog.title = "ERROR in S3 configuration"
+            dialog.title = "S3 Configuration Error"
             text = <<EOF
 
-We have detected an error in S3 configuration.
+An error has been detected in the S3 configuration.
 
-Please, provide correct values for the parameters.
+Please provide valid values for the required parameters.
 
 EOF
             dialog.msgbox(text, 12, 41)
@@ -1065,19 +1061,14 @@ class S3Conf < WizConf
             dialog.insecure = true
             text = <<EOF
 
-You need to provide two paratemeters in order to use
-Amazon S3 Storage Service:
+You need to provide the following parameters to use the Amazon S3 Storage Service:
 
-AWS access key:  This is an alphanumeric text string that
-                 uniquely identifies the user who owns the
-                 account in Amazon Web Services.
-AWS secret key:  This is an encoded password used to confirm
-                 the user's indentity.
-Bucket: This is a logical unit of storage created in AWS S3
-                  Storage Service, needed to storage objects.
-Endpoint: URL that is the entry point for a web service.
+    - AWS Access Key: A unique alphanumeric string that identifies your Amazon Web Services (AWS) account.
+    - AWS Secret Key: An encoded password used to authenticate your identity.
+    - Bucket: A logical storage unit in AWS S3, where objects are stored.
+    - Endpoint: The URL that serves as the entry point for the web service.
 
-Please, set these S3 parameters:
+Please enter these S3 parameters:
 
 EOF
             items = []
@@ -1136,7 +1127,7 @@ EOF
             data.attr = 0
             items.push(data.to_a)
 
-            dialog.title = "S3 configuration"
+            dialog.title = "S3 Configuration"
             s3conf = dialog.mixedform(text, items, 0, 0, 0)
 
             if dialog.exit_code == dialog.dialog_ok
@@ -1155,12 +1146,12 @@ EOF
             # error, do another loop
             dialog = MRDialog.new
             dialog.clear = true
-            dialog.title = "ERROR in S3 configuration"
+            dialog.title = "S3 configuration Error"
             text = <<EOF
 
-We have detected an error in S3 configuration.
+An error has been detected in the S3 configuration.
 
-Please, provide correct values for the parameters.
+Please provide valid values for the required parameters.
 
 EOF
             dialog.msgbox(text, 12, 41)
@@ -1171,6 +1162,5 @@ EOF
 
 end
 
-
-
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
+
