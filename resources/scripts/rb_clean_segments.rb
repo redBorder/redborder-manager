@@ -47,31 +47,57 @@ def logit(text)
   printf("%s\n", text)
 end
 
+remove_only_indexCache = false
+
 Aws.config.update({ssl_verify_peer: false,
                  force_path_style: true
                  })
 
-zk_config = YAML.load_file("/var/www/rb-rails/config/rbdruid_config.yml")
-zk = ZK.new zk_config["production"]["zk_connect"]
+zk_host = 'zookeeper.service:2181'
 
-remove_only_indexCache = false
-
-# Do nothing if path exists
-if zk.exists? '/cleanDruidSegments'
-  logit "Another node have the lock. Only remove local data..."
+begin
+  zk = ZK.new(zk_host)
+  # Do nothing if path exists
+  if zk.exists? '/cleanDruidSegments'
+    logit "Another node have the lock. Only remove local data..."
+    remove_only_indexCache = true
+  else
+    # Create the lock
+    zk.create('/cleanDruidSegments', ephemeral: true)
+  end
+rescue ZK::Exceptions::ConnectionLoss, StandardError => e
+  logit "Failed to connect to ZooKeeper: #{e.message}. Only remove local data..."
   remove_only_indexCache = true
-else
-  # Create the lock
-  zk.create('/cleanDruidSegments', ephemeral: true)
 end
 
-# PG connection
-druid_config = YAML.load_file("/var/www/rb-rails/config/database.yml")
-db =  PG.connect(dbname: druid_config["druid"]["database"], user: druid_config["druid"]["username"],
-                 password: druid_config["druid"]["password"], port: druid_config["druid"]["port"],
-                 host: druid_config["druid"]["host"])
-  
+# PG connection and check druid service in node
+
+druid_propierties_file_path = "/etc/druid/_common/common.runtime.properties"
+
+if !File.exist?(druid_propierties_file_path)
+  logit "Druid propierties not found. Check if any druid services is enabled. No segments to delete"
+  exit
+end
+
+druid_db_uri = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.metadata.storage.connector.connectURI="|tr '=' ' '|awk '{print $2}'")
+druid_db_user = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.metadata.storage.connector.user="|tr '=' ' '|awk '{print $2}'")
+druid_db_pass = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.metadata.storage.connector.password="|tr '=' ' '|awk '{print $2}'")
+druid_db_host = druid_db_uri.match(/:\/\/(.*?):/)[1]
+druid_db_port = druid_db_uri.match(/:(\d+)\//)[1]
+druid_db_name = druid_db_uri.match(/\/([^\/]+)$/)[1]
+
+begin
+  db =  PG.connect(dbname: druid_db_name, user: druid_db_user,
+                  password: druid_db_pass, port: druid_db_port,
+                  host: druid_db_host)
+  logit "Getting druid rules from PG..."
+rescue PG::Error => e
+  logit "Error connecting to Druid Db: #{e.message}. Unable to load druid rules. Check druid propierties"
+  exit
+end
+
 # Get rules info from PG
+
 rules = []
 db.exec("SELECT DISTINCT ON (datasource) * FROM druid_rules  ORDER BY datasource, version DESC") do |result|
   result.each do |row|
@@ -98,7 +124,7 @@ end
 
 # Add datasources without rules to rules array
 
-logit "Adding datasources without rules"
+logit "Adding rest of datasources without rules"
 db.exec("SELECT DISTINCT ON (datasource) datasource FROM druid_segments") do |result|
   result.each do |row|
     datasource_exists_on_db_rules = rules.any? { |rule| rule[:datasource] == row["datasource"] }
@@ -186,14 +212,17 @@ rules.each do |rule|
     end
     
     # Remove segments from S3 if necessary
-    if File.exist? "/var/www/rb-rails/config/aws.yml"
-      s3_config = YAML.load_file("/var/www/rb-rails/config/aws.yml")
-      s3 = Aws::S3::Client.new(access_key_id: s3_config["production"]["access_key_id"],
-        secret_access_key: s3_config["production"]["secret_access_key"],
+    druid_deep_storage = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.storage.type="|tr '=' ' '|awk '{print $2}'")
+    if druid_deep_storage == "s3"
+      s3_access_key_id = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.s3.accessKey="|tr '=' ' '|awk '{print $2}'")
+      s3_secret_access_key = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.s3.secretKey="|tr '=' ' '|awk '{print $2}'")
+      s3 = Aws::S3::Client.new(access_key_id: s3_access_key_id,
+        secret_access_key: s3_secret_access_key,
         region: 'us-east-1',
-        endpoint: endpoint = s3_config["production"]["s3_protocol"].concat("://", s3_config["production"]["s3_host_name"])
+        endpoint: 'https://s3.service'
         )
-      bucket_name = s3_config["production"]["bucket"].chomp!('/')
+      bucket_name = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.storage.bucket="|tr '=' ' '|awk '{print $2}'")
+      s3_prefix= system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.storage.baseKey="|tr '=' ' '|awk '{print $2}'")
 
     
       # Get all the segments from S3
@@ -202,7 +231,7 @@ rules.each do |rule|
       continuation_token = nil
 
       begin
-        response = s3.list_objects_v2(bucket: bucket_name, prefix: "rbdata/#{datasource}/",continuation_token: continuation_token)
+        response = s3.list_objects_v2(bucket: bucket_name, prefix: "#{s3_prefix}/#{datasource}/",continuation_token: continuation_token)
         segments_on_s3.concat(response.contents.map(&:key))
         continuation_token = response.next_continuation_token
       end while continuation_token
@@ -231,11 +260,20 @@ rules.each do |rule|
   end
 
   # Remove segments from historical indexCache
-  logit "Removing files from druid historical indexCache"
-  removeFiles("/var/druid/historical/indexCache/#{datasource}/*", limitDate)
+  if !Dir.exist?("/var/druid/historical/indexCache")
+    logit "Warning: Historical folder doesn't exist. No segments to remove"
+  else
+    logit "Removing files from druid historical indexCache"
+    removeFiles("/var/druid/historical/indexCache/#{datasource}/*", limitDate)
+  end
   # Remove segments from localStorage
-  logit "Removing files from localStorage"
-  removeFiles("/var/druid/data/#{datasource}/*", limitDate)
+  if !Dir.exist?("/var/druid/data")
+    logit "Warning: Druid localStorage folder doesn't exist. No segments to remove"
+  else
+    logit "Removing files from localStorage"
+    removeFiles("/var/druid/data/#{datasource}/*", limitDate)
+  end
+  
 end
 
 if !remove_only_indexCache
@@ -243,3 +281,5 @@ if !remove_only_indexCache
   zk.delete ('/cleanDruidSegments')
   zk.close!
 end
+
+db.close if db
