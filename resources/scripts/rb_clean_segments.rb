@@ -72,16 +72,14 @@ end
 
 # PG connection and check druid service in node
 
-druid_propierties_file_path = "/etc/druid/_common/common.runtime.properties"
-
-if !File.exist?(druid_propierties_file_path)
+if !File.exist?("/etc/druid/_common/common.runtime.properties")
   logit "Druid propierties not found. Check if any druid services is enabled. No segments to delete"
   exit
 end
 
-druid_db_uri = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.metadata.storage.connector.connectURI="|tr '=' ' '|awk '{print $2}'")
-druid_db_user = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.metadata.storage.connector.user="|tr '=' ' '|awk '{print $2}'")
-druid_db_pass = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.metadata.storage.connector.password="|tr '=' ' '|awk '{print $2}'")
+druid_db_uri = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.metadata.storage.connector.connectURI='|tr '=' ' '|awk '{print $2}'].chomp
+druid_db_user = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.metadata.storage.connector.user='|tr '=' ' '|awk '{print $2}'].chomp
+druid_db_pass = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.metadata.storage.connector.password='|tr '=' ' '|awk '{print $2}'].chomp
 druid_db_host = druid_db_uri.match(/:\/\/(.*?):/)[1]
 druid_db_port = druid_db_uri.match(/:(\d+)\//)[1]
 druid_db_name = druid_db_uri.match(/\/([^\/]+)$/)[1]
@@ -212,17 +210,17 @@ rules.each do |rule|
     end
     
     # Remove segments from S3 if necessary
-    druid_deep_storage = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.storage.type="|tr '=' ' '|awk '{print $2}'")
+    druid_deep_storage = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.storage.type='|tr '=' ' '|awk '{print $2}'].chomp
     if druid_deep_storage == "s3"
-      s3_access_key_id = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.s3.accessKey="|tr '=' ' '|awk '{print $2}'")
-      s3_secret_access_key = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.s3.secretKey="|tr '=' ' '|awk '{print $2}'")
+      s3_access_key_id = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.s3.accessKey='|tr '=' ' '|awk '{print $2}'].chomp
+      s3_secret_access_key = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.s3.secretKey='|tr '=' ' '|awk '{print $2}'].chomp
       s3 = Aws::S3::Client.new(access_key_id: s3_access_key_id,
         secret_access_key: s3_secret_access_key,
         region: 'us-east-1',
         endpoint: 'https://s3.service'
         )
-      bucket_name = system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.storage.bucket="|tr '=' ' '|awk '{print $2}'")
-      s3_prefix= system("cat #{druid_propierties_file_path} 2>/dev/null |grep "^druid.storage.baseKey="|tr '=' ' '|awk '{print $2}'")
+      bucket_name = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.storage.bucket='|tr '=' ' '|awk '{print $2}'].chomp
+      s3_prefix= %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.storage.baseKey='|tr '=' ' '|awk '{print $2}'].chomp
 
     
       # Get all the segments from S3
