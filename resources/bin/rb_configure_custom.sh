@@ -49,8 +49,18 @@ if [ "x$s3_ret" == "xnull" -o "x$s3_ret" == "x" ]; then #If not s3 registered
   [ $? -ne 0 ] && echo "$IP_S3   s3.service.${cdomain}" >> /etc/hosts
 fi
 
-IP_PG=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
-echo "$IP_PG master.postgresql.service" >> /etc/hosts
+# postgresql service
+DATA_BAG_OUTPUT=$(knife data bag show rBglobal ipvirtual-internal-postgresql 2>/dev/null)
+VIRTUAL_IP=$(echo "$DATA_BAG_OUTPUT" | grep '^ip:' | awk '{print $2}')
+
+if [[ -n "$VIRTUAL_IP" ]]; then
+  # If a virtual IP exists, add it to /etc/hosts
+  echo "$VIRTUAL_IP master.postgresql.service" >> /etc/hosts
+else
+  # If no virtual IP, fetch the PostgreSQL IP and add it to /etc/hosts
+  IP_PG=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
+  echo "$IP_PG master.postgresql.service" >> /etc/hosts
+fi
 
 # Get chef validator and admin certificates
 $RBBIN/serf-query-file -q certificate-validator > /tmp/cert && mv /tmp/cert /etc/chef/redborder-validator.pem
