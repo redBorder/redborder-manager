@@ -98,7 +98,7 @@ begin
 
     topics.each do |topic|
       next if topic=="rb_alarm" or topic=="__consumer_offsets" or topic=="app"
-      #next if topic.start_with?"__samza_"
+
       index=0
       if zk.exists?("#{topic_path(topic)}")
         partitions = zk.children(partitions_path(topic)).map{|k| k.to_i}.sort.uniq
