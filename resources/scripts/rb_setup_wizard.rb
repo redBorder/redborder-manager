@@ -16,13 +16,13 @@ def cancel_wizard()
 
     dialog = MRDialog.new
     dialog.clear = true
-    dialog.title = "SETUP wizard cancelled"
+    dialog.title = "Setup Wizard Cancelled"
 
     text = <<EOF
 
-The setup has been cancelled or stopped.
+The setup wizard has been cancelled.
 
-If you want to complete the setup wizard, please execute it again.
+To resume the installation, please run the setup again.
 
 EOF
     result = dialog.msgbox(text, 11, 41)
@@ -84,15 +84,19 @@ general_conf = {
 
 text = <<EOF
 
-This wizard will guide you through the necessary configuration of the device
-in order to convert it into a redborder node within a redborder cluster.
 
-It will go through the following required steps: network configuration,
-configuration of hostname, domain and DNS, Serf configuration, and finally
-the node mode (the mode determines the minimum group of services that make up
-the node, giving it more or less weight within the cluster).
+This wizard will guide you through the essential steps to configure your 
+device as a Redborder node within a Redborder cluster.
 
-Would you like to continue?
+The configuration process includes the following steps:
+
+    - Network settings: Set up your network configuration
+    - Serf configuration: Establish Serf communication settings
+    - System settings: Configure the hostname, domain, and DNS
+    - Node mode selection: Choose the node mode, which determines 
+    the set of services the node will run and its weight within the cluster
+
+Would you like to proceed with the configuration?
 
 EOF
 
@@ -107,114 +111,65 @@ end
 
 text = <<EOF
 
-Next, you will be able to configure network settings. If you have
-the network configured manually, you can "SKIP" this step and go
-to the next step.
 
-Please, Select an option.
+In the next step, you'll configure your device's network settings.
+
+First, you'll be asked to choose one of your interfaces to serve as the management interface. Then, you'll be prompted to select an interface for synchronization.
 
 EOF
 
 dialog = MRDialog.new
 dialog.clear = true
 dialog.title = "Configure Network"
-dialog.cancel_label = "SKIP"
-dialog.no_label = "SKIP"
-yesno = dialog.yesno(text,0,0)
+dialog.msgbox(text,0,0)
 
-if yesno # yesno is "yes" -> true
+netconf = NetConf.new
+network_interfaces = netconf.get_network_interfaces()
 
-    # Conf for network
-    netconf = NetConf.new
-    netconf.doit # launch wizard
-    cancel_wizard if netconf.cancel
-    general_conf["network"]["interfaces"] = netconf.conf
-
-    static_interface = general_conf["network"]["interfaces"].find { |i| i["mode"] == "static" }
-    dhcp_interfaces = general_conf["network"]["interfaces"].select { |i| i["mode"] == "dhcp" }
-
-    if general_conf["network"]["interfaces"].size > 1
-        if static_interface && static_interface.size == 1 && dhcp_interfaces.size >= 1
-            general_conf["network"]["management_interface"] = static_interface["device"]
-        else
-            interface_options = general_conf["network"]["interfaces"].map { |i| [i["device"]] }
-            text = <<EOF
-You have multiple network interfaces configured.
-Please select one to be used as the management interface.
-EOF
-            dialog = MRDialog.new
-            dialog.clear = true
-            dialog.title = "Select Management Interface"
-            management_iface = dialog.menu(text, interface_options, 10, 50)
-
-            if management_iface.nil? || management_iface.empty?
-                cancel_wizard
-            else
-                general_conf["network"]["management_interface"] = management_iface
-            end
-        end
-    else
-        if general_conf["network"]["interfaces"].size == 1
-            if !static_interface.nil?
-              general_conf["network"]["management_interface"] = static_interface["device"]
-            else
-              general_conf["network"]["management_interface"] = dhcp_interfaces.first["device"]
-            end
-        end         
-    end
-    # Conf for DNS
-    text = <<EOF
-
-Do you want to configure DNS servers?
-
-If you have configured the network as Dynamic and
-you get the DNS servers via DHCP, you should say
-'No' to this  question.
-
-EOF
-
+if network_interfaces.empty?
     dialog = MRDialog.new
     dialog.clear = true
-    dialog.title = "CONFIGURE DNS"
-    yesno = dialog.yesno(text,0,0)
-
-    if yesno # yesno is "yes" -> true
-        # configure dns
-        dnsconf = DNSConf.new
-        dnsconf.doit # launch wizard
-        cancel_wizard if dnsconf.cancel
-        general_conf["network"]["dns"] = dnsconf.conf
-    else
-        general_conf["network"].delete("dns")
-    end
+    dialog.title = "Error"
+    
+    dialog.msgbox("Error: No network interfaces found. The script will now exit.", 0, 0)
+    exit
 end
 
-# Conf for hostname and domain
-hostconf = HostConf.new
-hostconf.doit # launch wizard
-cancel_wizard if hostconf.cancel
-general_conf["hostname"] = hostconf.conf[:hostname]
-general_conf["cdomain"] = hostconf.conf[:domainname]
+netconf.doit(network_interfaces)
+cancel_wizard if netconf.cancel
+
+network_interfaces.delete_if { |iface| iface[0] == netconf.management_iface }
+
+netconf.doitsync(network_interfaces)
+cancel_wizard if netconf.cancel
+
+netconf.confdev.each_key do |interface|
+    netconf.conf << netconf.confdev[interface].merge("device" => interface)
+end
+
+general_conf["network"]["management_interface"] = netconf.management_iface
+general_conf["network"]["sync_interface"] = netconf.sync_interface
+general_conf["network"]["interfaces"] = netconf.conf
 
 text = <<EOF
 
-Next, you must configure settings for serf service.
+In this step, you will configure the Serf service, which is responsible for creating and managing the cluster. Serf coordinates communication between nodes, handles certificate exchange, and determines the initial master node during cluster formation.
 
-Serf service is the service that create the cluster
-and coordinate nodes between them, interchange certificates
-and decide which will be the first master in the cluster
-formation.
+For this configuration, you will need to provide the following three parameters:
 
-You will need to provide three parameters for this configuration:
-the synchronism network, the unicast/multicast mode and
-a secret key for encryption of serf network traffic.
+    - Synchronism network: Define the network for node synchronization.
+    - Unicast/Multicast mode: Select the communication mode for cluster coordination.
+    - Secret key: Set a key to encrypt Serf network traffic for secure communication.
 
 EOF
 
 dialog = MRDialog.new
 dialog.clear = true
 dialog.title = "Configure Cluster Service (Serf)"
-dialog.msgbox(text,0, 0)
+dialog.no_label = "Cancel"
+yesno = dialog.yesno(text,0,0)
+
+cancel_wizard unless yesno
 
 # Initialize hshnet for using in SerfSync configuration
 hshnet = {}
@@ -223,44 +178,41 @@ listnetdev.each do |netdev|
     # loopback and devices with no pci nor mac are not welcome!
     next if netdev == "lo"
     general_conf["network"]["interfaces"].each do |i|
-        if i["device"] == netdev
-            # found device!
-            next unless i["mode"] == "static"
-            n = NetAddr::CIDRv4.create("#{i["ip"]}/#{i["netmask"]}") # get network address from device ipaddr
-            hshnet[netdev] = "#{n.network}#{n.netmask}" # format 192.168.1.0/24
+        if i["device"] == netdev && netdev != general_conf["network"]["management_interface"]
+            begin
+                n = NetAddr::CIDRv4.create("#{i["ip"]}/#{i["netmask"]}") # get network address from device ipaddr
+                hshnet[netdev] = "#{n.network}#{n.netmask}" # format 192.168.1.0/24
+            rescue NetAddr::ValidationError => e
+                hshnet[netdev] = nil
+            end
             break
         end
     end
-    # this netdev not configured via wizard? ... getting from system
-    if hshnet[netdev].nil?
-        hshnet[netdev] = Config_utils.get_first_route(netdev)[:prefix]
-    end
-    # No setting from wizard nor systems ... strange! better remove from the list.
     if hshnet[netdev].nil? or hshnet[netdev].empty?
         hshnet.delete(netdev)
     end
 end
 
-flag_serfsyncmanual = false
-unless hshnet.empty?
-    # Conf synchronization network
+if !hshnet.empty?
+
+text = <<EOF
+
+Please configure the synchronism network.
+
+Select one of the device networks to designate as the synchronism network. This network is essential for connecting nodes and building the cluster. It also facilitates communication between internal services.
+        
+In some cases, the synchronism network may not have a default gateway and could be isolated from other networks.
+
+EOF
+
+    dialog = MRDialog.new
+    dialog.clear = true
+    dialog.title = "Configure Sync Network"
+    yesno = dialog.msgbox(text,0,0)
+
     syncconf = SerfSyncDevConf.new
     syncconf.networks = hshnet
-    syncconf.doit # launch wizard
-    cancel_wizard if syncconf.cancel
-    if syncconf.conf == "Manual"
-        flag_serfsyncmanual = true
-    else
-        general_conf["serf"]["sync_net"] = syncconf.conf
-    end
-else
-    flag_serfsyncmanual = true
-end
-
-if flag_serfsyncmanual
-    # Conf synchronization network
-    syncconf = SerfSyncConf.new
-    syncconf.doit # launch wizard
+    syncconf.doit(general_conf["network"]["sync_interface"])
     cancel_wizard if syncconf.cancel
     general_conf["serf"]["sync_net"] = syncconf.conf
 end
@@ -277,18 +229,49 @@ cryptconf.doit # launch wizard
 cancel_wizard if cryptconf.cancel
 general_conf["serf"]["encrypt_key"] = cryptconf.conf
 
-# External S3 storage
-text = <<EOF
+# Conf for hostname and domain
+hostconf = HostConf.new
+hostconf.doit # launch wizard
+cancel_wizard if hostconf.cancel
+general_conf["hostname"] = hostconf.conf[:hostname]
+general_conf["cdomain"] = hostconf.conf[:domainname]
 
-Do you want to use Amazon S3 Storage service?
+# Conf for DNS
+    text = <<EOF
+
+Would you like to manually configure DNS servers?
+
+If your network is set to Dynamic and you are receiving DNS servers automatically via DHCP, it is recommended to select 'No' for this option.
 
 EOF
 
 dialog = MRDialog.new
 dialog.clear = true
-dialog.title = "Confirm configuration"
-dialog.dialog_options = "--defaultno"
+dialog.title = "Configure DNS"
 yesno = dialog.yesno(text,0,0)
+
+if yesno # yesno is "yes" -> true
+    # configure dns
+    dnsconf = DNSConf.new
+    dnsconf.doit # launch wizard
+    cancel_wizard if dnsconf.cancel
+    general_conf["network"]["dns"] = dnsconf.conf
+else
+    general_conf["network"].delete("dns")
+end
+
+# External S3 storage
+text = <<EOF
+
+Do you need to use Amazon S3 Storage service?
+
+EOF
+
+dialog = MRDialog.new
+dialog.clear = true
+dialog.title = "Confirm Configuration"
+dialog.dialog_options = "--defaultno"
+yesno = dialog.yesno(text,8,50)
 
 if yesno # yesno is "yes" -> true
     # configure dns
@@ -310,9 +293,9 @@ EOF
 
 dialog = MRDialog.new
 dialog.clear = true
-dialog.title = "Confirm configuration"
+dialog.title = "Confirm Configuration"
 dialog.dialog_options = "--defaultno"
-yesno = dialog.yesno(text,0,0)
+yesno = dialog.yesno(text,8,50)
 
 if yesno # yesno is "yes" -> true
     # configure dns
@@ -360,11 +343,9 @@ unless general_conf["network"]["management_interface"].nil?
     text += "\n"
 end
 
-unless general_conf["network"]["dns"].nil?
-    text += "- DNS:\n"
-    general_conf["network"]["dns"].each do |dns|
-        text += "    #{dns}\n"
-    end
+unless general_conf["network"]["sync_interface"].nil?
+    text += "- Synchronism Interface:\n"
+    text += "    #{general_conf["network"]["sync_interface"]}\n"
 end
 
 unless general_conf["s3"].nil?
@@ -385,12 +366,21 @@ end
 
 text += "\n- Serf:\n"
 text += "    mode: #{general_conf["serf"]["multicast"] ? "multicast" : "unicast"}\n"
-text += "    sync net: #{general_conf["serf"]["sync_net"]}\n"
+unless general_conf["serf"]["sync_net"].nil? || general_conf["serf"]["sync_net"].empty?
+    text += "    sync net: #{general_conf["serf"]["sync_net"]}\n"
+end
 text += "    encrypt key: #{general_conf["serf"]["encrypt_key"]}\n"
 
-text += "\n- Mode: #{general_conf["mode"]}\n"
+text += "\n- Mode: #{general_conf["mode"]}\n\n"
 
-text += "\nPlease, is this configuration ok?\n \n"
+unless general_conf["network"]["dns"].nil?
+    text += "- DNS:\n"
+    general_conf["network"]["dns"].each do |dns|
+        text += "    #{dns}\n"
+    end
+end
+
+text += "\nWould you like to proceed with the installation?\n \n"
 
 dialog = MRDialog.new
 dialog.clear = true
@@ -408,7 +398,7 @@ command = "#{ENV['RBBIN']}/rb_init_conf"
 
 dialog = MRDialog.new
 dialog.clear = false
-dialog.title = "Applying configuration"
+dialog.title = "Applying Configuration"
 dialog.prgbox(command,20,100, "Executing rb_init_conf")
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
