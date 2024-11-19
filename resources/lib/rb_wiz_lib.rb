@@ -549,14 +549,13 @@ end
 
 class SerfSyncDevConf < WizConf
 
-    attr_accessor :conf, :cancel, :networks, :interface_name
+    attr_accessor :conf, :cancel, :networks
 
     def initialize()
         @cancel = false
         @returning_from_cancel = false
         @conf = ""
         @networks = {}
-        @interface_name = ""
     end
 
     def doit(sync_interface)
