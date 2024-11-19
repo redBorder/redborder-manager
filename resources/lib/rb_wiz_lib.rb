@@ -144,17 +144,20 @@ class NetConf < WizConf
             dev = DevConf.new(interface, self)
             dev.conf = @confdev[interface] if @confdev[interface]
             dev.doit
-            @confdev[interface] = {
-                "mode" => "static",
-                "ip" => dev.conf['IP:'],
-                "netmask" => dev.conf['Netmask:'],
-                "gateway" => dev.conf['Gateway:'].to_s.empty? ? "" : dev.conf['Gateway:']
-            } unless dev.conf.empty?
             if dev.conf.empty?
                 get_network_scripts(interface)
                 @returning_from_cancel = true
                 return
+            else
+                @confdev[interface] = {
+                    "mode" => "static",
+                    "ip" => dev.conf['IP:'],
+                    "netmask" => dev.conf['Netmask:'],
+                    "gateway" => dev.conf['Gateway:'].to_s.empty? ? "" : dev.conf['Gateway:']
+                }
+                self.management_iface_ip = dev.conf['IP:'] if management_iface_ip.nil?
             end
+            
         end
     end
 
@@ -593,7 +596,7 @@ EOF
             network_interfaces.push(data.to_a)
         end
 
-        network_interfaces.push(radiolist_data.new("Custom", "Set a custom network", false).to_a)
+        network_interfaces.push(radiolist_data.new("Manual", "Manually set a sync network", false).to_a)
 
         dialog.title = "Synchronism Network configuration"
 
