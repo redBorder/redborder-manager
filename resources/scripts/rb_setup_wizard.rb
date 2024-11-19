@@ -132,6 +132,7 @@ end
 general_conf["network"]["management_interface"] = netconf.management_iface
 general_conf["network"]["sync_interface"] = netconf.sync_interface
 general_conf["network"]["interfaces"] = netconf.conf
+management_iface_ip = netconf.management_iface_ip
 
 text = <<EOF
 
@@ -197,6 +198,10 @@ EOF
     syncconf.doit(general_conf["network"]["sync_interface"])
     cancel_wizard if syncconf.cancel
     general_conf["serf"]["sync_net"] = syncconf.conf
+
+else
+    subnet = management_iface_ip.split('.')[0..2].join('.') + '.0/24'
+    general_conf["serf"]["sync_net"] = subnet
 end
 
 # Select multicast or unicast
