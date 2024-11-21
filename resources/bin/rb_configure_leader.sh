@@ -100,6 +100,8 @@ function configure_dataBags(){
   # IF S3HOST not found, set default: s3.service
   [ "x$S3HOST" = "x" ] && S3HOST="s3.service"
 
+  VRRPPASS=`< /dev/urandom tr -dc A-Za-z0-9 | head -c8 | sed 's/ //g'`
+
   # Vault data bag configuration
   HASH_KEY="yourenterprisekey"
   HASH_FUNCTION="SHA256"
@@ -142,6 +144,16 @@ _RBEOF_
   "s3_url": "$S3URL",
   "s3_external_url": "$S3EXTERNALURL",
   "s3_bucket": "$S3BUCKET"
+}
+_RBEOF_
+
+  mkdir -p /var/chef/data/data_bag_encrypted/passwords/
+  cat > /var/chef/data/data_bag_encrypted/passwords/vrrp.json <<-_RBEOF_
+{
+  "id": "vrrp",
+  "username": "vrrp",
+  "start_id": "$(( ( RANDOM % 191 ) + 10 ))",
+  "pass": "$VRRPPASS" 
 }
 _RBEOF_
 
@@ -409,7 +421,7 @@ function configure_leader(){
   # Multiple runs of chef-client
   e_title "Configuring Chef-Client. Please wait...  "
 
-  e_title "redborder install run (1/4) $(date)" | tee -a /root/.install-chef-client.log
+  e_title "redborder install run (1/2) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
 
   # Replace chef-server SV init scripts by systemd scripts
@@ -424,16 +436,7 @@ function configure_leader(){
     done
   fi
 
-  e_title "redborder install run (2/4) $(date)" | tee -a /root/.install-chef-client.log
-  chef-client | tee -a /root/.install-chef-client.log
-  
-  e_title "redborder install run (3/4) $(date)" | tee -a /root/.install-chef-client.log
-  chef-client | tee -a /root/.install-chef-client.log
-
-  e_title "Creating database structure $(date)"
-  chef-solo -c /var/chef/solo/webui-solo.rb -j /var/chef/solo/webui-attributes.json
-  
-  e_title "redborder install run (4/4) $(date)" | tee -a /root/.install-chef-client.log
+  e_title "redborder install run (2/2) $(date)" | tee -a /root/.install-chef-client.log
   chef-client | tee -a /root/.install-chef-client.log
 }
 
@@ -543,8 +546,17 @@ configure_leader
 #rm -f /etc/opscode/chef-server.rb
 rm -f /var/lock/leader-configuring.lock
 
+e_title "Enabling chef-client service"
+systemctl enable chef-client
+systemctl start chef-client
+
+e_title "Starting default services"
+for service in logstash webui rb-workers sfacctd f2k redborder-mem2incident; do
+  [ "$(systemctl is-enabled $service 2>/dev/null)" = "enabled" ] && systemctl start $service &>/dev/null &
+done
+
 # Configure default druid rule (load 1 month, drop forever)
-e_title "Configuring default druid rule"
+e_title "Configuring default 1 month data retention"
 /usr/lib/redborder/bin/rb_druid_rules -t _default -p none -d p1m -i 1
 
 # Copy dhclient hook
@@ -552,7 +564,7 @@ cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
 
 e_title "Configuring cgroups (first time), please wait..."
 
-rb_configure_cgroups &>/dev/null
+/usr/lib/redborder/bin/rb_configure_cgroups
 
 echo "Cgroups configured in /sys/fs/cgroup/redborder.slice/"
 

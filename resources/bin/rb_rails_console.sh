@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/bin/bash -
 
 #######################################################################
-# Copyright (c) 2024 ENEO Tecnología S.L.
+# Copyright (c) 2024 ENEO Tecnologia S.L.
 # This file is part of redBorder.
 # redBorder is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License License as published by
@@ -15,6 +15,17 @@
 # along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 #######################################################################
 
-source /etc/profile.d/rvm.sh
+if [ ! -d /var/www/rb-rails ]; then
+    echo 'ERROR: rb-rails not found!'
+    exit 1
+fi
 
-/usr/lib/redborder/scripts/rb_sync_minio_cluster.rb $*
+source /etc/profile
+
+pushd /var/www/rb-rails &>/dev/nul
+
+rvm gemset use web &>/dev/null
+
+RAILS_ENV=production rails console
+
+exit 0

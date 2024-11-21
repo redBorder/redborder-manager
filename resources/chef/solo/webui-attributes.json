@@ -1,6 +1,5 @@
 {
   "run_list" : [
-    "recipe[webui::configure_db]",
     "recipe[webui::configure_modules]"
   ]
 }
