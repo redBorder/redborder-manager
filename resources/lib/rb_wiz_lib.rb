@@ -46,7 +46,6 @@ class NetConf < WizConf
         @devmode = { "dhcp" => "Dynamic", "static" => "Static" }
         @devmodereverse = { "Dynamic" => "dhcp", "Static" => "static" }
         @management_iface = nil
-        @management_iface_ip = nil
         @sync_interface = nil 
     end
 
