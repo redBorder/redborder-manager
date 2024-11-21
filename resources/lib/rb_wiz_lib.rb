@@ -157,30 +157,22 @@ class NetConf < WizConf
                 }
                 self.management_iface_ip = dev.conf['IP:'] if management_iface_ip.nil?
             end
-            
+        else
+            @confdev[interface] = {"mode" => "dhcp"}
         end
     end
 
     def configure_sync_interface(interface)
-        dialog = MRDialog.new
-        dialog.clear = true
-        dialog.title = "Interface Configuration"
-        if dialog.yesno("\nWould you like to assign a static IP to this interface?\n\nIf you choose not to, you will have to select a different interface or assign an IP to this interface before running the script.\n", 0, 0)
-            dev = DevConf.new(interface, self)
-            dev.conf = @confdev[interface] if @confdev[interface]
-            dev.doit
-            @confdev[interface] = {
-                "mode" => "static",
-                "ip" => dev.conf['IP:'],
-                "netmask" => dev.conf['Netmask:'],
-                "gateway" => dev.conf['Gateway:'].to_s.empty? ? "" : dev.conf['Gateway:']
-            } unless dev.conf.empty?
-            if dev.conf.empty?
-                get_network_scripts(interface)
-                @returning_from_cancel = true
-                return
-            end
-        else
+        dev = DevConf.new(interface, self)
+        dev.conf = @confdev[interface] if @confdev[interface]
+        dev.doit
+        @confdev[interface] = {
+            "mode" => "static",
+            "ip" => dev.conf['IP:'],
+            "netmask" => dev.conf['Netmask:'],
+            "gateway" => dev.conf['Gateway:'].to_s.empty? ? "" : dev.conf['Gateway:']
+        } unless dev.conf.empty?
+        if dev.conf.empty?
             get_network_scripts(interface)
             @returning_from_cancel = true
             return
@@ -192,9 +184,9 @@ class NetConf < WizConf
             config_file = File.read("/etc/sysconfig/network-scripts/ifcfg-#{netdev}")
             
             if config_file.match(/^IPADDR=/)
-                ip = config_file.match(/^IPADDR=(?<ip>.*)$/)[:ip]
-                netmask = config_file.match(/^NETMASK=(?<netmask>.*)$/)[:netmask]
-                gateway = config_file.match(/^GATEWAY=(?<gateway>.*)$/)[:gateway]
+                ip = config_file.match(/^IPADDR=(?<ip>.*)$/)&.[](:ip)
+                netmask = config_file.match(/^NETMASK=(?<netmask>.*)$/)&.[](:netmask) || "255.255.255.0"
+                gateway = config_file.match(/^GATEWAY=(?<gateway>.*)$/)&.[](:gateway) || ""
 
                 @confdev[netdev] = {
                     "mode" => "static", 

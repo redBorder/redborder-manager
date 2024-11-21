@@ -198,7 +198,7 @@ if hshnet.empty?
   text = <<~CONFIGURE_SYNC_NET
 
     Would you like to automatically configure the synchronism network based on your management interface IP?
-    If not, you will need to manually configure it.
+    If decide not to, you will need to manually configure it.
 
   CONFIGURE_SYNC_NET
 
@@ -356,13 +356,12 @@ general_conf["mode"] = modeconf.conf
 text = <<EOF
 
 You have selected the following parameter values for your configuration:
-
 EOF
 
 unless general_conf["network"]["interfaces"].empty?
-    text += "- Networking:\n"
+    text += "\n- Networking:\n"
     general_conf["network"]["interfaces"].each do |i|
-        text += "    device: #{i["device"]}\n"
+        text += "\n    device: #{i["device"]}\n"
         text += "    mode: #{i["mode"]}\n"
         if i["mode"] == "static"
             text += "    ip: #{i["ip"]}\n"
