@@ -36,7 +36,7 @@ end
 # Class to create a Network configuration box
 class NetConf < WizConf
 
-    attr_accessor :conf, :confdev, :cancel, :management_iface, :management_iface_ip, :sync_interface
+    attr_accessor :conf, :confdev, :cancel, :management_iface, :sync_interface
 
     def initialize()
         @cancel = false
@@ -59,7 +59,6 @@ class NetConf < WizConf
             return cancel_wizard unless management_iface
             selected_interface = network_interfaces.find { |iface| iface[0] == management_iface }
             if selected_interface[1].include?("IP: ")
-                self.management_iface_ip = selected_interface[1].match(/IP: ([\d\.]+)/)[1]
                 dialog = MRDialog.new
                 dialog.clear = true
                 dialog.title = "Skip Network Configuration"

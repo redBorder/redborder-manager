@@ -3,6 +3,7 @@
 require 'json'
 require 'mrdialog'
 require 'yaml'
+require 'netaddr'
 require "#{ENV['RBLIB']}/rb_wiz_lib"
 require "#{ENV['RBLIB']}/rb_config_utils.rb"
 
@@ -150,7 +151,6 @@ end
 general_conf["network"]["management_interface"] = netconf.management_iface
 general_conf["network"]["sync_interface"] = netconf.sync_interface
 general_conf["network"]["interfaces"] = netconf.conf
-management_iface_ip = netconf.management_iface_ip
 
 text = <<EOF
 
@@ -208,8 +208,10 @@ if hshnet.empty?
   yesno = dialog.yesno(text, 0, 0)
 
   if yesno
-    subnet = management_iface_ip.split('.')[0..2].join('.') + '.0/24'
-    general_conf['serf']['sync_net'] = subnet
+    ip = netconf.conf[0]["ip"].split('.')[0..2].join('.') + '.0'
+    netmask = netconf.conf[0]["netmask"]
+    cidr = NetAddr::CIDR.create("#{ip}/#{netmask}")
+    general_conf['serf']['sync_net'] = cidr.to_s
   else
     text = <<~SYNC_NETWORK_CONFIGURATION
 
