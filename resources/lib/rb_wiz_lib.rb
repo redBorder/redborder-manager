@@ -153,7 +153,6 @@ class NetConf < WizConf
                     "netmask" => dev.conf['Netmask:'],
                     "gateway" => dev.conf['Gateway:'].to_s.empty? ? "" : dev.conf['Gateway:']
                 }
-                self.management_iface_ip = dev.conf['IP:'] if management_iface_ip.nil?
             end
         else
             @confdev[interface] = {"mode" => "dhcp"}
