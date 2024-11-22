@@ -61,7 +61,7 @@ def parse_period(period)
   end
 end
 
-def payload(hot_period, default_period, hot_replicants, default_replicants)
+def calculate_payload(hot_period, default_period, hot_replicants, default_replicants)
   if hot_period == 'none' && default_period == 'forever'
     [
       { type: :loadForever,
@@ -125,7 +125,7 @@ begin
       # Build the request
       req = Net::HTTP::Post.new(uri)
       req.content_type = 'application/json'
-      payload = payload(hot_period, default_period, hot_replicants, default_replicants)
+      payload = calculate_payload(hot_period, default_period, hot_replicants, default_replicants)
       req.body = JSON.generate payload
     
       # Get the response
