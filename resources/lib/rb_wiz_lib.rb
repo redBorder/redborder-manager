@@ -3,6 +3,7 @@
 require 'mrdialog'
 require 'net/ip'
 require 'system/getifaddrs'
+require 'socket'
 require 'netaddr'
 require 'uri'
 require File.join(ENV['RBDIR'].nil? ? '/usr/lib/redborder' : ENV['RBDIR'],'lib/rb_config_utils.rb')
@@ -160,20 +161,54 @@ class NetConf < WizConf
     end
 
     def configure_sync_interface(interface)
-        dev = DevConf.new(interface, self)
-        dev.conf = @confdev[interface] if @confdev[interface]
-        dev.doit
-        @confdev[interface] = {
-            "mode" => "static",
-            "ip" => dev.conf['IP:'],
-            "netmask" => dev.conf['Netmask:'],
-            "gateway" => dev.conf['Gateway:'].to_s.empty? ? "" : dev.conf['Gateway:']
-        } unless dev.conf.empty?
-        if dev.conf.empty?
-            get_network_scripts(interface)
-            @returning_from_cancel = true
-            return
+        dialog = MRDialog.new
+        dialog.clear = true
+        dialog.title = "Synchronism Interface Configuration"
+        if dialog.yesno("\nWould you like to assign a static IP to this interface?\n\nIf you choose not to, the interface will default to DHCP for automatic IP configuration.\n", 0, 0)
+            dev = DevConf.new(interface, self)
+            dev.conf = @confdev[interface] if @confdev[interface]
+            dev.doit
+            @confdev[interface] = {
+                "mode" => "static",
+                "ip" => dev.conf['IP:'],
+                "netmask" => dev.conf['Netmask:'],
+                "gateway" => dev.conf['Gateway:'].to_s.empty? ? "" : dev.conf['Gateway:']
+            } unless dev.conf.empty?
+            if dev.conf.empty?
+                get_network_scripts(interface)
+                @returning_from_cancel = true
+                return
+            end
+        else
+            @confdev[interface] = {
+                "mode" => "dhcp",
+                "ip" => get_ip_of_interface(interface),
+                "netmask" => get_netmask_of_interface(interface)
+            }
+            if @confdev[interface]["ip"].nil? && @confdev[interface]["netmask"].nil?
+              get_network_scripts(interface)
+              @returning_from_cancel = true
+              return
+            end
         end
+    end
+
+    def get_ip_of_interface(interface_name)
+        Socket.getifaddrs.each do |ifaddr|
+          if ifaddr.name == interface_name && ifaddr.addr&.ipv4?
+            return ifaddr.addr.ip_address # Extract and return the IP as a string
+          end
+        end
+        nil
+    end
+      
+    def get_netmask_of_interface(interface_name)
+        Socket.getifaddrs.each do |ifaddr|
+            if ifaddr.name == interface_name && ifaddr.addr&.ipv4?
+                return ifaddr.netmask.ip_address # Extract and return the netmask as a string
+            end
+        end
+        nil
     end
 
     def get_network_scripts(netdev)
