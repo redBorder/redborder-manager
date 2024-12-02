@@ -173,8 +173,8 @@ end
 final_archive = "#{final_archive_path}backup_all_#{timestamp}.tar.gz"
 
 if opt['e']
-  puts final_archive
-  exit 1
+  puts "Final archive will be in #{final_archive}"
+
   # Export option
   puts "Starting export process..." if verbose
 
