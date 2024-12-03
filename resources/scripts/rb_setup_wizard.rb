@@ -3,6 +3,7 @@
 require 'json'
 require 'mrdialog'
 require 'yaml'
+require 'netaddr'
 require "#{ENV['RBLIB']}/rb_wiz_lib"
 require "#{ENV['RBLIB']}/rb_config_utils.rb"
 
@@ -193,28 +194,67 @@ listnetdev.each do |netdev|
     end
 end
 
-if !hshnet.empty?
+if hshnet.empty?
+  text = <<~CONFIGURE_SYNC_NET
 
-text = <<EOF
+    Would you like to automatically configure the synchronism network based on your management interface IP?
+    If decide not to, you will need to manually configure it.
 
-Please configure the synchronism network.
+  CONFIGURE_SYNC_NET
 
-Select one of the device networks to designate as the synchronism network. This network is essential for connecting nodes and building the cluster. It also facilitates communication between internal services.
-        
-In some cases, the synchronism network may not have a default gateway and could be isolated from other networks.
+  dialog = MRDialog.new
+  dialog.clear = true
+  dialog.title = 'Configure Sync Network?'
+  yesno = dialog.yesno(text, 0, 0)
 
-EOF
+  if yesno
+    ip = netconf.conf[0]["ip"].split('.')[0..2].join('.') + '.0'
+    netmask = netconf.conf[0]["netmask"]
+    cidr = NetAddr::CIDR.create("#{ip}/#{netmask}")
+    general_conf['serf']['sync_net'] = cidr.to_s
+  else
+    text = <<~SYNC_NETWORK_CONFIGURATION
+
+      Please configure the synchronism network.
+
+      Select one of the device networks to designate as the synchronism network. This network is essential for connecting nodes and building the cluster. It also facilitates communication between internal services.
+
+      In some cases, the synchronism network may not have a default gateway and could be isolated from other networks.
+
+    SYNC_NETWORK_CONFIGURATION
 
     dialog = MRDialog.new
     dialog.clear = true
-    dialog.title = "Configure Sync Network"
-    yesno = dialog.msgbox(text,0,0)
+    dialog.title = 'Configure Sync Network'
+    dialog.msgbox(text, 0, 0)
 
     syncconf = SerfSyncDevConf.new
     syncconf.networks = hshnet
-    syncconf.doit(general_conf["network"]["sync_interface"])
+    syncconf.doit(general_conf['network']['sync_interface'])
     cancel_wizard if syncconf.cancel
-    general_conf["serf"]["sync_net"] = syncconf.conf
+    general_conf['serf']['sync_net'] = syncconf.conf
+  end
+else
+  text = <<~SYNC_NETWORK_CONFIGURATION
+
+    Please configure the synchronism network.
+
+    Select one of the device networks to designate as the synchronism network. This network is essential for connecting nodes and building the cluster. It also facilitates communication between internal services.
+
+    In some cases, the synchronism network may not have a default gateway and could be isolated from other networks.
+
+  SYNC_NETWORK_CONFIGURATION
+
+  dialog = MRDialog.new
+  dialog.clear = true
+  dialog.title = 'Configure Sync Network'
+  dialog.msgbox(text, 0, 0)
+
+  syncconf = SerfSyncDevConf.new
+  syncconf.networks = hshnet
+  syncconf.doit(general_conf['network']['sync_interface'])
+  cancel_wizard if syncconf.cancel
+  general_conf['serf']['sync_net'] = syncconf.conf
 end
 
 # Select multicast or unicast
@@ -318,13 +358,12 @@ general_conf["mode"] = modeconf.conf
 text = <<EOF
 
 You have selected the following parameter values for your configuration:
-
 EOF
 
 unless general_conf["network"]["interfaces"].empty?
-    text += "- Networking:\n"
+    text += "\n- Networking:\n"
     general_conf["network"]["interfaces"].each do |i|
-        text += "    device: #{i["device"]}\n"
+        text += "\n    device: #{i["device"]}\n"
         text += "    mode: #{i["mode"]}\n"
         if i["mode"] == "static"
             text += "    ip: #{i["ip"]}\n"
@@ -333,18 +372,16 @@ unless general_conf["network"]["interfaces"].empty?
                 text += "    gateway: #{i["gateway"]}\n"
             end
         end
-        text += "\n"
     end
 end
 
 unless general_conf["network"]["management_interface"].nil?
-    text += "- Management Interface:\n"
+    text += "\n- Management Interface:\n"
     text += "    #{general_conf["network"]["management_interface"]}\n"
-    text += "\n"
 end
 
 unless general_conf["network"]["sync_interface"].nil?
-    text += "- Synchronism Interface:\n"
+    text += "\n- Synchronism Interface:\n"
     text += "    #{general_conf["network"]["sync_interface"]}\n"
 end
 

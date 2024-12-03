@@ -192,7 +192,7 @@ encrypt_key = serf['encrypt_key']
 multicast = serf['multicast']
 
 # local IP to bind to
-unless sync_net.nil?
+unless sync_net.nil? || sync_net.empty?
     # Initialize network device
     System.get_all_ifaddrs.each do |netdev|
         if IPAddr.new(sync_net).include?(netdev[:inet_addr])
