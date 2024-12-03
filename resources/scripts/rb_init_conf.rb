@@ -239,6 +239,10 @@ file_serf_tags.close
 if !network.nil? #Firewall rules are not needed in cloud environments
   if sync_interface != ""
     system("firewall-cmd --permanent --zone=home --add-interface=#{sync_interface}")
+
+    #keepalived
+    system("firewall-cmd --add-protocol=112 --permanent --zone=home")
+    system("firewall-cmd --add-rich-rule='rule family=\"ipv4\" source address=\"224.0.0.18\" accept' --permanent --zone=home")
   end
   system("firewall-cmd --permanent --zone=home --add-source=#{sync_net} &>/dev/null")
   system("firewall-cmd --zone=home --add-protocol=igmp &>/dev/null")
