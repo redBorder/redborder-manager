@@ -235,6 +235,10 @@ file_serf_tags = File.open(TAGSJSON,"w")
 file_serf_tags.write(serf_tags.to_json)
 file_serf_tags.close
 
+# stop firewall till chef-client install and run the cookbook-rb-firewall
+# this allow serf/consul communication while leader is in "configuring" state
+system("systemctl stop firewalld &>/dev/null")
+
 # TODO: maybe we should stop using rc.local and start using systemd for this
 # Configure rc.local scripts
 system("chmod a+x /etc/rc.d/rc.local")
