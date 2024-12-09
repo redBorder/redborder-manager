@@ -30,7 +30,7 @@ if [ "x$?" == "x0" ]; then
   # Check if chef-server is registered in consul
   ret=$(curl $CONSULIP:8500/v1/catalog/services 2> /dev/null | jq .erchef)
   s3_ret=$(curl $CONSULIP:8500/v1/catalog/services 2> /dev/null | jq .s3)
-  pg_ret=$(curl $CONSULIP:8500/v1/catalog/services 2> /dev/null | jq .postgresql)
+  pg_ret=$(curl $CONSULIP:8500/v1/catalog/service/postgresql 2> /dev/null | jq -r '.[0].ServiceMeta["ipvirtual-internal-postgresql"]')
 else
   ret="null"
   s3_ret="null"
@@ -51,11 +51,12 @@ if [ "x$s3_ret" == "xnull" -o "x$s3_ret" == "x" ]; then #If not s3 registered
   [ $? -ne 0 ] && echo "$IP_S3   s3.service.${cdomain}" >> /etc/hosts
 fi
 
-if [ "x$pg_ret" == "xnull" -o "x$pg_ret" == "x" ]; then #If not postgresql registered
-  # Get IP pg as a pg service IP and Add pg IP to /etc/hosts
+# if ipvirtual-internal-postgresql consul meta tag is null or empty 
+if [ "x$pg_ret" == "xnull" -o "x$pg_ret" == "x" ]; then
   IP_PG=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
-  grep -q master.postgresql.service.${cdomain} /etc/hosts
-  [ $? -ne 0 ] && echo "$IP_PG   master.postgresql.service.${cdomain}" >> /etc/hosts
+  echo "$IP_PG master.postgresql.service" >> /etc/hosts
+else
+  echo "$pg_ret master.postgresql.service" >> /etc/hosts
 fi
 
 # Get chef validator and admin certificates
