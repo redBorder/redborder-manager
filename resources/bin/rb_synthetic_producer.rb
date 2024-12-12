@@ -58,6 +58,10 @@ config_file = opt["c"] || "/etc/synthetic-producer/config/#{topic}.yml"
 rate = opt["r"].to_s.strip
 threads = opt["p"].to_s.strip
 if topic == "rb_vault"
+  unless File.exist?("/etc/synthetic_producer/python/vault_scan.py")
+    puts "[ERROR] vault_scan.py script not found"
+    exit 1
+  end
   system("/etc/synthetic_producer/python/vault_scan.py")
   exit 0
 end
