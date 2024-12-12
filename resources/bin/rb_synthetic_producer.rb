@@ -57,6 +57,10 @@ topic = opt["t"].to_s.strip unless opt["t"].nil?
 config_file = opt["c"] || "/etc/synthetic-producer/config/#{topic}.yml"
 rate = opt["r"].to_s.strip
 threads = opt["p"].to_s.strip
+if topic == "rb_vault"
+  system("/etc/synthetic_producer/python/vault_scan.py")
+  exit 0
+end
 
 implemented_topics("#{topic}") if (!File.exist?(config_file) && opt["c"].nil?)
 
