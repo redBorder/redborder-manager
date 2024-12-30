@@ -207,7 +207,7 @@ _RBEOF_
 {
   "id": "elasticache",
   "cfg_address": "$ELASTICACHE_ADDRESS",
-  "cfg_port": $ELASTICACHE_PORT
+  "cfg_port": "$ELASTICACHE_PORT"
 }
 _RBEOF_
 
