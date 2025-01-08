@@ -16,9 +16,22 @@ echo Cleaning up old cluster directory
 sudo -u postgres rm -rf /var/lib/pgsql/data
 
 echo Starting base backup as replicator
-sudo -u postgres pg_basebackup -h $master -D /var/lib/pgsql/data -U rep -R -v
-if [ $? -ne 0 ]; then
-    echo "Error detected" 
+retries=3
+count=0
+while [ $count -lt $retries ]; do
+    sudo -u postgres pg_basebackup -h $master -D /var/lib/pgsql/data -U rep -R -v 2> /tmp/pg_basebackup_error.log
+    if [ $? -eq 0 ]; then
+        echo "pg_basebackup completed successfully."
+        break
+    fi
+    echo "pg_basebackup failed. Retrying... ($((count + 1))/$retries)"
+    count=$((count + 1))
+    sleep 5
+done
+
+if [ $count -eq $retries ]; then
+    echo "pg_basebackup failed after $retries attempts. Check /tmp/pg_basebackup_error.log for details."
+    cat /tmp/pg_basebackup_error.log
     exit 1
 fi
 
