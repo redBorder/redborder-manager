@@ -71,7 +71,8 @@ function configure_dataBags(){
 
   # Chef server configuration file
   ERCHEFCFG="/opt/opscode/embedded/service/opscode-erchef/sys.config"
-  S3INITCONF="${RBETC}/s3_init_conf.yml"
+  #S3INITCONF="${RBETC}/s3_init_conf.yml"
+  S3INITCONF=$(if [ -f "${RBETC}/s3_init_conf.yml" ]; then echo "${RBETC}/s3_init_conf.yml"; else echo "${RBETC}/rb_init_conf.yml"; fi)
 
   # Data bag encrypted key
   [ "x$DATABAGKEY" == "x" ] && DATABAGKEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
