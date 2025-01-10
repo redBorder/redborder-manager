@@ -135,6 +135,21 @@ _RBEOF_
 
 _RBEOF_
 
+  cat > /var/chef/data/data_bag/rBglobal/splitintrusion.json <<-_RBEOF_
+{
+  "id": "splitintrusion",
+  "logstash": false
+}
+_RBEOF_
+
+  cat > /var/chef/data/data_bag/rBglobal/splittraffic.json <<-_RBEOF_
+{
+  "id": "splittraffic",
+  "logstash": false
+}
+
+_RBEOF_
+
   # S3 passwords
   cat > /var/chef/data/data_bag/passwords/s3.json <<-_RBEOF_
 {
