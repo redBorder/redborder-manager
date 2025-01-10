@@ -59,7 +59,7 @@ if [ "x$?" == "x0" ] ; then
   chef-solo -c /var/chef/solo/rb-selinux-solo.rb -j /var/chef/solo/rb-selinux-attributes.json
 
   #Check if any of S3_TAG or PG_TAG are true
-  serf members -tag $s3_TAG | grep -q $s3_TAG || serf members -tag $postgres_TAG | grep -q $postgres_TAG
+  serf members -tag $s3_TAG | grep -q $s3_TAG || serf members -tag $postgresql_TAG | grep -q $postgresql_TAG
   if [ "x$?" == "x0" ] ; then
     serviceList=(s3 postgresql)
     for service in ${serviceList[@]}; do
