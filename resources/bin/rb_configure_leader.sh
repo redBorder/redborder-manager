@@ -71,7 +71,8 @@ function configure_dataBags(){
 
   # Chef server configuration file
   ERCHEFCFG="/opt/opscode/embedded/service/opscode-erchef/sys.config"
-  S3INITCONF="${RBETC}/s3_init_conf.yml"
+  #S3INITCONF="${RBETC}/s3_init_conf.yml"
+  S3INITCONF=$(if [ -f "${RBETC}/s3_init_conf.yml" ]; then echo "${RBETC}/s3_init_conf.yml"; else echo "${RBETC}/rb_init_conf.yml"; fi)
 
   # Data bag encrypted key
   [ "x$DATABAGKEY" == "x" ] && DATABAGKEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
@@ -99,6 +100,8 @@ function configure_dataBags(){
 
   # IF S3HOST not found, set default: s3.service
   [ "x$S3HOST" = "x" ] && S3HOST="s3.service"
+
+  VRRPPASS=`< /dev/urandom tr -dc A-Za-z0-9 | head -c8 | sed 's/ //g'`
 
   # Vault data bag configuration
   HASH_KEY="yourenterprisekey"
@@ -142,6 +145,16 @@ _RBEOF_
   "s3_url": "$S3URL",
   "s3_external_url": "$S3EXTERNALURL",
   "s3_bucket": "$S3BUCKET"
+}
+_RBEOF_
+
+  mkdir -p /var/chef/data/data_bag_encrypted/passwords/
+  cat > /var/chef/data/data_bag_encrypted/passwords/vrrp.json <<-_RBEOF_
+{
+  "id": "vrrp",
+  "username": "vrrp",
+  "start_id": "$(( ( RANDOM % 191 ) + 10 ))",
+  "pass": "$VRRPPASS" 
 }
 _RBEOF_
 
