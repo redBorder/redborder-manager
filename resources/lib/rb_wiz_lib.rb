@@ -47,7 +47,7 @@ class NetConf < WizConf
         @devmode = { "dhcp" => "Dynamic", "static" => "Static" }
         @devmodereverse = { "Dynamic" => "dhcp", "Static" => "static" }
         @management_iface = nil
-        @sync_interface = nil 
+        @sync_interface = nil
     end
 
     def doit(network_interfaces)
@@ -107,7 +107,7 @@ class NetConf < WizConf
             next if netdev == "lo"
             netdevprop = netdev_property(netdev)
             next unless (netdevprop["ID_BUS"] == "pci" and !netdevprop["MAC"].nil?)
-    
+
             # Fetch network scripts to get IP information
             ip = get_ip_for_interface(netdev)
             get_network_scripts(netdev)
@@ -118,12 +118,12 @@ class NetConf < WizConf
             data.item += ", IP: #{ip}" unless ip.nil? # Add IP if available
             data.select = first_interface ? true : false
             first_interface = false if first_interface
-    
+
             network_interfaces.push(data.to_a)
         end
         return network_interfaces
     end
-    
+
     # Helper method to extract the IPv4 address from the network script
     def get_ip_for_interface(netdev)
         if File.exist?("/etc/sysconfig/network-scripts/ifcfg-#{netdev}")
@@ -201,7 +201,7 @@ class NetConf < WizConf
         end
         nil
     end
-      
+
     def get_netmask_of_interface(interface_name)
         Socket.getifaddrs.each do |ifaddr|
             if ifaddr.name == interface_name && ifaddr.addr&.ipv4?
@@ -214,15 +214,15 @@ class NetConf < WizConf
     def get_network_scripts(netdev)
         if File.exist?("/etc/sysconfig/network-scripts/ifcfg-#{netdev}")
             config_file = File.read("/etc/sysconfig/network-scripts/ifcfg-#{netdev}")
-            
+
             if config_file.match(/^IPADDR=/)
                 ip = config_file.match(/^IPADDR=(?<ip>.*)$/)&.[](:ip)
                 netmask = config_file.match(/^NETMASK=(?<netmask>.*)$/)&.[](:netmask) || "255.255.255.0"
                 gateway = config_file.match(/^GATEWAY=(?<gateway>.*)$/)&.[](:gateway) || ""
 
                 @confdev[netdev] = {
-                    "mode" => "static", 
-                    "ip" => ip, 
+                    "mode" => "static",
+                    "ip" => ip,
                     "netmask" => netmask,
                     "gateway" => gateway
                 }
@@ -341,6 +341,88 @@ EOF
                 break
             end
         end
+    end
+end
+
+class MemcachedConf < WizConf
+
+    attr_accessor :conf, :cancel
+
+    def initialize()
+      @cancel = false
+      @conf = {}
+    end
+
+    def doit
+        memcached_config = {
+            "cfg_address"=>"",
+            "cfg_port"=>11211
+        }
+
+      loop do
+        dialog = MRDialog.new
+        dialog.clear = true
+        text = <<EOF
+
+Please configure the Memcached service.
+
+Memcached is a distributed memory object caching system that stores key-value pairs in memory.
+It is used to speed up dynamic database-driven websites by caching data and objects in memory
+to reduce the number of times an external data source must be read.
+EOF
+
+        items = []
+        form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen, :attr)
+
+        label = "Memcached domain:"
+        data = form_data.new
+        data.label = label
+        data.ly = 1
+        data.lx = 1
+        data.item = memcached_config[label]
+        data.iy = 1
+        data.ix = 20
+        data.flen = 30
+        data.ilen = 0
+        data.attr = 0
+        items.push(data.to_a)
+
+        label = "Memcached port:"
+        data = form_data.new
+        data.label = label
+        data.ly = 2
+        data.lx = 1
+        data.item = memcached_config[label]
+        data.iy = 2
+        data.ix = 20
+        data.flen = 30
+        data.ilen = 0
+        data.attr = 0
+        items.push(data.to_a)
+
+        dialog.title = "Memcached Configuration"
+        memcached_config = dialog.mixedform(text, items, 20, 60, 0)
+
+        if memcached_config.empty?
+            @cancel = true
+            break
+        else
+            break
+        end
+
+        dialog = MRDialog.new
+        dialog.clear = true
+        dialog.title = "Memcached Configuration Error"
+        text = <<EOF
+
+An error has been detected in the Memcached configuration.
+
+Please review the settings and ensure that the host and port are valid.
+EOF
+        dialog.msgbox(text, 12, 60)
+      end
+      @conf['cfg_address'] = memcached_config['Memcached domain:']
+      @conf['cfg_port'] = memcached_config['Memcached port:']
     end
 end
 
@@ -479,7 +561,7 @@ Please, set DNS servers.
 You can set up to 3 DNS servers, but only one is mandatory. Set DNS values in order, first, second (optional) and then third (optional).
 
 Please, insert each value fo IPv4 address in dot notation.
- 
+
 EOF
             items = []
             form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen, :attr)
@@ -597,7 +679,7 @@ class SerfSyncDevConf < WizConf
 Please configure the synchronism network.
 
 Select one of the device networks to designate as the synchronism network. This network is essential for connecting nodes and building the cluster. It also facilitates communication between internal services.
-        
+
 In some cases, the synchronism network may not have a default gateway and could be isolated from other networks.
 
 EOF
@@ -609,7 +691,7 @@ EOF
         networks.each do |k,v|
             data = radiolist_data.new
             data.tag = k
-            data.item = v 
+            data.item = v
             data.select = select
             if k == sync_interface
                 data.select = true
@@ -625,7 +707,7 @@ EOF
         dialog.title = "Synchronism Network configuration"
 
         loop do
-            sync_interface = dialog.radiolist("Please select a network to use as the synchronism network:", 
+            sync_interface = dialog.radiolist("Please select a network to use as the synchronism network:",
                                                 network_interfaces, 10, 80, 0)
             return cancel_wizard unless sync_interface
             sync_network = network_interfaces.find { |ni| ni[0] == sync_interface }[1]
@@ -763,7 +845,7 @@ Please select the configuration type:
     - Unicast: Configures the Serf agent to operate in Unicast mode. In this mode, Serf attempts to join an existing cluster by scanning via ARP over the Synchronism network.
 
 In both modes, the Synchronism network is used to identify and bind to the appropriate network device.
-        
+
 EOF
         items = []
         radiolist_data = Struct.new(:tag, :item, :select)
@@ -814,7 +896,7 @@ class SerfCryptConf < WizConf
 Please provide a password to encrypt Serf network traffic.
 
 This password will prevent unauthorized nodes from connecting to the cluster. You may use any printable characters, with a length of 6 to 20 characters.
- 
+
 EOF
 
             flen = 20
@@ -974,7 +1056,7 @@ You need to provide the following parameters to use the Amazon RDS database serv
     - Password: The password for the superuser account.
     - Host: The IP address or hostname of the database service.
     - Port: The port for the database service (default: 5432).
-   
+
 Please enter these PostgreSQL parameters:
 
 EOF
@@ -1191,4 +1273,3 @@ EOF
 end
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
-

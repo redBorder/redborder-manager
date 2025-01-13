@@ -76,6 +76,10 @@ general_conf = {
         "host" => "",
         "port" => ""
         },
+    "elasticache" => {
+        "cfg_address" => "",
+        "cfg_port" => ""
+    },
     "mode" => "full" # default mode
     }
 
@@ -86,7 +90,7 @@ general_conf = {
 text = <<EOF
 
 
-This wizard will guide you through the essential steps to configure your 
+This wizard will guide you through the essential steps to configure your
 device as a Redborder node within a Redborder cluster.
 
 The configuration process includes the following steps:
@@ -94,7 +98,7 @@ The configuration process includes the following steps:
     - Network settings: Set up your network configuration
     - Serf configuration: Establish Serf communication settings
     - System settings: Configure the hostname, domain, and DNS
-    - Node mode selection: Choose the node mode, which determines 
+    - Node mode selection: Choose the node mode, which determines
     the set of services the node will run and its weight within the cluster
 
 Would you like to proceed with the configuration?
@@ -131,7 +135,7 @@ if network_interfaces.empty?
     dialog = MRDialog.new
     dialog.clear = true
     dialog.title = "Error"
-    
+
     dialog.msgbox("Error: No network interfaces found. The script will now exit.", 0, 0)
     exit
 end
@@ -347,6 +351,33 @@ else
     general_conf.delete("postgresql")
 end
 
+# External memcached configuration
+text = <<EOF
+
+Do you want to configure an external memcached service?
+EOF
+
+dialog = MRDialog.new
+dialog.clear = true
+dialog.title = "Confirm Configuration"
+dialog.dialog_options = "--defaultno"
+configure_memcached = dialog.yesno(text, 8, 50)
+
+if configure_memcached
+  memconf = MemcachedConf.new
+  begin
+    memconf.doit
+    if memconf.cancel
+      cancel_wizard
+    else
+      general_conf["elasticache"] = memconf.conf
+    end
+  rescue => e
+    puts "Error during memcached configuration: #{e.message}"
+  end
+else
+  general_conf.delete("elasticache")
+end
 
 # Set mode
 modeconf = ModeConf.new
@@ -399,6 +430,13 @@ unless general_conf["postgresql"].nil?
     text += "    password: #{general_conf["postgresql"]["password"]}\n"
     text += "    host: #{general_conf["postgresql"]["host"]}\n"
     text += "    port: #{general_conf["postgresql"]["port"]}\n"
+end
+
+unless general_conf["elasticache"].nil?
+    text += "\n- Elasticache:\n"
+    text += "    Domain: #{general_conf["elasticache"]["cfg_address"]}\n"
+    text += "    Port: #{general_conf["elasticache"]["cfg_port"]}\n"
+    # text += "    ela: #{general_conf}"
 end
 
 text += "\n- Serf:\n"

@@ -239,13 +239,16 @@ _RBEOF_
   # External services
   MODE_PG="external"
   MODE_S3="external"
+  MODE_MEMCACHED="onpremise"
   [ -f /etc/redborder/postgresql_init_conf.yml ] && MODE_PG="onpremise"
   [ -f /etc/redborder/s3_init_conf.yml ] && MODE_S3="onpremise"
+  [ -n "${ELASTICACHE_ADDRESS}" ] && MODE_MEMCACHED="external"
   cat > /var/chef/data/data_bag/rBglobal/external_services.json <<-_RBEOF_
 {
   "id": "external_services",
   "postgresql": "$MODE_PG",
-  "s3": "$MODE_S3"
+  "s3": "$MODE_S3",
+  "memcached": "$MODE_MEMCACHED"
 }
 _RBEOF_
 
