@@ -436,7 +436,6 @@ unless general_conf["elasticache"].nil?
     text += "\n- Elasticache:\n"
     text += "    Domain: #{general_conf["elasticache"]["cfg_address"]}\n"
     text += "    Port: #{general_conf["elasticache"]["cfg_port"]}\n"
-    # text += "    ela: #{general_conf}"
 end
 
 text += "\n- Serf:\n"
