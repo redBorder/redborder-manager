@@ -143,23 +143,31 @@ unless network.nil? # network will not be defined in cloud deployments
       # No extra configuration is require if the interface has no IP/Netmask (for now)
       next unless ip && !ip.empty?
 
-      metric=Config_utils.network_contains(serf['sync_net'], ip) ? 101:100
-      cidr=Config_utils.to_cidr_mask(netmask)
-      iprange=Config_utils.serialize_ipaddr(ip+cidr)
+      management_iface_info = network['interfaces'].find { |i| i['device'] == management_interface }
+      if management_iface_info && Config_utils.network_contains(serf['sync_net'], management_iface_info['ip'])
+        # Management and sync are on the same network, treat as single interface
+        open("/etc/sysconfig/network-scripts/route-#{dev}", 'w') { |f|
+          f.puts "default via #{gateway} dev #{iface['device']}" unless gateway.nil? or gateway.empty?
+        }
+      else
+        metric = Config_utils.network_contains(serf['sync_net'], ip) ? 101 : 100
+        cidr = Config_utils.to_cidr_mask(netmask)
+        iprange = Config_utils.serialize_ipaddr(ip + cidr)
 
-      open("/etc/iproute2/rt_tables", 'a') { |f|
-        f.puts "#{metric} #{iface['device']}tbl" #if File.readlines("/etc/iproute2/rt_tables").grep(/#{metric} #{iface['device']}tbl/).any?
-      }
-      open("/etc/sysconfig/network-scripts/route-#{dev}", 'w') { |f|
-        if dev == management_interface
-          f.puts "default via #{gateway} dev #{iface['device']} table #{iface['device']}tbl" unless gateway.nil? or gateway.empty?
-        end
-        f.puts "#{iprange} dev #{iface['device']} table #{iface['device']}tbl"
-        f.puts "#{iprange} dev #{iface['device']} table main"
-      }
-      open("/etc/sysconfig/network-scripts/rule-#{dev}", 'w') { |f|
-        f.puts "from #{iprange} table #{iface['device']}tbl"
-      }
+        open("/etc/iproute2/rt_tables", 'a') { |f|
+          f.puts "#{metric} #{iface['device']}tbl"
+        }
+        open("/etc/sysconfig/network-scripts/route-#{dev}", 'w') { |f|
+          if dev == management_interface
+            f.puts "default via #{gateway} dev #{iface['device']} table #{iface['device']}tbl" unless gateway.nil? or gateway.empty?
+          end
+          f.puts "#{iprange} dev #{iface['device']} table #{iface['device']}tbl"
+          f.puts "#{iprange} dev #{iface['device']} table main"
+        }
+        open("/etc/sysconfig/network-scripts/rule-#{dev}", 'w') { |f|
+          f.puts "from #{iprange} table #{iface['device']}tbl"
+        }
+      end
     end
   end
 
