@@ -912,9 +912,8 @@ class ModeConf < WizConf
 
 Please select the mode of operation for the manager node.
 
-    - If this is the first installation of a Redborder manager and you plan to create a cluster with multiple nodes, select 'core' mode.
+    - If this is your first installation of a Redborder manager and you intend to create a cluster with multiple nodes or perform a standalone manager installation, select 'full' mode.
     - For additional nodes in the cluster, choose 'custom' mode.
-    - If this is a standalone manager installation, select 'full' mode.
 
 EOF
         items = []
