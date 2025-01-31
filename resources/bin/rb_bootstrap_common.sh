@@ -6,8 +6,8 @@
 function candidateModes() {
   SERVICE=$1
 
-  s3_modes="s3|full"
-  postgresql_modes="postgresql|full"
+  s3_modes="s3|full|core"
+  postgresql_modes="postgresql|full|core"
 
   CANDIDATE_MODES=$(eval echo \$${SERVICE}_modes)
 }
