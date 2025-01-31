@@ -51,12 +51,12 @@ rescue RuntimeError => e
 end
 
 
-usage if opt["h"] || (opt["t"].nil? && opt["c"].nil?) || opt["p"].nil? || opt["r"].nil?
+usage if opt["h"] || (opt["t"].nil? && opt["c"].nil?)
 
 topic = opt["t"].to_s.strip unless opt["t"].nil?
 config_file = opt["c"] || "/etc/synthetic-producer/config/#{topic}.yml"
-rate = opt["r"].to_s.strip
-threads = opt["p"].to_s.strip
+rate = opt["r"] ? opt["r"].to_s.strip : '1'
+threads = opt["p"] ? opt["p"].to_s.strip : '1'
 
 implemented_topics("#{topic}") if (!File.exist?(config_file) && opt["c"].nil?)
 
