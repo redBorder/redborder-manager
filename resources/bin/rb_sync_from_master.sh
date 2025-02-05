@@ -1,3 +1,7 @@
+#!/bin/bash
+
+source /etc/profile 
+
 master=$1
 hostname=`hostname`
 
