@@ -7,7 +7,6 @@ BuildArch: noarch
 Summary: Main package for redborder manager
 
 License: AGPL 3.0
-Obsoletes: rsyslog-logrotate
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 

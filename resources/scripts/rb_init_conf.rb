@@ -143,23 +143,31 @@ unless network.nil? # network will not be defined in cloud deployments
       # No extra configuration is require if the interface has no IP/Netmask (for now)
       next unless ip && !ip.empty?
 
-      metric=Config_utils.network_contains(serf['sync_net'], ip) ? 101:100
-      cidr=Config_utils.to_cidr_mask(netmask)
-      iprange=Config_utils.serialize_ipaddr(ip+cidr)
+      management_iface_info = network['interfaces'].find { |i| i['device'] == management_interface }
+      if management_iface_info && Config_utils.network_contains(serf['sync_net'], management_iface_info['ip'])
+        # Management and sync are on the same network, treat as single interface
+        open("/etc/sysconfig/network-scripts/route-#{dev}", 'w') { |f|
+          f.puts "default via #{gateway} dev #{iface['device']}" unless gateway.nil? or gateway.empty?
+        }
+      else
+        metric = Config_utils.network_contains(serf['sync_net'], ip) ? 101 : 100
+        cidr = Config_utils.to_cidr_mask(netmask)
+        iprange = Config_utils.serialize_ipaddr(ip + cidr)
 
-      open("/etc/iproute2/rt_tables", 'a') { |f|
-        f.puts "#{metric} #{iface['device']}tbl" #if File.readlines("/etc/iproute2/rt_tables").grep(/#{metric} #{iface['device']}tbl/).any?
-      }
-      open("/etc/sysconfig/network-scripts/route-#{dev}", 'w') { |f|
-        if dev == management_interface
-          f.puts "default via #{gateway} dev #{iface['device']} table #{iface['device']}tbl" unless gateway.nil? or gateway.empty?
-        end
-        f.puts "#{iprange} dev #{iface['device']} table #{iface['device']}tbl"
-        f.puts "#{iprange} dev #{iface['device']} table main"
-      }
-      open("/etc/sysconfig/network-scripts/rule-#{dev}", 'w') { |f|
-        f.puts "from #{iprange} table #{iface['device']}tbl"
-      }
+        open("/etc/iproute2/rt_tables", 'a') { |f|
+          f.puts "#{metric} #{iface['device']}tbl"
+        }
+        open("/etc/sysconfig/network-scripts/route-#{dev}", 'w') { |f|
+          if dev == management_interface
+            f.puts "default via #{gateway} dev #{iface['device']} table #{iface['device']}tbl" unless gateway.nil? or gateway.empty?
+          end
+          f.puts "#{iprange} dev #{iface['device']} table #{iface['device']}tbl"
+          f.puts "#{iprange} dev #{iface['device']} table main"
+        }
+        open("/etc/sysconfig/network-scripts/rule-#{dev}", 'w') { |f|
+          f.puts "from #{iprange} table #{iface['device']}tbl"
+        }
+      end
     end
   end
 
@@ -192,7 +200,7 @@ encrypt_key = serf['encrypt_key']
 multicast = serf['multicast']
 
 # local IP to bind to
-unless sync_net.nil?
+unless sync_net.nil? || sync_net.empty?
     # Initialize network device
     System.get_all_ifaddrs.each do |netdev|
         if IPAddr.new(sync_net).include?(netdev[:inet_addr])
@@ -235,126 +243,9 @@ file_serf_tags = File.open(TAGSJSON,"w")
 file_serf_tags.write(serf_tags.to_json)
 file_serf_tags.close
 
-#Firewall rules
-if !network.nil? #Firewall rules are not needed in cloud environments
-  if sync_interface != ""
-    system("firewall-cmd --permanent --zone=home --add-interface=#{sync_interface}")
-  end
-  system("firewall-cmd --permanent --zone=home --add-source=#{sync_net} &>/dev/null")
-  system("firewall-cmd --zone=home --add-protocol=igmp &>/dev/null")
-
-  #nginx
-  system("firewall-cmd --permanent --zone=home --add-port=443/tcp &>/dev/null")
-
-  # mDNS / serf
-  system("firewall-cmd --permanent --zone=home --add-source-port=5353/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-source-port=5353/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=5353/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=5353/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=7946/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=7946/udp &>/dev/null")
-
-  #Consul ports
-  system("firewall-cmd --permanent --zone=home --add-port=8300/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8301/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8301/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8302/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8302/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8400/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8500/tcp &>/dev/null")
-
-  #DNS
-  system("firewall-cmd --permanent --zone=home --add-port=53/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=53/udp &>/dev/null")
-
-  #Chef server
-  system("firewall-cmd --permanent --zone=home --add-port=4443/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=5432/tcp &>/dev/null")
-
-  #zookeeper
-  system("firewall-cmd --permanent --zone=home --add-port=2888/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=3888/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=2181/tcp &>/dev/null")
-
-  #kafka
-  system("firewall-cmd --permanent --zone=home --add-port=9092/tcp &>/dev/null")
-
-  #http2k
-  system("firewall-cmd --permanent --zone=home --add-port=7980/tcp &>/dev/null")
-
-  #f2k
-  system("firewall-cmd --permanent --zone=home --add-port=2055/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=2055/udp &>/dev/null")
-
-  #sfacctd (pmacctd)
-  system("firewall-cmd --permanent --zone=home --add-port=6343/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=6343/udp &>/dev/null")
-
-  #rsyslogd
-  system("firewall-cmd --permanent --zone=home --add-port=514/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=514/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=514/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=514/udp &>/dev/null")
-
-  #freeradius
-  system("firewall-cmd --permanent --zone=home --add-port=1812/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=1812/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=1813/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=1813/udp &>/dev/null")
-
-  #rb-ale
-  system("firewall-cmd --permanent --zone=public --add-port=7779/tcp &>/dev/null")
-
-  #n2klocd
-  system("firewall-cmd --permanent --zone=home --add-port=2056/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=2056/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=2057/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=2057/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=2058/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=2058/tcp &>/dev/null")
-
-  #druid
-  system("firewall-cmd --permanent --zone=home --add-port=8080/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8081/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8083/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=8084/tcp &>/dev/null")
-
-  #minio
-  system("firewall-cmd --permanent --zone=home --add-port=9000/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=9001/tcp &>/dev/null")
-
-  #snmp
-  system("firewall-cmd --permanent --zone=home --add-port=161/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=161/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=162/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=162/udp &>/dev/null")
-
-  #keepalived
-  system("firewall-cmd --add-protocol=112 --permanent")
-  system("firewall-cmd --add-rich-rule='rule family=\"ipv4\" source address=\"224.0.0.18\" accept' --permanent")
-
-  #webui
-  system("firewall-cmd --permanent --zone=home --add-port=8001/tcp &>/dev/null")
-
-  #memcached
-  system("firewall-cmd --permanent --zone=home --add-port=11211/tcp &>/dev/null")
-  system("firewall-cmd --permanent --zone=home --add-port=11211/udp &>/dev/null")
-
-  #chrony
-  system("firewall-cmd --permanent --zone=home --add-port=123/udp &>/dev/null")
-  system("firewall-cmd --permanent --zone=public --add-port=123/udp &>/dev/null")
-
-  # redborder-ai
-  system('firewall-cmd --permanent --zone=home --add-port=50505/tcp &>/dev/null')
-
-  #mongo
-  system("firewall-cmd --permanent --zone=home --add-port=27017/tcp &>/dev/null")
-
-
-  # Reload firewalld configuration
-  system("firewall-cmd --reload &>/dev/null")
-
-end
+# stop firewall till chef-client install and run the cookbook-rb-firewall
+# this allow serf/consul communication while leader is in "configuring" state
+system("systemctl stop firewalld &>/dev/null")
 
 # TODO: maybe we should stop using rc.local and start using systemd for this
 # Configure rc.local scripts
