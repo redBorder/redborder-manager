@@ -38,7 +38,7 @@ def print_ok(text="", colorless, quiet)
   unless quiet
     columns =  get_stty_columns
     spec_char = text.count('%')/2
-    printf(text)
+    printf("%s", text)
     printf("%*c", columns - 8 - text.size + spec_char, ' ')
     if colorless
       printf("[  OK  ]\n")
@@ -52,7 +52,7 @@ def print_error(text="", colorless, quiet)
   unless quiet
     columns =  get_stty_columns
     spec_char = text.count('%')/2
-    printf(text)
+    printf("%s", text)
     printf("%*c", columns - 8 - text.size + spec_char, ' ')
     if colorless
       printf("[FAILED]\n")
