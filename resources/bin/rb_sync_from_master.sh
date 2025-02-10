@@ -21,7 +21,7 @@ echo "Starting base backup as replicator to temporary directory..."
 retries=3
 count=0
 while [ $count -lt $retries ]; do
-    sudo -u postgres pg_basebackup -h "$master" -D "$backup_dir" -U rep -R -v 2> /tmp/pg_basebackup_error.log
+    sudo -u postgres pg_basebackup -h "$master" -D "$backup_dir" -U rep -R -v 2> /tmp/rb_notify_postgresql_pg_basebackup_error.log
     if [ $? -eq 0 ]; then
         echo "pg_basebackup completed successfully."
         break
@@ -33,7 +33,7 @@ done
 
 if [ $count -eq $retries ]; then
     echo "pg_basebackup failed after $retries attempts. Keeping the existing data directory."
-    cat /tmp/pg_basebackup_error.log
+    cat /tmp/rb_notify_postgresql_pg_basebackup_error.log
     exit 1
 fi
 
