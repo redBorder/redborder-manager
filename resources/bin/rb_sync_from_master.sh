@@ -15,7 +15,7 @@ backup_dir="/var/lib/pgsql/data_tmp"
 data_dir="/var/lib/pgsql/data"
 
 # Ensure previous backup attempt directory is clean
-sudo -u postgres rm -rf "$backup_dir"
+rm -rf "$backup_dir"
 
 echo "Starting base backup as replicator to temporary directory..."
 retries=3
@@ -38,16 +38,16 @@ if [ $count -eq $retries ]; then
 fi
 
 echo "Stopping PostgreSQL"
-sudo systemctl stop postgresql
+systemctl stop postgresql
 
 echo "Replacing old data directory with new backup"
-sudo -u postgres rm -rf "$data_dir"
-sudo mv "$backup_dir" "$data_dir"
+rm -rf "$data_dir"
+mv "$backup_dir" "$data_dir"
 
 echo "Creating standby.signal file"
 sudo -u postgres touch "$data_dir/standby.signal"
 
-[ -f "$data_dir/recovery.done" ] && sudo rm -f "$data_dir/recovery.done"
+[ -f "$data_dir/recovery.done" ] && rm -f "$data_dir/recovery.done"
 
 sed -i '/^primary_conninfo/d' "$data_dir/postgresql.conf"
 sed -i '/^promote_trigger_file/d' "$data_dir/postgresql.conf"
@@ -61,7 +61,7 @@ _EOF1_
 "
 
 echo "Starting PostgreSQL"
-sudo service postgresql start
+service postgresql start
 
 echo "restart webui in all nodes"
 rbcli node execute all systemctl restart webui
