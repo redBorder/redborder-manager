@@ -137,11 +137,11 @@ def check_hd(colorless, quiet=false)
       max = pcent if pcent > max
       if pcent >= 90
         errors = 1
-        print_error("ERROR: Disk space problem at #{node} (#{pcent}%%) in #{source}", colorless, quiet)
+        print_error("ERROR: Disk space problem at #{node} (#{pcent}%) in #{source}", colorless, quiet)
         has_errors = true
       end
     end
-    print_ok(node + " (max #{max}%%)",colorless, quiet) if errors == 0
+    print_ok(node + " (max #{max}%)",colorless, quiet) if errors == 0
   end
   exit 1 if has_errors
 end
