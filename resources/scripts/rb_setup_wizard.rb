@@ -86,7 +86,7 @@ general_conf = {
 text = <<EOF
 
 
-This wizard will guide you through the essential steps to configure your 
+This wizard will guide you through the essential steps to configure your
 device as a Redborder node within a Redborder cluster.
 
 The configuration process includes the following steps:
@@ -94,7 +94,7 @@ The configuration process includes the following steps:
     - Network settings: Set up your network configuration
     - Serf configuration: Establish Serf communication settings
     - System settings: Configure the hostname, domain, and DNS
-    - Node mode selection: Choose the node mode, which determines 
+    - Node mode selection: Choose the node mode, which determines
     the set of services the node will run and its weight within the cluster
 
 Would you like to proceed with the configuration?
@@ -131,7 +131,7 @@ if network_interfaces.empty?
     dialog = MRDialog.new
     dialog.clear = true
     dialog.title = "Error"
-    
+
     dialog.msgbox("Error: No network interfaces found. The script will now exit.", 0, 0)
     exit
 end
@@ -359,6 +359,16 @@ text = <<EOF
 
 You have selected the following parameter values for your configuration:
 EOF
+
+unless general_conf['hostname'].empty?
+    text += "\n- Hostname:\n"
+    text += "    #{general_conf['hostname']}\n"
+end
+
+unless general_conf['cdomain'].empty?
+    text += "\n- Domain Name:\n"
+    text += "    #{general_conf['cdomain']}\n"
+end
 
 unless general_conf["network"]["interfaces"].empty?
     text += "\n- Networking:\n"
