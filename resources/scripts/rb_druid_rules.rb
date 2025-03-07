@@ -107,8 +107,8 @@ begin
   zk = ZK.new(zk_host)
 
   if zk
-    coordinator = zk.children('/druid/discoveryPath/coordinator').map(&:to_s).uniq.shuffle
-    zktdata,stat = zk.get("/druid/discoveryPath/coordinator/#{coordinator.first}")
+    coordinator = zk.children('/druid/discoveryPath/druid:coordinator').map(&:to_s).uniq.shuffle
+    zktdata,stat = zk.get("/druid/discoveryPath/druid:coordinator/#{coordinator.first}")
     zktdata = YAML.load(zktdata)
     node = "#{zktdata['address']}:#{zktdata['port']}" if zktdata['address'] && zktdata['port']
     uri = URI("http://#{node}/druid/coordinator/v1/rules/#{datasource}")
