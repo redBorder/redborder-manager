@@ -13,6 +13,8 @@
 ## You should have received a copy of the GNU Affero General Public License License
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
+
+require 'zk'
 require 'optparse'
 require 'chef'
 require 'shellwords'
@@ -68,7 +70,6 @@ def service_running?(node, service)
       return false
     end
   else
-    # Handle case where the command execution fails
     logit(:fail, "Failed to execute the command on #{node}. Output was: #{output}")
     return false
   end
