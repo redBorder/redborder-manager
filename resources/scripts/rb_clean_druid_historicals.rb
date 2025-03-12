@@ -80,7 +80,7 @@ end
 def clean_index_cache(node)
   logit(:info, "Cleaning index cache on node #{node}...")
 
-  if system("rbcli node execute #{node} \"rm -rf /var/druid/historical/indexCache/*\" > /dev/null 2>&1")
+  if system("rbcli node execute #{node} \"rm \\-rf /var/druid/historical/indexCache/*\" > /dev/null 2>&1")
     lsnode = "rbcli node execute #{node} \"ls /var/druid/historical/indexCache/\""
     lsout = `#{lsnode}`
     
