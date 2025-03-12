@@ -79,12 +79,19 @@ end
 
 def clean_index_cache(node)
   logit(:info, "Cleaning index cache on node #{node}...")
-  if system("rbcli node execute #{node} \"rm \\-rf /var/druid/historical/indexCache/*\" > /dev/null 2>&1")
-    cache_check = `rbcli node execute #{node} "ls /var/druid/historical/indexCache/"`
-    if cache_check.split("\n").length <= 3
-      logit(:success, "Index cache cleaned on #{node}.")
+
+  if system("rbcli node execute #{node} \"rm -rf /var/druid/historical/indexCache/*\" > /dev/null 2>&1")
+    lsnode = "rbcli node execute #{node} \"ls /var/druid/historical/indexCache/\""
+    lsout = `#{lsnode}`
+    
+    if $?.success?
+      if lsout.split("\n").length <= 3
+        logit(:success, "Index cache cleaned on #{node}.")
+      else
+        logit(:fail, "Index cache not fully cleaned on #{node}.")
+      end
     else
-      logit(:fail, "Index cache not fully cleaned on #{node}.")
+      logit(:fail, "Failed to execute 'ls' command to check index cache on #{node}. Error: #{lsout}")
     end
   else
     logit(:fail, "Failed to clean index cache on #{node}.")
