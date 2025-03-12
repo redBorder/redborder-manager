@@ -13,8 +13,6 @@
 ## You should have received a copy of the GNU Affero General Public License License
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
-
-require 'zk'
 require 'optparse'
 require 'chef'
 require 'shellwords'
