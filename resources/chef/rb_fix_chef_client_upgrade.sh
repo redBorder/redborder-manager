@@ -39,20 +39,25 @@ if [[ "$CHEF_VERSION" == "$TARGET_VERSION" ]]; then
         echo "INFO: Created backup directory: $BACKUP_DIR"
     fi
 
-    # Check if the original gem file exists
+    # Check if both files exist before making changes
     if [[ -f "$GEM_PATH/default/$GEM_NAME" ]]; then
-        # Backup the original gem specification file before removing it
-        install -D "$GEM_PATH/default/$GEM_NAME" "$BACKUP_DIR/$GEM_NAME"
-        rm -f "$GEM_PATH/default/$GEM_NAME"
-        echo "INFO: Moved $GEM_NAME to $BACKUP_DIR"
-    fi
+        if [[ -f "$NEW_GEM" && -s "$NEW_GEM" ]]; then
+            # Backup the original gem specification file before removing it
+            cp -a "$GEM_PATH/default/$GEM_NAME" "$BACKUP_DIR/$GEM_NAME"
+            echo "INFO: Backed up $GEM_NAME to $BACKUP_DIR"
 
-    # Check if the new gem file exists and is not empty
-    if [[ -s "$NEW_GEM" ]]; then
-        cp "$NEW_GEM" "$GEM_PATH/default/"
-        echo "INFO: Replaced with openssl-3.2.0.gemspec"
+            # Remove the original gem specification file
+            rm -f "$GEM_PATH/default/$GEM_NAME"
+            echo "INFO: Removed $GEM_NAME from $GEM_PATH/default/"
+
+            # Replacing gemspec is omitted since it's unnecessary (according to your comment)
+            echo "INFO: Skipping replacement of openssl-3.2.0.gemspec"
+        else
+            echo "ERROR: New gemspec file ($NEW_GEM) is missing or empty. Aborting."
+            exit 1
+        fi
     else
-        echo "ERROR: The new gem file is empty or not found, cannot replace."
+        echo "ERROR: Original gemspec file ($GEM_NAME) not found. Cannot proceed."
         exit 1
     fi
 else
