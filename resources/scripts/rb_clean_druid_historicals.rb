@@ -50,16 +50,28 @@ def get_historicals(silent=false)
 end
 
 def service_running?(node, service)
-  status = `rbcli node execute #{node} "service #{service} status" 2>&1`
-
-  if status.include?("is running") || status.include?("active (running)")
-    logit(:success, "Service #{service} is running on #{node}.")
-    return true
-  elsif status.include?("inactive") || status.include?("not running")
-    logit(:fail, "Service #{service} is not running on #{node}.")
-    return false
+  output = `rbcli node execute #{node} "systemctl is-active #{service}" 2>&1`
+  
+  if $?.success?
+    status = output.strip.split("\n").last
+    
+    case status
+    when "active"
+      logit(:success, "Service #{service} is running on #{node}.")
+      return true
+    when "inactive"
+      logit(:fail, "Service #{service} is not running on #{node}.")
+      return false
+    when "failed"
+      logit(:fail, "Service #{service} has failed on #{node}.")
+      return false
+    else
+      logit(:fail, "Unable to determine the status of service #{service} on #{node}. Output was: #{status}")
+      return false
+    end
   else
-    logit(:fail, "Unable to determine the status of service #{service} on #{node}. Output was: #{status}")
+    # Handle case where the command execution fails
+    logit(:fail, "Failed to execute the command on #{node}. Output was: #{output}")
     return false
   end
 end
