@@ -50,8 +50,6 @@ if [[ "$CHEF_VERSION" == "$TARGET_VERSION" ]]; then
             rm -f "$GEM_PATH/default/$GEM_NAME"
             echo "INFO: Removed $GEM_NAME from $GEM_PATH/default/"
 
-            # Replacing gemspec is omitted since it's unnecessary (according to your comment)
-            echo "INFO: Skipping replacement of openssl-3.2.0.gemspec"
         else
             echo "ERROR: New gemspec file ($NEW_GEM) is missing or empty. Aborting."
             exit 1
