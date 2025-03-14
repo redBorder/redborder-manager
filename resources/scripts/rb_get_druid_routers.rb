@@ -26,8 +26,8 @@ def logit(text)
   printf("%s\n", text)
 end
 
-def print_broker(zk, zk_id)
-  zktdata,stat = zk.get("/druid/discoveryPath/druid:broker/#{zk_id}")
+def print_router(zk, zk_id)
+  zktdata,stat = zk.get("/druid/discoveryPath/druid:router/#{zk_id}")
   zktdata = YAML.load(zktdata)
   if zktdata["address"] and zktdata["port"]
     logit "#{zktdata["address"]}:#{zktdata["port"]}"
@@ -35,7 +35,7 @@ def print_broker(zk, zk_id)
 end
 
 if opt["h"]
-  logit "rb_get_druid_brokers.rb [-h]"
+  logit "rb_get_druid_routers.rb [-h]"
   logit "    -r       -> pick one random"
   logit "    -h       -> print this help"
   exit 0
@@ -46,12 +46,12 @@ random=(opt["r"] ? true : false)
 zk_host="zookeeper.service:2181"
 
 zk = ZK.new(zk_host)
-brokers = zk.children("/druid/discoveryPath/druid:broker").map{|k| k.to_s}.sort.uniq
+routers = zk.children("/druid/discoveryPath/druid:router").map{|k| k.to_s}.sort.uniq
 
 if random
-  print_broker zk, brokers.shuffle.first
+  print_router zk, routers.shuffle.first
 else
-  brokers.each do |b|
-    print_broker zk, b
+    routers.each do |b|
+        print_router zk, b
   end
 end

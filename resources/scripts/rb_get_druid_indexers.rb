@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #######################################################################
-## Copyright (c) 2014 ENEO Tecnología S.L.
+## Copyright (c) 2025 ENEO Tecnología S.L.
 ## This file is part of redBorder.
 ## redBorder is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU Affero General Public License License as published by
@@ -19,23 +19,18 @@ require 'yaml'
 require 'json'
 require "getopt/std"
 
-CONTROLLERPATH="/controller"
 opt = Getopt::Std.getopts("ht:r")
 
 def logit(text)
   printf("%s\n", text)
 end
 
-def print_broker(zk, zk_id)
-  zktdata,stat = zk.get("/druid/discoveryPath/druid:broker/#{zk_id}")
-  zktdata = YAML.load(zktdata)
-  if zktdata["address"] and zktdata["port"]
-    logit "#{zktdata["address"]}:#{zktdata["port"]}"
-  end
+def print_indexer(zk, zk_id)
+  logit zk_id
 end
 
 if opt["h"]
-  logit "rb_get_druid_brokers.rb [-h]"
+  logit "rb_get_druid_indexers.rb [-h]"
   logit "    -r       -> pick one random"
   logit "    -h       -> print this help"
   exit 0
@@ -46,12 +41,12 @@ random=(opt["r"] ? true : false)
 zk_host="zookeeper.service:2181"
 
 zk = ZK.new(zk_host)
-brokers = zk.children("/druid/discoveryPath/druid:broker").map{|k| k.to_s}.sort.uniq
+indexers = zk.children("/druid/indexer/announcements").map{|k| k.to_s}.sort.uniq
 
 if random
-  print_broker zk, brokers.shuffle.first
+  print_indexer zk, indexers.shuffle.first
 else
-  brokers.each do |b|
-    print_broker zk, b
+  indexers.each do |b|
+    print_indexer zk, b
   end
 end

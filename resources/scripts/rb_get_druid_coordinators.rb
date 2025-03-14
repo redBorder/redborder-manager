@@ -27,7 +27,7 @@ def logit(text)
 end
 
 def print_coordinator(zk, zk_id)
-  zktdata,stat = zk.get("/druid/discoveryPath/coordinator/#{zk_id}")
+  zktdata,stat = zk.get("/druid/discoveryPath/druid:coordinator/#{zk_id}")
   zktdata = YAML.load(zktdata)
   if zktdata["address"] and zktdata["port"]
     logit "#{zktdata["address"]}:#{zktdata["port"]}"
@@ -46,7 +46,7 @@ random=(opt["r"] ? true : false)
 zk_host="zookeeper.service:2181"
 
 zk = ZK.new(zk_host)
-coordinators = zk.children("/druid/discoveryPath/coordinator").map{|k| k.to_s}.sort.uniq
+coordinators = zk.children("/druid/discoveryPath/druid:coordinator").map{|k| k.to_s}.sort.uniq
 
 if random
   print_coordinator zk, coordinators.shuffle.first
