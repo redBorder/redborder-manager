@@ -60,6 +60,8 @@ install -D -m 0644 resources/systemd/rb-init-conf.service %{buildroot}/usr/lib/s
 install -D -m 0644 resources/systemd/rb-bootstrap.service %{buildroot}/usr/lib/systemd/system/rb-bootstrap.service
 install -D -m 0755 resources/lib/dhclient-enter-hooks %{buildroot}/usr/lib/redborder/lib/dhclient-enter-hooks
 install -D -m 0644 resources/etc/01default_handlers.json %{buildroot}/etc/serf/01default_handlers.json
+mkdir -p %{buildroot}/tmp/patches
+cp resources/patches/chef_upgrade.patch %{buildroot}/tmp/patches/
 
 %pre
 
@@ -73,11 +75,15 @@ firewall-cmd --reload
 # adjust kernel printk settings for the console
 echo "kernel.printk = 1 4 1 7" > /usr/lib/sysctl.d/99-redborder-printk.conf
 /sbin/sysctl --system > /dev/null 2>&1
+patch -p1 < /tmp/patches/chef_upgrade.patch
+
+rm -f /tmp/patches/chef_upgrade.patch
 
 %posttrans
 update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "java"|head -n 1)
 
 %files
+/tmp/patches/chef_upgrade.patch
 %defattr(0755,root,root)
 /usr/lib/redborder/bin
 /usr/lib/redborder/scripts
@@ -100,6 +106,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Tue Feb 25 2025 Vicente Mesa <vimesa@redborder.com> - 
+- Update chef-workstation
+
 * Mon Jul 29 2024 Miguel Alvarez <malvarez@redborder.com> - 
 - Add redboder tools path
 
