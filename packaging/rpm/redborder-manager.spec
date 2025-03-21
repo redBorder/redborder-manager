@@ -83,6 +83,7 @@ rm -f /tmp/patches/chef_upgrade.patch
 update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "java"|head -n 1)
 
 %files
+/tmp/patches/chef_upgrade.patch
 %defattr(0755,root,root)
 /usr/lib/redborder/bin
 /usr/lib/redborder/scripts
