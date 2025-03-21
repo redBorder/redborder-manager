@@ -60,8 +60,8 @@ install -D -m 0644 resources/systemd/rb-init-conf.service %{buildroot}/usr/lib/s
 install -D -m 0644 resources/systemd/rb-bootstrap.service %{buildroot}/usr/lib/systemd/system/rb-bootstrap.service
 install -D -m 0755 resources/lib/dhclient-enter-hooks %{buildroot}/usr/lib/redborder/lib/dhclient-enter-hooks
 install -D -m 0644 resources/etc/01default_handlers.json %{buildroot}/etc/serf/01default_handlers.json
-cp -r resources/chef/rb_fix_chef_client_upgrade.sh %{buildroot}/var/chef/
-chmod 0755 %{buildroot}/var/chef/rb_fix_chef_client_upgrade.sh
+mkdir -p %{buildroot}/tmp/patches
+cp resources/patches/chef_upgrade.patch %{buildroot}/tmp/patches/
 
 %pre
 
@@ -75,7 +75,9 @@ firewall-cmd --reload
 # adjust kernel printk settings for the console
 echo "kernel.printk = 1 4 1 7" > /usr/lib/sysctl.d/99-redborder-printk.conf
 /sbin/sysctl --system > /dev/null 2>&1
-/var/chef/rb_fix_chef_client_upgrade.sh
+patch -p1 < /tmp/patches/chef_upgrade.patch
+
+rm -f /tmp/patches/chef_upgrade.patch
 
 %posttrans
 update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "java"|head -n 1)
@@ -86,7 +88,6 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 /usr/lib/redborder/scripts
 /usr/lib/redborder/tools
 /usr/lib/redborder/lib/check
-/var/chef/rb_fix_chef_client_upgrade.sh
 %defattr(0755,root,root)
 /etc/profile.d/redborder-manager.sh
 /usr/lib/redborder/lib/dhclient-enter-hooks
