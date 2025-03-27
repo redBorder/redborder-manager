@@ -83,6 +83,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 
 %files
 %defattr(0755,root,root)
+/tmp/patches/chef_upgrade.patch
 /usr/lib/redborder/bin
 /usr/lib/redborder/scripts
 /usr/lib/redborder/tools
@@ -104,7 +105,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
-* Thu March 27 2025 Vicente Mesa, José Navarro <vimesa@redborder.com, jnavarro@redborder.com> - 5.0.0
+* Thu Mar 27 2025 Vicente Mesa, José Navarro <vimesa@redborder.com, jnavarro@redborder.com> - 5.0.0
 - Update & patch chef-workstation
 
 * Mon Jul 29 2024 Miguel Alvarez <malvarez@redborder.com> - 
