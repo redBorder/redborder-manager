@@ -10,7 +10,6 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 Patch1: chef_upgrade.patch
-Source1: patches/chef_upgrade.patch
 
 BuildRequires: patch
 
@@ -29,7 +28,7 @@ Requires: mcli
 
 %prep
 %setup -qn %{name}-%{version}
-%patch1 -p1
+%patch1
 
 %build
 
@@ -141,7 +140,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 * Tue Nov 28 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.8-1
 - Fix sync network routes and allow no gateways
 
-* Mon Nov 21 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.7-1
+* Tue Nov 21 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.7-1
 - Add support for sync network
 
 * Tue Nov 21 2023 David Vanhoucke, Vicente Mesa <dvanhoucke@redborder.com, vimesa@redborder.com> - 0.9.6-1

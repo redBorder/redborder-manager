@@ -1,9 +1,6 @@
---- redborder-manager.spec.orig    2025-03-27 10:00:00 +0100
-+++ redborder-manager.spec         2025-03-27 10:00:00 +0100
-@@ %post
--/usr/lib/redborder/bin/rb_rubywrapper.sh -c
+--- packaging/rpm/redborder-manager.spec         2025-03-27 10:00:00 +0100
++++ packaging/rpm/redborder-manager.spec         2025-03-27 10:00:00 +0100
+@@ -80,0 +80,3 @@
 +if [ -f /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.gemspec ]; then
 +    rm -f /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.gemspec
 +fi
-+/usr/lib/redborder/bin/rb_rubywrapper.sh -c
-
