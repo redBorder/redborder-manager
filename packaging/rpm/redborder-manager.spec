@@ -9,6 +9,7 @@ Summary: Main package for redborder manager
 License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
+Patch1: chef_upgrade.patch
 Source1: patches/chef_upgrade.patch
 
 BuildRequires: patch
@@ -104,7 +105,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
-* Thu March 27 2025 Vicente Mesa, José Navarro <vimesa@redborder.com, jnavarro@redborder.com> - 5.0.0
+* Thu Mar 27 2025 Vicente Mesa, José Navarro <vimesa@redborder.com, jnavarro@redborder.com> - 5.0.0
 - Update & patch chef-workstation
 
 * Mon Jul 29 2024 Miguel Alvarez <malvarez@redborder.com> - 
