@@ -21,10 +21,7 @@ archive: SOURCES
 	git archive --prefix=$(PACKAGE_NAME)-$(VERSION)/ \
 		-o packaging/rpm/SOURCES/$(PACKAGE_NAME)-$(VERSION).tar.gz $(LATEST)
 
-copy_patch: SOURCES
-		cp patches/chef_upgrade.patch SOURCES/
-
-build_prepare: archive copy_patch
+build_prepare: archive
 	mkdir -p $(RESULT_DIR)
 	rm -f $(RESULT_DIR)/$(PACKAGE_NAME)*.rpm
 
