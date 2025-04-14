@@ -21,7 +21,7 @@ require 'net/http'
 
 opt = Getopt::Std.getopts("hwprcoudn")
 
-def usage 
+def usage
   printf("USAGE: rb_get_tasks.rb [-h][-w][-p][-r][-c][-o][-u][-d][-n]\n")
   printf("  * -h -> get this help\n")
   printf("  * -w -> get all waiting tasks\n")
@@ -30,7 +30,7 @@ def usage
   printf("  * -c -> get all capacity (always integer)\n")
   printf("  * -o -> get all running capacity used in %% (always integer)\n")
   printf("  * -d -> get all desired capacity used in %% (always integer)\n")
-  printf("  * -u -> get current middle manager running tasks\n")
+  printf("  * -u -> get current indexer running tasks\n")
   printf("  * -n -> show only num\n")
 end
 
@@ -43,21 +43,20 @@ def get_elements(node, url)
   return Net::HTTP.get(URI.parse("http://#{node}/#{url}"))
 end
 
-overlord="localhost:8084"
-middleManager="localhost:8091"
+router="localhost:8888"
 
 if opt["h"]
   usage
 elsif opt["c"]
-  print JSON.parse(Net::HTTP.get(URI.parse("http://#{overlord}/druid/indexer/v1/workers"))).map{|x| x["worker"]["capacity"]}.inject{|sum,x| sum + x }
+  print JSON.parse(Net::HTTP.get(URI.parse("http://#{router}/druid/indexer/v1/workers"))).map{|x| x["worker"]["capacity"]}.inject{|sum,x| sum + x }
   printf("\n")
 elsif opt["o"]
-  worker=JSON.parse(Net::HTTP.get(URI.parse("http://#{overlord}/druid/indexer/v1/workers")))
-  print (100.0 * (worker.map{|x| x["currCapacityUsed"]}.inject{|sum,x| sum + x } + get_size(overlord, "druid/indexer/v1/pendingTasks") )/worker.map{|x| x["worker"]["capacity"]}.inject{|sum,x| sum + x }).ceil
+  worker=JSON.parse(Net::HTTP.get(URI.parse("http://#{router}/druid/indexer/v1/workers")))
+  print (100.0 * (worker.map{|x| x["currCapacityUsed"]}.inject{|sum,x| sum + x } + get_size(router, "druid/indexer/v1/pendingTasks") )/worker.map{|x| x["worker"]["capacity"]}.inject{|sum,x| sum + x }).ceil
   printf("\n")
 elsif opt["d"]
-  worker=JSON.parse(Net::HTTP.get(URI.parse("http://#{overlord}/druid/indexer/v1/workers")))
-  tasks = JSON.parse(get_elements(overlord, "druid/indexer/v1/pendingTasks")) + JSON.parse(get_elements(overlord, "druid/indexer/v1/runningTasks")) + JSON.parse(get_elements(overlord, "druid/indexer/v1/waitingTasks"))
+  worker=JSON.parse(Net::HTTP.get(URI.parse("http://#{router}/druid/indexer/v1/workers")))
+  tasks = JSON.parse(get_elements(router, "druid/indexer/v1/pendingTasks")) + JSON.parse(get_elements(router, "druid/indexer/v1/runningTasks")) + JSON.parse(get_elements(router, "druid/indexer/v1/waitingTasks"))
   current=0
   other=0
   t = Time.now
@@ -73,28 +72,25 @@ elsif opt["d"]
   printf("\n")
 elsif opt["n"]
   if opt["w"]
-    print get_size(overlord, "druid/indexer/v1/waitingTasks")
+    print get_size(router, "druid/indexer/v1/waitingTasks")
   elsif opt["p"]
-    print get_size(overlord, "druid/indexer/v1/pendingTasks")
+    print get_size(router, "druid/indexer/v1/pendingTasks")
   elsif opt["r"]
-    print get_size(overlord, "druid/indexer/v1/runningTasks")
+    print get_size(router, "druid/indexer/v1/runningTasks")
   elsif opt["u"]
-    print get_size(middleManager, "druid/worker/v1/tasks")
+    print get_size(router, "druid/indexer/v1/tasks")
   end
   printf("\n")
 elsif opt["w"]
-  print get_elements(overlord, "druid/indexer/v1/waitingTasks")
+  print get_elements(router, "druid/indexer/v1/waitingTasks")
   printf("\n")
 elsif opt["p"]
-  print get_elements(overlord, "druid/indexer/v1/pendingTasks")
+  print get_elements(router, "druid/indexer/v1/pendingTasks")
   printf("\n")
 elsif opt["r"]
-  print get_elements(overlord, "druid/indexer/v1/runningTasks")
+  print get_elements(router, "druid/indexer/v1/runningTasks")
   printf("\n")
 elsif opt["u"]
-  print get_elements(middleManager, "druid/worker/v1/tasks")
+  print get_elements(router, "druid/indexer/v1/tasks")
   printf("\n")
-else
-  system("/opt/rb/bin/rb_get_druid_middleManagers.rb -t")
 end
-
