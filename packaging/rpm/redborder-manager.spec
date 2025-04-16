@@ -10,6 +10,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
+
 Requires: bash chrony dialog postgresql s3cmd dmidecode rsync nc dhclient
 Requires: telnet redborder-serf redborder-common redborder-chef-client
 Requires: redborder-cookbooks redborder-rubyrvm redborder-cli
@@ -62,8 +63,14 @@ install -D -m 0755 resources/lib/dhclient-enter-hooks %{buildroot}/usr/lib/redbo
 install -D -m 0644 resources/etc/01default_handlers.json %{buildroot}/etc/serf/01default_handlers.json
 
 %pre
+if [ -f /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.gemspec ]; then
+    cp -p /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.gemspec /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.gemspec.backup
+fi
 
 %post
+if [ -f /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.gemspec ]; then
+    rm -f /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.gemspec
+fi
 /usr/lib/redborder/bin/rb_rubywrapper.sh -c
 firewall-cmd --zone=public --add-port=443/tcp --permanent
 #firewall-cmd --zone=public --add-port=7946/tcp --permanent
@@ -73,6 +80,11 @@ firewall-cmd --reload
 # adjust kernel printk settings for the console
 echo "kernel.printk = 1 4 1 7" > /usr/lib/sysctl.d/99-redborder-printk.conf
 /sbin/sysctl --system > /dev/null 2>&1
+
+%postun
+if [ -f /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.gemspec.backup ]; then
+    mv /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.gemspec.backup /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.gemspec
+fi
 
 %posttrans
 update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "java"|head -n 1)
@@ -100,6 +112,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Fri Mar 28 2025 Vicente Mesa, José Navarro <vimesa@redborder.com, jnavarro@redborder.com> - 5.0.0-1
+- Chef-workstation update handling conflict with embedded openssl gemspec
+
 * Mon Jul 29 2024 Miguel Alvarez <malvarez@redborder.com> - 
 - Add redboder tools path
 
@@ -133,7 +148,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 * Tue Nov 28 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.8-1
 - Fix sync network routes and allow no gateways
 
-* Mon Nov 21 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.7-1
+* Tue Nov 21 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.7-1
 - Add support for sync network
 
 * Tue Nov 21 2023 David Vanhoucke, Vicente Mesa <dvanhoucke@redborder.com, vimesa@redborder.com> - 0.9.6-1
