@@ -65,8 +65,8 @@ install -D -m 0644 resources/etc/01default_handlers.json %{buildroot}/etc/serf/0
 %pre
 
 %post
-if [ -f /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.gemspec ]; then
-    rm -f /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.gemspec
+if ls /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.* 1> /dev/null 2>&1; then
+    rm -f /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.*
 fi
 /usr/lib/redborder/bin/rb_rubywrapper.sh -c
 firewall-cmd --zone=public --add-port=443/tcp --permanent
