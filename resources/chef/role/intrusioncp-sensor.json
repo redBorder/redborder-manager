@@ -6,9 +6,9 @@
   },
   "override_attributes": {
     "redborder": {
-      "cloud": false,
+      "cloud": true,
       "sshd": {
-        "addkeys": true
+        "addkeys":false
       }
     }
   },
