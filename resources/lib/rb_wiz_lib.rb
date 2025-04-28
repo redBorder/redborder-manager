@@ -344,6 +344,88 @@ EOF
     end
 end
 
+class MemcachedConf < WizConf
+
+    attr_accessor :conf, :cancel
+
+    def initialize()
+      @cancel = false
+      @conf = {}
+    end
+
+    def doit
+        memcached_config = {
+            "cfg_address"=>"",
+            "cfg_port"=>11211
+        }
+
+      loop do
+        dialog = MRDialog.new
+        dialog.clear = true
+        text = <<EOF
+
+Please configure the Memcached service.
+
+Memcached is a distributed memory object caching system that stores key-value pairs in memory.
+It is used to speed up dynamic database-driven websites by caching data and objects in memory
+to reduce the number of times an external data source must be read.
+EOF
+
+        items = []
+        form_data = Struct.new(:label, :ly, :lx, :item, :iy, :ix, :flen, :ilen, :attr)
+
+        label = "Memcached domain:"
+        data = form_data.new
+        data.label = label
+        data.ly = 1
+        data.lx = 1
+        data.item = memcached_config[label]
+        data.iy = 1
+        data.ix = 20
+        data.flen = 30
+        data.ilen = 0
+        data.attr = 0
+        items.push(data.to_a)
+
+        label = "Memcached port:"
+        data = form_data.new
+        data.label = label
+        data.ly = 2
+        data.lx = 1
+        data.item = memcached_config[label]
+        data.iy = 2
+        data.ix = 20
+        data.flen = 30
+        data.ilen = 0
+        data.attr = 0
+        items.push(data.to_a)
+
+        dialog.title = "Memcached Configuration"
+        memcached_config = dialog.mixedform(text, items, 20, 60, 0)
+
+        if memcached_config.empty?
+            @cancel = true
+            break
+        else
+            break
+        end
+
+        dialog = MRDialog.new
+        dialog.clear = true
+        dialog.title = "Memcached Configuration Error"
+        text = <<EOF
+
+An error has been detected in the Memcached configuration.
+
+Please review the settings and ensure that the host and port are valid.
+EOF
+        dialog.msgbox(text, 12, 60)
+      end
+      @conf['cfg_address'] = memcached_config['Memcached domain:']
+      @conf['cfg_port'] = memcached_config['Memcached port:']
+    end
+end
+
 class HostConf < WizConf
 
     attr_accessor :conf, :cancel
