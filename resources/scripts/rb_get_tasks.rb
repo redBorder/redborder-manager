@@ -18,6 +18,7 @@
 require 'json'
 require "getopt/std"
 require 'net/http'
+require 'zookeeper'
 
 opt = Getopt::Std.getopts("hwprcoudn")
 
@@ -43,7 +44,22 @@ def get_elements(node, url)
   return Net::HTTP.get(URI.parse("http://#{node}/#{url}"))
 end
 
-router="localhost:8888"
+def get_router_from_zk(zookeeper_host = 'localhost:2181')
+  zk = Zookeeper.new(zookeeper_host)
+
+  base_path = '/druid/discoveryPath/druid:router'
+  children = zk.get_children(path: base_path)[:children]
+
+  abort("No router nodes found in ZooKeeper at #{base_path}") if children.nil? || children.empty?
+
+  data = zk.get(path: "#{base_path}/#{children.first}")[:data]
+  info = JSON.parse(data)
+  zk.close
+
+  "#{info['address']}:#{info['port']}"
+end
+
+router = get_router_from_zk('localhost:2181')
 
 if opt["h"]
   usage
