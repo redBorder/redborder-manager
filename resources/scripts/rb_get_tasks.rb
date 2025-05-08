@@ -19,6 +19,7 @@ require 'json'
 require "getopt/std"
 require 'net/http'
 require 'zookeeper'
+require 'chef'
 
 opt = Getopt::Std.getopts("hwprcoudn")
 
@@ -35,6 +36,14 @@ def usage
   printf("  * -n -> show only num\n")
 end
 
+def load_node
+  Chef::Config.from_file('/etc/chef/client.rb')
+  Chef::Config[:node_name] = 'admin'
+  Chef::Config[:client_key] = '/etc/chef/admin.pem'
+  Chef::Config[:http_retry_count] = 5
+
+  Chef::Node.load(`hostname`.split('.')[0])
+end
 
 def get_size(node, url)
   return JSON.parse(Net::HTTP.get(URI.parse("http://#{node}/#{url}"))).size
@@ -44,13 +53,12 @@ def get_elements(node, url)
   return Net::HTTP.get(URI.parse("http://#{node}/#{url}"))
 end
 
-def get_router_from_zk(zookeeper_host = 'localhost:2181')
+def get_router_from_zk(zookeeper_host = 'zookeeper.service:2181')
   zk = Zookeeper.new(zookeeper_host)
-
   base_path = '/druid/discoveryPath/druid:router'
   children = zk.get_children(path: base_path)[:children]
 
-  abort("No router nodes found in ZooKeeper at #{base_path}") if children.nil? || children.empty?
+  return 'localhost:8888' if children.nil? || children.empty?
 
   data = zk.get(path: "#{base_path}/#{children.first}")[:data]
   info = JSON.parse(data)
@@ -59,7 +67,15 @@ def get_router_from_zk(zookeeper_host = 'localhost:2181')
   "#{info['address']}:#{info['port']}"
 end
 
-router = get_router_from_zk('localhost:2181')
+def get_all_zk_nodes
+  node = load_node
+  node['redborder']['managers_per_services']['zookeeper']
+    .map(&:strip)
+    .map { |h| h.split('.').first + ".node." + node['redborder']['cdomain'] + ":" + node['redborder']['zookeeper']['port'].to_s }
+    .join(',')
+end
+
+router = get_router_from_zk(get_all_zk_nodes)
 
 if opt["h"]
   usage
