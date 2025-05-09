@@ -1,0 +1,21 @@
+{
+  "name": "intrusioncp-sensor",
+  "description": "redBorder sensor role for IPS v4 Cloud Proxy sensor",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+  },
+  "override_attributes": {
+    "redborder": {
+      "cloud": true,
+      "sshd": {
+        "addkeys":false
+      }
+    }
+  },
+  "chef_type": "role",
+  "run_list": [
+    "recipe[rb-intrusion]"
+  ],
+  "env_run_lists": {
+  }
+}
