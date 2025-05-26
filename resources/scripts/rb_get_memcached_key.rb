@@ -6,7 +6,7 @@ require 'yaml'
 
 def print_usage
   puts <<~USAGE
-    Usage: ruby check_memcached_key.rb -k KEY [-h HOST] [-p PORT]
+    Usage: ruby rb_get_memcached_key.rb -k KEY [-h HOST] [-p PORT]
 
     Options:
       -k KEY     Key to search for (required)
