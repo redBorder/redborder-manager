@@ -103,9 +103,9 @@ if opt["h"].nil?
           #insert data into database
           res = conn.exec_params("SELECT * from druid_segments where id = '#{data["id"]}' limit 1")
           if res.none?
-            cmd = "insert into druid_segments (id, datasource, created_date, start, \"end\", partitioned, version, used, payload ) VALUES ('#{data["id"]}', '#{data["datasource"]}', '#{data["created_date"]}', '#{data["start"]}', '#{data["end"]}', '#{data["partitioned"]}', '#{data["version"]}', '#{data["used"]}', '\\x#{data["payload"].to_json.unpack("H*")[0]}')"
+            cmd = "insert into druid_segments (id, datasource, created_date, start, \"end\", partitioned, version, used, payload, used_status_last_updated ) VALUES ('#{data["id"]}', '#{data["datasource"]}', '#{data["created_date"]}', '#{data["start"]}', '#{data["end"]}', '#{data["partitioned"]}', '#{data["version"]}', '#{data["used"]}', '\\x#{data["payload"].to_json.unpack("H*")[0]}', '#{data["used_status_last_updated"]}')"
           else
-            cmd = "update druid_segments set datasource='#{data["datasource"]}', created_date='#{data["created_date"]}', start='#{data["start"]}', \"end\"='#{data["end"]}', partitioned='#{data["partitioned"]}', version='#{data["version"]}', used='#{data["used"]}', payload='\\x#{data["payload"].to_json.unpack("H*")[0]}' where id='#{data["id"]}'"
+            cmd = "update druid_segments set datasource='#{data["datasource"]}', created_date='#{data["created_date"]}', start='#{data["start"]}', \"end\"='#{data["end"]}', partitioned='#{data["partitioned"]}', version='#{data["version"]}', used='#{data["used"]}', payload='\\x#{data["payload"].to_json.unpack("H*")[0]}', used_status_last_updated='#{data["used_status_last_updated"]}' where id='#{data["id"]}'"
           end
           res = conn.exec_params(cmd)
         end
