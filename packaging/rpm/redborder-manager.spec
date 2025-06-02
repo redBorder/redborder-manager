@@ -78,6 +78,27 @@ firewall-cmd --reload
 echo "kernel.printk = 1 4 1 7" > /usr/lib/sysctl.d/99-redborder-printk.conf
 /sbin/sysctl --system > /dev/null 2>&1
 
+case "$1" in
+  1)
+    # This is an initial install.
+    :
+  ;;
+  2)
+    # This is an upgrade.
+    CDOMAIN_FILE="/etc/redborder/cdomain"
+
+    if [ -f "$CDOMAIN_FILE" ]; then
+      SUFFIX=$(cat "$CDOMAIN_FILE")
+    else
+      SUFFIX="redborder.cluster"
+    fi
+
+    sed -i "s|^bookshelf\['external_url'\] = \"https://s3\.service\"|bookshelf['external_url'] = \"https://s3.service.${SUFFIX}\"|" /etc/opscode/chef-server.rb
+    systemctl restart opscode-erchef.service
+    chef-server-ctl reconfigure
+  ;;
+esac
+
 %posttrans
 update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "java"|head -n 1)
 
@@ -154,7 +175,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 - Fix random hostname
 
 * Wed Nov 15 2023 Miguel Negron, Miguel Álvarez <manegron@redborder.com, malvarez@redborder.com> - 0.9.4-1
-- Fix chef license auto accept and fix serf DNS 
+- Fix chef license auto accept and fix serf DNS
 
 * Tue Nov 14 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.3-1
 - Fix RSA creation for RHEL9
@@ -174,7 +195,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 - Fix chef running duplicate on boot
 
 * Thu May 04 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.8-1
-- Add ohai recipe to the list 
+- Add ohai recipe to the list
 
 * Mon Apr 24 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.7-1
 - Scripts recovery from old version for monitor sensors
@@ -185,7 +206,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 * Thu Jan 26 2023 Luis Blanco <ljblanco@redborder.com> - 0.8.4-1
 - Check config.json is a directory when the setup of s3
 
-* Wed Jan 25 2023 Luis Blanco <ljblanco@redborder.com> - 
+* Wed Jan 25 2023 Luis Blanco <ljblanco@redborder.com> -
 - Open snmp ports
 
 * Wed May 11 2022 Eduardo Reyes <eareyes@redborder.com> -

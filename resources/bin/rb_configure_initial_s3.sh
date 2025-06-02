@@ -1,7 +1,10 @@
 #!/bin/bash
 
+# Get cdomain
+[ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 $RBETC/cdomain | tr '\n' ' ' | awk '{print $1}')
+
 BUCKET="bucket"
-S3HOST="s3.service"
+S3HOST="s3.service.${cdomain}"
 
 echo "INFO: Executing rb_configure_initial_s3"
 
@@ -47,8 +50,8 @@ MINIO_IP=$(serf members -tag s3=inprogress | tr ':' ' ' | awk '{print $2}')
 
 # Add s3.service name to /etc/hosts
 echo "INFO: Adding $S3HOST name to /etc/hosts"
-grep -q s3.service /etc/hosts
-[ $? -ne 0 -a "x$MINIO_IP" != "x" ] && echo "$MINIO_IP  s3.service" >> /etc/hosts
+grep -q s3.service.${cdomain} /etc/hosts
+[ $? -ne 0 -a "x$MINIO_IP" != "x" ] && echo "$MINIO_IP  s3.service.${cdomain}" >> /etc/hosts
 
 echo "INFO: Creating bucket ($BUCKET)"
 s3cmd -c /root/.s3cfg_initial mb s3://$BUCKET
