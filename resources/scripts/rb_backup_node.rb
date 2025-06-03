@@ -111,6 +111,21 @@ def check_oper (cmd, mode, type, message)
   end
 end
 
+def empty_vitual_ips
+  services = %w[ erchef freeradius kafka n2klocd n2kmobiled nprobe rb-reputation nginx riak trap2kafka cep drill erchef kafka n2kmetricd oozie postgresql ]
+  %w[external internal].map do |type| 
+    services.map do |service| 
+      "ipvirtual-#{type}-#{service}" 
+    end 
+  end.flatten.each do |x|
+    db_temp = Chef::DataBagItem.load('rBglobal', x ) rescue db_temp = nil
+    unless db_temp.nil? or db_temp["ip"].nil? or db_temp["ip"]==''
+      db_temp["ip"] = ""
+      db_temp.save
+    end
+  end
+end
+
 # Global var
 opt                            = Getopt::Std.getopts("f:bhvprms3k:nc:")
 time                           = Time.new
@@ -430,13 +445,7 @@ elsif opt['r']
       end
 
       # empty virtual ips on new environment
-      ["ipvirtual-external-erchef", "ipvirtual-external-freeradius", "ipvirtual-external-kafka", "ipvirtual-external-n2klocd", "ipvirtual-external-n2kmobiled", "ipvirtual-external-nprobe", "ipvirtual-external-rb-reputation", "ipvirtual-external-rb-webui", "ipvirtual-external-riak", "ipvirtual-external-trap2kafka", "ipvirtual-internal-cep", "ipvirtual-internal-drill", "ipvirtual-internal-erchef", "ipvirtual-internal-kafka", "ipvirtual-internal-n2kmetricd", "ipvirtual-internal-oozie", "ipvirtual-internal-postgresql"].each do |x|
-        db_temp = Chef::DataBagItem.load('rBglobal', x ) rescue db_temp = nil
-        if !db_temp.nil? and !db_temp["ip"].nil? and db_temp["ip"]!=""
-          db_temp["ip"] = ""
-          db_temp.save
-        end
-      end
+      empty_vitual_ips
     end
     `echo "127.0.0.1 erchef.#{domain_rbglobal} postgresql.#{domain_rbglobal}" >> /etc/extrahosts` if opt['n']
 
