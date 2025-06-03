@@ -78,27 +78,6 @@ firewall-cmd --reload
 echo "kernel.printk = 1 4 1 7" > /usr/lib/sysctl.d/99-redborder-printk.conf
 /sbin/sysctl --system > /dev/null 2>&1
 
-case "$1" in
-  1)
-    # This is an initial install.
-    :
-  ;;
-  2)
-    # This is an upgrade.
-    CDOMAIN_FILE="/etc/redborder/cdomain"
-
-    if [ -f "$CDOMAIN_FILE" ]; then
-      SUFFIX=$(cat "$CDOMAIN_FILE")
-    else
-      SUFFIX="redborder.cluster"
-    fi
-
-    sed -i "s|^bookshelf\['external_url'\] = \"https://s3\.service\"|bookshelf['external_url'] = \"https://s3.service.${SUFFIX}\"|" /etc/opscode/chef-server.rb
-    systemctl restart opscode-erchef.service
-    chef-server-ctl reconfigure
-  ;;
-esac
-
 %posttrans
 update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "java"|head -n 1)
 
