@@ -50,8 +50,8 @@ MINIO_IP=$(serf members -tag s3=inprogress | tr ':' ' ' | awk '{print $2}')
 
 # Add s3.service name to /etc/hosts
 echo "INFO: Adding $S3HOST name to /etc/hosts"
-grep -q s3.service.${cdomain} /etc/hosts
-[ $? -ne 0 -a "x$MINIO_IP" != "x" ] && echo "$MINIO_IP  s3.service.${cdomain}" >> /etc/hosts
+grep -qE "s3\.service(\.${cdomain})?" /etc/hosts
+[ $? -ne 0 -a "x$MINIO_IP" != "x" ] && echo "$MINIO_IP  s3.service s3.service.${cdomain}" >> /etc/hosts
 
 echo "INFO: Creating bucket ($BUCKET)"
 s3cmd -c /root/.s3cfg_initial mb s3://$BUCKET
