@@ -13,12 +13,29 @@ require 'ipaddr'
 require 'netaddr'
 require 'system/getifaddrs'
 require 'json'
+require 'open3'
 require File.join(ENV['RBLIB'].nil? ? '/usr/lib/redborder/lib' : ENV['RBLIB'],'rb_config_utils.rb')
 
 RBETC = ENV['RBETC'].nil? ? '/etc/redborder' : ENV['RBETC']
 INITCONF="#{RBETC}/rb_init_conf.yml"
 
 init_conf = YAML.load_file(INITCONF)
+
+def iproute2_version
+  stdout, _stderr, _status = Open3.capture3('rpm -q iproute')
+  version_match = stdout.match(/iproute-(\d+\.\d+\.\d+)/)
+  if version_match
+    version_match[1]
+  else
+    nil
+  end
+end
+
+def use_usr_share?(version)
+  return false if version.nil?
+  major, minor, patch = version.split('.').map(&:to_i)
+  (major > 6) || (major == 6 && (minor > 7 || (minor == 7 && patch >= 0)))
+end
 
 management_interface = init_conf['network']['management_interface'] if init_conf['network'] && init_conf['network']['management_interface']
 hostname = init_conf['hostname']
@@ -154,9 +171,15 @@ unless network.nil? # network will not be defined in cloud deployments
         cidr = Config_utils.to_cidr_mask(netmask)
         iprange = Config_utils.serialize_ipaddr(ip + cidr)
 
-        open("/etc/iproute2/rt_tables", 'a') { |f|
+        version = iproute2_version
+        config_dir = use_usr_share?(version) ? '/usr/share/iproute2' : '/etc/iproute2'
+
+        rt_tables_path = File.join(config_dir, 'rt_tables')
+
+        open(rt_tables_path, 'a') do |f|
           f.puts "#{metric} #{iface['device']}tbl"
-        }
+        end
+
         open("/etc/sysconfig/network-scripts/route-#{dev}", 'w') { |f|
           if dev == management_interface
             f.puts "default via #{gateway} dev #{iface['device']} table #{iface['device']}tbl" unless gateway.nil? or gateway.empty?
