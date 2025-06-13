@@ -303,35 +303,7 @@ _RBEOF_
 }
 _RBEOF_
 
-  ## Generating external virtual ip
-  mkdir -p /var/chef/data/data_bag/rBglobal
-  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-nginx.json <<-_RBEOF_
-{
-  "id": "ipvirtual-external-nginx"
-}
-_RBEOF_
-
-  mkdir -p /var/chef/data/data_bag/rBglobal
-  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-f2k.json <<-_RBEOF_
-{
-  "id": "ipvirtual-external-f2k"
-}
-_RBEOF_
-
-  mkdir -p /var/chef/data/data_bag/rBglobal
-  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-sfacctd.json <<-_RBEOF_
-{
-  "id": "ipvirtual-external-sfacctd"
-}
-_RBEOF_
-
-  mkdir -p /var/chef/data/data_bag/rBglobal
-  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-kafka.json <<-_RBEOF_
-{
-  "id": "ipvirtual-external-kafka"
-}
-_RBEOF_
-
+  rb_init_vip.sh
 LICMODE=$(head -n 1 /etc/licmode 2>/dev/null)
   if [ "x$LICMODE" != "xglobal" -a "x$LICMODE" != "xorganization" ]; then
     LICMODE="global"
