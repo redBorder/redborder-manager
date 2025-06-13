@@ -14,7 +14,7 @@ Source0: %{name}-%{version}.tar.gz
 Requires: bash chrony dialog postgresql s3cmd dmidecode rsync nc dhclient
 Requires: telnet redborder-serf redborder-common redborder-chef-client
 Requires: redborder-cookbooks redborder-rubyrvm redborder-cli
-Requires: synthetic-producer darklist-updated tcpdump
+Requires: synthetic-producer tcpdump
 Requires: chef-workstation
 Requires: alternatives java-1.8.0-openjdk java-1.8.0-openjdk-devel
 Requires: network-scripts network-scripts-teamd
