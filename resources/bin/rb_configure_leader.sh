@@ -471,7 +471,7 @@ function set_external_service_names {
 
   PSQL_IP=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
   grep -q master.postgresql.service /etc/hosts
-  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  master.postgresql.service master.postgresql.service.${cdomain}" >> /etc/hosts
+  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  master.postgresql.service" >> /etc/hosts
 }
 
 ########
