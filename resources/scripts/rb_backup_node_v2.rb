@@ -89,8 +89,8 @@ def export_segments(options, verbose)
 
   if File.exist?(segment_file_path)
     puts "[  OK  ] Segments exported successfully to #{segment_file_path}" if verbose
-    create_tar_gz("#{segment_file_path}", [segment_file_path], true)
-    return "#{segment_file_path}"
+    create_tar_gz("#{segment_file_path}.gz", [segment_file_path], true)
+    return "#{segment_file_path}.gz"
   else
     puts "[  KO  ] Segment export file #{segment_file_path} not found. Please check the export process."
     exit 1
