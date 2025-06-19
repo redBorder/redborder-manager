@@ -21,7 +21,6 @@ archive: SOURCES
 	git archive --prefix=$(PACKAGE_NAME)-$(VERSION)/ \
 		-o packaging/rpm/SOURCES/$(PACKAGE_NAME)-$(VERSION).tar.gz $(LATEST)
 
-
 build_prepare: archive
 	mkdir -p $(RESULT_DIR)
 	rm -f $(RESULT_DIR)/$(PACKAGE_NAME)*.rpm

@@ -14,34 +14,44 @@
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
 
-require 'rubygems'
-require 'chef'
+require 'zk'
+require 'yaml'
 require 'json'
+require "getopt/std"
 
-def usage
-  printf "Usage: rb_set_darklist_key.rb <key>\n"
+CONTROLLERPATH="/controller"
+opt = Getopt::Std.getopts("ht:r")
+
+def logit(text)
+  printf("%s\n", text)
 end
 
-Chef::Config.from_file("/etc/chef/client.rb")
-Chef::Config[:node_name]  = "admin"
-Chef::Config[:client_key] = "/etc/chef/admin.pem"
-Chef::Config[:http_retry_count] = 5
-
-hostname = `hostname -s`.strip
-
-if ARGV.length == 1
-  role = Chef::Role.load("manager")
-  role.override_attributes["redborder"] = {} if role.override_attributes["redborder"].nil?
-  role.override_attributes["redborder"]["manager"] = {} if role.override_attributes["redborder"]["manager"].nil?
-  role.override_attributes["redborder"]["manager"]["darklist"] = {} if role.override_attributes["redborder"]["manager"]["darklist"].nil?
-  role.override_attributes["redborder"]["manager"]["darklist"]["apikey"] = ARGV[0]
-
-  if role.save
-    printf "role[#{hostname}] saved successfully\n"
-  else
-    printf "ERROR: role[#{hostname}] cannot be saved!\n"
+def print_router(zk, zk_id)
+  zktdata,stat = zk.get("/druid/discoveryPath/druid:router/#{zk_id}")
+  zktdata = YAML.load(zktdata)
+  if zktdata["address"] and zktdata["port"]
+    logit "#{zktdata["address"]}:#{zktdata["port"]}"
   end
-else
-  usage
 end
 
+if opt["h"]
+  logit "rb_get_druid_routers.rb [-h]"
+  logit "    -r       -> pick one random"
+  logit "    -h       -> print this help"
+  exit 0
+end
+
+random=(opt["r"] ? true : false)
+
+zk_host="zookeeper.service:2181"
+
+zk = ZK.new(zk_host)
+routers = zk.children("/druid/discoveryPath/druid:router").map{|k| k.to_s}.sort.uniq
+
+if random
+  print_router zk, routers.shuffle.first
+else
+    routers.each do |b|
+        print_router zk, b
+  end
+end

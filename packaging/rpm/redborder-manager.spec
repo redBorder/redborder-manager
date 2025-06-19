@@ -10,10 +10,11 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
+
 Requires: bash chrony dialog postgresql s3cmd dmidecode rsync nc dhclient
 Requires: telnet redborder-serf redborder-common redborder-chef-client
 Requires: redborder-cookbooks redborder-rubyrvm redborder-cli
-Requires: synthetic-producer darklist-updated tcpdump
+Requires: synthetic-producer tcpdump
 Requires: chef-workstation
 Requires: alternatives java-1.8.0-openjdk java-1.8.0-openjdk-devel
 Requires: network-scripts network-scripts-teamd
@@ -64,6 +65,9 @@ install -D -m 0644 resources/etc/01default_handlers.json %{buildroot}/etc/serf/0
 %pre
 
 %post
+if ls /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.* 1> /dev/null 2>&1; then
+    rm -f /opt/chef-workstation/embedded/lib/ruby/gems/3.1.0/specifications/default/openssl-3.0.1.*
+fi
 /usr/lib/redborder/bin/rb_rubywrapper.sh -c
 firewall-cmd --zone=public --add-port=443/tcp --permanent
 #firewall-cmd --zone=public --add-port=7946/tcp --permanent
@@ -100,7 +104,13 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
-* Mon Jul 29 2024 Miguel Alvarez <malvarez@redborder.com> - 
+* Tue Apr 22 2025 Rafael Gómez <rgomez@redborder.com> - 5.1.1-1
+- Remove openssl gemspec file handling from chef-workstation package
+
+* Fri Mar 28 2025 Vicente Mesa, José Navarro <vimesa@redborder.com, jnavarro@redborder.com> - 5.1.0-1
+- Chef-workstation update handling conflict with embedded openssl gemspec
+
+* Mon Jul 29 2024 Miguel Alvarez <malvarez@redborder.com> - 2.4.0-1
 - Add redboder tools path
 
 * Fri Jan 19 2024 Miguel Negrón <manegron@redborder.com> - 1.0.7-1
@@ -133,7 +143,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 * Tue Nov 28 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.8-1
 - Fix sync network routes and allow no gateways
 
-* Mon Nov 21 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.7-1
+* Tue Nov 21 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.7-1
 - Add support for sync network
 
 * Tue Nov 21 2023 David Vanhoucke, Vicente Mesa <dvanhoucke@redborder.com, vimesa@redborder.com> - 0.9.6-1
@@ -144,7 +154,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 - Fix random hostname
 
 * Wed Nov 15 2023 Miguel Negron, Miguel Álvarez <manegron@redborder.com, malvarez@redborder.com> - 0.9.4-1
-- Fix chef license auto accept and fix serf DNS 
+- Fix chef license auto accept and fix serf DNS
 
 * Tue Nov 14 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.3-1
 - Fix RSA creation for RHEL9
@@ -164,7 +174,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 - Fix chef running duplicate on boot
 
 * Thu May 04 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.8-1
-- Add ohai recipe to the list 
+- Add ohai recipe to the list
 
 * Mon Apr 24 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.7-1
 - Scripts recovery from old version for monitor sensors
@@ -175,7 +185,7 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 * Thu Jan 26 2023 Luis Blanco <ljblanco@redborder.com> - 0.8.4-1
 - Check config.json is a directory when the setup of s3
 
-* Wed Jan 25 2023 Luis Blanco <ljblanco@redborder.com> - 
+* Wed Jan 25 2023 Luis Blanco <ljblanco@redborder.com> -
 - Open snmp ports
 
 * Wed May 11 2022 Eduardo Reyes <eareyes@redborder.com> -
