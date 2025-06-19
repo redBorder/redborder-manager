@@ -247,7 +247,7 @@ if [ $import -eq 1 ]; then
                 if [ $debug -eq 1 ]; then
                   echo -n "  sync $n to s3 : [${progress}%]"
                 fi
-                nice -n 19 ionice -c2 -n7 mcli put $tmpdir/segments/$n ${hostname}/${s3currentbucket}/${s3basekey}/${n} &>/dev/null
+                nice -n 19 ionice -c2 -n7 /usr/local/bin/mcli put $tmpdir/segments/$n ${hostname}/${s3currentbucket}/${s3basekey}/${n} &>/dev/null
                 RET4=$?
                 if [ $debug -eq 1 ]; then
                   print_result $RET4
@@ -352,7 +352,7 @@ else # we are going to export the segments to a tar
       [[ -n "$startdate" ]] && datefilter+=("--newer-than" "${startdate}")
       [[ -n "$stopdate" ]] && datefilter+=("--older-than" "${stopdate}")
       
-      eval "miniofiles=($(nice -n 19 ionice -c2 -n7 mcli find "${hostname}/${s3currentbucket}/${s3basekey}/" "${datefilter[@]}" --regex "$filter" | sed "s|${hostname}/${s3currentbucket}/${s3basekey}/||"))"
+      eval "miniofiles=($(nice -n 19 ionice -c2 -n7 /usr/local/bin/mcli find "${hostname}/${s3currentbucket}/${s3basekey}/" "${datefilter[@]}" --regex "$filter" | sed "s|${hostname}/${s3currentbucket}/${s3basekey}/||"))"
       print_result $?
 
       counter=0
@@ -374,7 +374,7 @@ else # we are going to export the segments to a tar
         else 
           printf "\r- copy segment data : %.0f%%" "$progress"
         fi 
-        nice -n 19 ionice -c2 -n7 mcli get "${hostname}/${s3currentbucket}/${s3basekey}/$n" "$n" &>/dev/null
+        nice -n 19 ionice -c2 -n7 /usr/local/bin/mcli get "${hostname}/${s3currentbucket}/${s3basekey}/$n" "$n" &>/dev/null
         RET=$?
         if [ $debug -eq 1 ]; then
           print_result "$RET"
