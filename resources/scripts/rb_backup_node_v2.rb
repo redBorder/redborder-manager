@@ -76,7 +76,7 @@ def export_postgresql_all(output, verbose)
 end
 
 def export_segments(options, verbose)
-  segment_file_path = "/tmp/segments_export_#{Time.now.strftime('%Y%m%d-%H%M%S')}"
+  segment_file_path = "/tmp/segments_export_#{Time.now.strftime('%Y%m%d-%H%M%S')}.tar"
   puts segment_file_path
   command = "/usr/lib/redborder/bin/rb_export_import_segments.sh"
   command << " -x #{options[:start_date]}" if options[:start_date]
@@ -89,8 +89,8 @@ def export_segments(options, verbose)
 
   if File.exist?(segment_file_path)
     puts "[  OK  ] Segments exported successfully to #{segment_file_path}" if verbose
-    create_tar_gz("#{segment_file_path}.tar", [segment_file_path], true)
-    return "#{segment_file_path}.tar"
+    create_tar_gz("#{segment_file_path}", [segment_file_path], true)
+    return "#{segment_file_path}"
   else
     puts "[  KO  ] Segment export file #{segment_file_path} not found. Please check the export process."
     exit 1
