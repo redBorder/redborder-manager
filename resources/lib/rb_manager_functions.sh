@@ -8,7 +8,7 @@ RES_COL=60
 MOVE_TO_COL="echo -en \\033[${RES_COL}G"
 
 CERT="/etc/chef/client.pem"
-RSA="/var/www/rb-rails/config/rsa"
+RSA="/root/.ssh/rsa"
 
 function valid_ip() {
     local ip=$1

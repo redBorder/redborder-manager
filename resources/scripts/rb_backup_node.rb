@@ -115,7 +115,7 @@ end
 opt                            = Getopt::Std.getopts("f:bhvprms3k:nc:")
 time                           = Time.new
 date                           = time.strftime("%Y%m%d-%H%M%S")
-rsa_key                        = "/var/www/rb-rails/config/rsa"
+rsa_key                        = "/root/.ssh/rsa"
 hostname                       = `hostname -s 2>/dev/null`.strip()
 encrypted_data_bag_secret_path = "/etc/chef/encrypted_data_bag_secret"
 nring                          = 60    # Max Number of backup files to store on S3
