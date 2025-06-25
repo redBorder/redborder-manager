@@ -42,13 +42,6 @@ nodes.each do |node|
     has_errors = true if return_value != 0
     print_command_output(node + " " +  output + " keys", return_value, colorless, quiet)
 
-
-    subtitle("Darklist keys", colorless, quiet)
-    output = execute_command_on_node(node,"#{rbcli} memcached keys darklist | grep -c darklist").gsub("\n","")
-    return_value = $?.exitstatus
-    has_errors = true if return_value != 0
-    print_command_output(node + " " +  output + " darklist keys", return_value, colorless, quiet)
-
   else
     has_errors = true
   end

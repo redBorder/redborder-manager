@@ -55,6 +55,7 @@ function usage(){
   echo "    -r: import backup file (-f is mandatory)"
   echo "    -e: enable imported segments"
   echo "    -f: import from a specified file."
+  echo "    -t: export to specific tarfile"
   echo "    -g: regex grep filter to export only those files that match the filter"
   echo "    -x: start date of the segments to import/export"
   echo "    -y: end date of the segments to import/export"
@@ -92,13 +93,14 @@ tmpdir="/tmp/segment.tmp-${currenttime}.$$"
 
 renice -n 19 $$ &>/dev/null
 
-while getopts "href:nbg:vx:y:" name
+while getopts "href:t:nbg:vx:y:" name
 do
   case $name in
     h) usage;;
     r) import=1;;
     e) enableallsegments=1;;
     f) filename="$OPTARG";;
+    t) exportfile="$OPTARG";;
     g) filter="$OPTARG";;
     v) debug=1;;
     n) ask=0;;
@@ -111,6 +113,19 @@ done
 if [ ! -f /etc/druid/_common/common.runtime.properties ];then
   echo "/etc/druid/_common/common.runtime.properties file is missing. This file is needed to connect to the database of druid, cannot continue..."
   exit 1
+fi
+
+if [ "x$exportfile" != "x" ]; then
+  exportpath=$(dirname $exportfile)
+  if [ ! -d $exportpath ]; then
+    echo "path where we need to store the tar file does not exist!"
+    exit 1
+  fi
+
+  if [[ "$exportfile" != *.tar ]]; then
+    echo "export file should end with .tar"
+    exit 1
+  fi
 fi
 
 # get druid connection data
@@ -232,7 +247,7 @@ if [ $import -eq 1 ]; then
                 if [ $debug -eq 1 ]; then
                   echo -n "  sync $n to s3 : [${progress}%]"
                 fi
-                nice -n 19 ionice -c2 -n7 mcli put $tmpdir/segments/$n ${hostname}/${s3currentbucket}/${s3basekey}/${n} &>/dev/null
+                nice -n 19 ionice -c2 -n7 /usr/local/bin/mcli put $tmpdir/segments/$n ${hostname}/${s3currentbucket}/${s3basekey}/${n} &>/dev/null
                 RET4=$?
                 if [ $debug -eq 1 ]; then
                   print_result $RET4
@@ -288,8 +303,12 @@ if [ $import -eq 1 ]; then
     fi
   fi
 else # we are going to export the segments to a tar
-  filename="/var/backup/segments/segment-${currenttime}.tar"
-  mkdir -p /var/backup/segments/
+  if [ -z $exportfile ]; then
+    filename="/var/backup/segments/segment-${currenttime}.tar"
+    mkdir -p /var/backup/segments/
+  else
+    filename=${exportfile}
+  fi
 
   confirm=1
   if [ -f $filename ]; then
@@ -333,7 +352,7 @@ else # we are going to export the segments to a tar
       [[ -n "$startdate" ]] && datefilter+=("--newer-than" "${startdate}")
       [[ -n "$stopdate" ]] && datefilter+=("--older-than" "${stopdate}")
       
-      eval "miniofiles=($(nice -n 19 ionice -c2 -n7 mcli find "${hostname}/${s3currentbucket}/${s3basekey}/" "${datefilter[@]}" --regex "$filter" | sed "s|${hostname}/${s3currentbucket}/${s3basekey}/||"))"
+      eval "miniofiles=($(nice -n 19 ionice -c2 -n7 /usr/local/bin/mcli find "${hostname}/${s3currentbucket}/${s3basekey}/" "${datefilter[@]}" --regex "$filter" | sed "s|${hostname}/${s3currentbucket}/${s3basekey}/||"))"
       print_result $?
 
       counter=0
@@ -355,7 +374,7 @@ else # we are going to export the segments to a tar
         else 
           printf "\r- copy segment data : %.0f%%" "$progress"
         fi 
-        nice -n 19 ionice -c2 -n7 mcli get "${hostname}/${s3currentbucket}/${s3basekey}/$n" "$n" &>/dev/null
+        nice -n 19 ionice -c2 -n7 /usr/local/bin/mcli get "${hostname}/${s3currentbucket}/${s3basekey}/$n" "$n" &>/dev/null
         RET=$?
         if [ $debug -eq 1 ]; then
           print_result "$RET"
