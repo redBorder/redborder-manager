@@ -27,7 +27,7 @@ end
 cdomain = (ENV["CDOMAIN"].nil?) ? "redborder.cluster" : ENV["CDOMAIN"].to_s
 
 ret_json = { "id" => "nginx" }
-[ "webui" ].each do |service|
+%w[webui nginx].each do |service|
 	cert_hash = create_cert("redborder.#{cdomain}")
 	ret_json["#{service}_crt"] = Base64.urlsafe_encode64(cert_hash[:crt].to_pem)
 	ret_json["#{service}_key"] = Base64.urlsafe_encode64(cert_hash[:key].to_pem)
