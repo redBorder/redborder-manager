@@ -23,13 +23,13 @@ Arguments:
                 Default: mac_to_asset_type.yaml
 
 Example:
-  $0 /etc/logstash/assets/mac_to_asset_type.yaml
+  $0 /etc/logstash/mac_to_asset_type.yaml
 EOF
   exit 0
 fi
 
 # Output file path parameter (optional)
-OUTPUT_FILE=${1:-mac_to_asset_type_id.yaml}
+OUTPUT_FILE=${1:-/etc/logstash/mac_to_asset_type_id.yaml}
 
 # Run query and process output
 echo "Generating file $OUTPUT_FILE..."
