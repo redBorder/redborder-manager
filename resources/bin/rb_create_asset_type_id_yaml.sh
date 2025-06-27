@@ -18,12 +18,12 @@ Arguments:
                 Default: asset_type.yaml
 
 Example:
-  $0 /etc/logstash/asset_type_id.yaml
+  $0 /etc/assets/mac_to_asset_type_id.yaml
 EOF
   exit 0
 fi
 
-OUTPUT_FILE=${1:-/etc/logastah/asset_type_id.yaml}
+OUTPUT_FILE=${1:-/etc/assets/mac_to_asset_type_id.yaml}
 
 echo "Generating file $OUTPUT_FILE..."
 
