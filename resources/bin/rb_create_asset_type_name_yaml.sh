@@ -34,7 +34,7 @@ OUTPUT_FILE=${1:-/etc/assets/asset_type_id_to_asset_type_name.yaml}
 # Run query and process output
 echo "Generating file $OUTPUT_FILE..."
 
-QUERY_RESULT=$(echo "SELECT r.value AS mac, t.id AS type_id FROM redborder_objects r JOIN inventory_device_type_objects t ON r.inventory_device_id = t.id WHERE r.type = 'MacObject'" | rb_psql redborder 2>&1)
+QUERY_RESULT=$(echo "SELECT r.value AS mac, i.inventory_device_type_object_id AS type_id FROM redborder_objects r JOIN inventory_devices i ON r.inventory_device_id = i.id WHERE r.type = 'MacObject'" | rb_psql redborder 2>&1)
 if [ $? -ne 0 ]; then
   echo "Error executing SQL query:"
   echo "$QUERY_RESULT"
