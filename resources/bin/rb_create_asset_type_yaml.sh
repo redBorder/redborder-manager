@@ -23,18 +23,18 @@ Arguments:
                 Default: mac_to_asset_type.yaml
 
 Example:
-  $0 /etc/assets/asset_type_id_to_asset_type_name.yaml
+  $0 /etc/assets/mac_to_asset_type.yaml
 EOF
   exit 0
 fi
 
 # Output file path parameter (optional)
-OUTPUT_FILE=${1:-/etc/assets/asset_type_id_to_asset_type_name.yaml}
+OUTPUT_FILE=${1:-/etc/assets/mac_to_asset_type.yaml}
 
 # Run query and process output
 echo "Generating file $OUTPUT_FILE..."
 
-QUERY_RESULT=$(echo "SELECT r.value AS mac, i.inventory_device_type_object_id AS type_id FROM redborder_objects r JOIN inventory_devices i ON r.inventory_device_id = i.id WHERE r.type = 'MacObject'" | rb_psql redborder 2>&1)
+QUERY_RESULT=$(echo "SELECT r.value AS mac, ido.name AS type_name FROM redborder_objects r JOIN inventory_devices i ON r.inventory_device_id = i.id JOIN inventory_device_type_objects ido ON i.inventory_device_type_object_id = ido.id WHERE r.type = 'MacObject'" | rb_psql redborder 2>&1)
 if [ $? -ne 0 ]; then
   echo "Error executing SQL query:"
   echo "$QUERY_RESULT"
