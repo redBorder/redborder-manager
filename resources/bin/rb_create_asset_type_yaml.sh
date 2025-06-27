@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # ================================
-# Script to generate a YAML file mapping MAC → type_id from PostgreSQL
+# Script to generate a YAML file mapping MAC → asset type name from PostgreSQL
 # Usage:
-#   ./rb_create_asset_type_name_yaml.sh [output_file]
-#   ./rb_create_asset_type_name_yaml.sh -h
+#   ./rb_create_asset_type_yaml.sh [output_file]
+#   ./rb_create_asset_type_yaml.sh -h
 # ================================
 
 # Show help
@@ -41,6 +41,7 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# Good luck understanding this awk command
 echo "$QUERY_RESULT" | awk -v outfile="$OUTPUT_FILE" '
 BEGIN { print "---" > outfile }
 /^[[:space:]]*([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}/ {
