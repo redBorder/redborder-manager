@@ -463,9 +463,11 @@ class DNSConf < WizConf
 
         dns = {}
         count=1
-        @conf.each do |x|
-            dns["DNS#{count}:"] = x
-            count+=1
+        # Get current DNS servers from /etc/resolv.conf
+        current_dns = current_dns_servers.take(3)
+        current_dns.each do |server|
+            dns["DNS#{count}:"] = server
+            count += 1
         end
 
         loop do
@@ -574,6 +576,19 @@ EOF
 
     end
 
+    def current_dns_servers
+      dns = []
+      begin
+        File.readlines("/etc/resolv.conf").each do |line|
+          if line =~ /^nameserver\s+(\d+\.\d+\.\d+\.\d+)$/
+            dns << $1
+        end
+      end
+      rescue => e
+        puts "Error reading /etc/resolv.conf: #{e.message}"
+      end
+      dns
+    end
 end
 
 class SerfSyncDevConf < WizConf
