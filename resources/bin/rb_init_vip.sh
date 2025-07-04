@@ -5,7 +5,6 @@ mkdir -p /var/chef/data/data_bag/rBglobal
 
 # List of IDs to generate
 ids=(
-  ipvirtual-external-webui
   ipvirtual-external-nginx
   ipvirtual-external-f2k
   ipvirtual-external-sfacctd
