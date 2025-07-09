@@ -2,19 +2,19 @@ en:
   wizard:
     welcome:
       title: "Welcome to Redborder Configuration Wizard\n\n"
-    _ message: |
-      This wizard will guide you through the essential steps to configure your
-      device as a Redborder node within a Redborder cluster.
+      message: |
+        This wizard will guide you through the essential steps to configure your
+        device as a Redborder node within a Redborder cluster.
 
-      The configuration process includes the following steps:
+        The configuration process includes the following steps:
 
-          - Network settings: Set up your network configuration
-          - Serf configuration: Establish Serf communication settings
-          - System settings: Configure the hostname, domain, and DNS
-          - Node mode selection: Choose the node mode, which determines
-          the set of services the node will run and its weight within the cluster
+            - Network settings: Set up your network configuration
+            - Serf configuration: Establish Serf communication settings
+            - System settings: Configure the hostname, domain, and DNS
+            - Node mode selection: Choose the node mode, which determines
+            the set of services the node will run and its weight within the cluster
 
-      Would you like to proceed with the configuration?
+        Would you like to proceed with the configuration?
 
     network: 
       title: "Network Configuration\n\n"
