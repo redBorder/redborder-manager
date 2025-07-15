@@ -258,6 +258,15 @@ _RBEOF_
 }
 _RBEOF_
 
+  #redis password token
+  REDIS_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  cat > /var/chef/data/data_bag/passwords/redis.json <<-_RBEOF_
+{
+  "id": "redis",
+  "secret": "$REDIS_SECRET"
+}
+_RBEOF_
+
   #kafka topics #TODO
   cat > /var/chef/data/data_bag/backend/kafka_topics.json <<-_RBEOF_
 {
