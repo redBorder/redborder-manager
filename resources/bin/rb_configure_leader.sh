@@ -263,7 +263,7 @@ _RBEOF_
   cat > /var/chef/data/data_bag/passwords/redis.json <<-_RBEOF_
 {
   "id": "redis",
-  "secret": "$REDIS_SECRET"
+  "pass": "$REDIS_SECRET"
 }
 _RBEOF_
 
