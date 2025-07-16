@@ -21,6 +21,8 @@ Requires: network-scripts network-scripts-teamd
 Requires: redborder-cgroups rb-logstatter redborder-pythonlibs
 Requires: mcli
 
+Obsoletes: redborder-postgresql
+
 %description
 %{summary}
 
