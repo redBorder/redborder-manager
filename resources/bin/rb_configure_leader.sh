@@ -341,6 +341,14 @@ _RBEOF_
 }
 _RBEOF_
 
+  mkdir -p /var/chef/data/data_bag/rBglobal
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-internal-postgresql.json <<-_RBEOF_
+{
+  "id": "ipvirtual-internal-postgresql"
+}
+_RBEOF_
+
+
 LICMODE=$(head -n 1 /etc/licmode 2>/dev/null)
   if [ "x$LICMODE" != "xglobal" -a "x$LICMODE" != "xorganization" ]; then
     LICMODE="global"
@@ -472,7 +480,7 @@ function set_external_service_names {
 
   PSQL_IP=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
   grep -q master.postgresql.service /etc/hosts
-  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  master.postgresql.service master.postgresql.service.${cdomain}" >> /etc/hosts
+  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  master.postgresql.service" >> /etc/hosts
 }
 
 ########
