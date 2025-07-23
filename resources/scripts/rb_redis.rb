@@ -23,7 +23,7 @@ end.parse!
 
 Chef::Config.from_file('/etc/chef/client.rb')
 Chef::Config[:node_name]  = 'admin'
-Chef::Config[:client_key] = '/etc/opscode/admin.pem'
+Chef::Config[:client_key] = '/etc/chef/admin.pem'
 Chef::Config[:http_retry_count] = 5
 
 hostname = `hostname -s`.strip
