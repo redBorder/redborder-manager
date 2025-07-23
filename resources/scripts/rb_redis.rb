@@ -15,6 +15,10 @@ OptionParser.new do |opts|
     options[:list_incident_keys] = true
   end
 
+  opts.on('--replication-status', 'Check replication status') do
+    options[:replication_status] = true
+  end
+
   opts.on('-h', '--help', 'Show this help message') do
     puts opts
     exit
@@ -45,12 +49,15 @@ if options[:terminal]
   exec("redis-cli -h #{redis_master} -p #{redis_port} -a '#{redis_password}'")
 elsif options[:list_incident_keys]
   system("redis-cli -h #{redis_master} -p #{redis_port} -a '#{redis_password}' --scan")
+elsif options[:replication_status]
+  system("redis-cli -a '#{redis_password}' -p #{redis_port} INFO replication")
 else
   puts OptionParser.new { |opts|
     opts.banner = 'Usage: rb_redis [options]'
 
     opts.on('--terminal', 'Open redis-cli (terminal)')
     opts.on('--list-incident-keys', 'List all keys in database 0')
+    opts.on('--replication-status', 'Check replication status')
     opts.on('-h', '--help', 'Show this help message')
   }
 end
