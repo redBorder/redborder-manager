@@ -7,14 +7,14 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 # redBorder is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 # You should have received a copy of the GNU Affero General Public License
 # along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 #######################################################################
 
 require 'zlib'
+require 'thread'
 
 DRUID_INDEXER_LOG_PATH = "/var/log/druid/indexer/"
 DRUID_INDEXER          = "druid-indexer"
@@ -79,12 +79,6 @@ def main
   end
 
   task_id = ARGV[0]
-
-  unless task_id =~ /\Aindex_kafka_rb_[\w]+_[\w]+\z/
-    warn "Invalid task ID format."
-    exit 1
-  end
-
   target = ARGV[1] || 'all'
   indexer_nodes = (target != 'all') ? [target] : get_indexers
 
@@ -93,18 +87,33 @@ def main
     exit 1
   end
 
+  all_logs = []
+
+  threads = []
   begin
     indexer_nodes.each do |indexer|
-      logs = get_logs(indexer, task_id)
-      puts "#{"=" * 90}"
-      puts "Logs for task #{task_id} on indexer #{indexer}"
-      puts "#{"=" * 90}"
-      puts logs.empty? ? "(No logs found for this task)" : logs
-      puts "\n"
+      threads << Thread.new(indexer) do |indexer|
+        logs = get_logs(indexer, task_id)
+        unless logs.empty?
+          all_logs << logs
+          puts "#{"=" * 90}"
+          puts "Logs for task #{task_id} on indexer #{indexer}"
+          puts "#{"=" * 90}"
+          puts logs
+          puts "\n"
+        end
+      end
     end
+
+    threads.each(&:join)
+
   rescue StandardError => e
     warn "An error occurred while processing logs: #{e.message}"
     exit 2
+  end
+
+  if all_logs.empty?
+    puts "(No logs found for this task)"
   end
 end
 
