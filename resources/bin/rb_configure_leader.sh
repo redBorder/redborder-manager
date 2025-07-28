@@ -258,6 +258,15 @@ _RBEOF_
 }
 _RBEOF_
 
+  #redis password token
+  REDIS_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  cat > /var/chef/data/data_bag/passwords/redis.json <<-_RBEOF_
+{
+  "id": "redis",
+  "pass": "$REDIS_SECRET"
+}
+_RBEOF_
+
   #kafka topics #TODO
   cat > /var/chef/data/data_bag/backend/kafka_topics.json <<-_RBEOF_
 {
@@ -303,7 +312,43 @@ _RBEOF_
 }
 _RBEOF_
 
-  rb_init_vip.sh
+  # rb_init_vip.sh
+  ## Generating external virtual ip
+  mkdir -p /var/chef/data/data_bag/rBglobal
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-webui.json <<-_RBEOF_
+{
+  "id": "ipvirtual-external-webui"
+}
+_RBEOF_
+
+  mkdir -p /var/chef/data/data_bag/rBglobal
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-f2k.json <<-_RBEOF_
+{
+  "id": "ipvirtual-external-f2k"
+}
+_RBEOF_
+
+  mkdir -p /var/chef/data/data_bag/rBglobal
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-sfacctd.json <<-_RBEOF_
+{
+  "id": "ipvirtual-external-sfacctd"
+}
+_RBEOF_
+
+  mkdir -p /var/chef/data/data_bag/rBglobal
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-kafka.json <<-_RBEOF_
+{
+  "id": "ipvirtual-external-kafka"
+}
+_RBEOF_
+
+  mkdir -p /var/chef/data/data_bag/rBglobal
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-internal-postgresql.json <<-_RBEOF_
+{
+  "id": "ipvirtual-internal-postgresql"
+}
+_RBEOF_
+
 LICMODE=$(head -n 1 /etc/licmode 2>/dev/null)
   if [ "x$LICMODE" != "xglobal" -a "x$LICMODE" != "xorganization" ]; then
     LICMODE="global"
@@ -435,7 +480,7 @@ function set_external_service_names {
 
   PSQL_IP=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 | head -n1)
   grep -q master.postgresql.service /etc/hosts
-  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  master.postgresql.service master.postgresql.service.${cdomain}" >> /etc/hosts
+  [ $? -ne 0 -a "x$PSQL_IP" != "x" ] && echo "$PSQL_IP  master.postgresql.service" >> /etc/hosts
 }
 
 ########
