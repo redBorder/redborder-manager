@@ -1,6 +1,7 @@
-#!/usr/bin/env ruby
+# !/usr/bin/env ruby
+# frozen_string_literal: true
 
-# Run initial server configuration from /etc/redborder/rb_init_conf.yml
+# Run initial server configuration from /etc/redborder/rb_init_conf.yml
 # 1. Set hostname + cdomain
 # 2. Configure network (on-premise only)
 # 3. Configure dns (on-premise only)
@@ -11,10 +12,10 @@
 require 'yaml'
 require 'ipaddr'
 require 'netaddr'
-require 'system/getifaddrs'
 require 'json'
 require 'open3'
-require File.join(ENV['RBLIB'].nil? ? '/usr/lib/redborder/lib' : ENV['RBLIB'],'rb_config_utils.rb')
+require 'socket'
+require File.join(ENV['RBLIB'].nil? ? '/usr/lib/redborder/lib' : ENV['RBLIB'], 'rb_config_utils.rb')
 
 RBETC = ENV['RBETC'].nil? ? '/etc/redborder' : ENV['RBETC']
 INITCONF="#{RBETC}/rb_init_conf.yml"
@@ -33,6 +34,7 @@ end
 
 def use_usr_share?(version)
   return false if version.nil?
+
   major, minor, patch = version.split('.').map(&:to_i)
   (major > 6) || (major == 6 && (minor > 7 || (minor == 7 && patch >= 0)))
 end
@@ -45,11 +47,11 @@ serf = init_conf['serf']
 mode = init_conf['mode']
 
 # Create file with bash env variables
-open("/etc/redborder/rb_init_conf.conf", "w") { |f|
-  f.puts "#REBORDER ENV VARIABLES"
-  if init_conf.has_key?("elasticache")
-    f.puts "ELASTICACHE_ADDRESS=#{init_conf["elasticache"]["cfg_address"]}" if init_conf["elasticache"].has_key?("cfg_address")
-    f.puts "ELASTICACHE_PORT=#{init_conf["elasticache"]["cfg_port"]}" if init_conf["elasticache"].has_key?("cfg_port")
+open('/etc/redborder/rb_init_conf.conf', 'w') { |f|
+  f.puts '#REBORDER ENV VARIABLES'
+  if init_conf.has_key?('elasticache')
+    f.puts "ELASTICACHE_ADDRESS=#{init_conf['elasticache']['cfg_address']}" if init_conf['elasticache'].has_key?('cfg_address')
+    f.puts "ELASTICACHE_PORT=#{init_conf['elasticache']['cfg_port']}" if init_conf['elasticache'].has_key?('cfg_port')
   end
 }
 
@@ -224,17 +226,19 @@ multicast = serf['multicast']
 
 # local IP to bind to
 unless sync_net.nil? || sync_net.empty?
-    # Initialize network device
-    System.get_all_ifaddrs.each do |netdev|
-        if IPAddr.new(sync_net).include?(netdev[:inet_addr])
-            serf_conf["bind"] = netdev[:inet_addr].to_s
-            sync_interface = netdev[:interface]
-        end
+  # Initialize network device
+  Socket.getifaddrs.each do |netdev|
+    addr = netdev.addr
+    next unless addr && addr.ipv4?  # Or use `ipv6?` if needed
+
+    ip = IPAddr.new(addr.ip_address)
+    if IPAddr.new(sync_net).include?(ip)
+      serf_conf["bind"] = ip.to_s
+      sync_interface = netdev.name
+      break
     end
-    if serf_conf["bind"].nil?
-        p "Error: no IP address to bind"
-        exit 1
-    end
+  end
+
 else
   p "Error: unknown sync network"
   exit 1
