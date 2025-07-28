@@ -1,4 +1,5 @@
-# !/usr/bin/env ruby
+#!/usr/bin/env ruby
+
 # frozen_string_literal: true
 
 # Run initial server configuration from /etc/redborder/rb_init_conf.yml
@@ -20,7 +21,13 @@ require File.join(ENV['RBLIB'].nil? ? '/usr/lib/redborder/lib' : ENV['RBLIB'], '
 RBETC = ENV['RBETC'].nil? ? '/etc/redborder' : ENV['RBETC']
 INITCONF = "#{RBETC}/rb_init_conf.yml"
 
-init_conf = YAML.load_file(INITCONF)
+begin
+  init_conf = YAML.load_file(INITCONF)
+rescue StandardError => e
+  puts "Error loading #{INITCONF}: #{e.message}"
+  exit 1
+end
+
 
 def iproute2_version
   stdout, _stderr, _status = Open3.capture3('rpm -q iproute')
@@ -35,6 +42,29 @@ def use_usr_share?(version)
 
   major, minor, patch = version.split('.').map(&:to_i)
   (major > 6) || (major == 6 && (minor > 7 || (minor == 7 && patch >= 0)))
+end
+
+def show_interface_conf(dev, iface, iface_mode)
+  if iface_mode == 'dhcp'
+    interface_info = Config_utils.get_ipv4_network(iface['device'])
+    interface_info[:ip]
+    f.puts dev == management_interface ? 'DEFROUTE=yes' : 'DEFROUTE=no' if network['interfaces'].count >= 1
+    return
+  end
+
+  # static or management interface
+  unless dev == management_interface || Config_utils.check_ipv4(ip: iface['ip'], netmask: iface['netmask'], gateway: iface['gateway'])
+    abort "Invalid network configuration for device #{dev}. Please review #{INITCONF} file"
+  end
+
+  f.puts "IPADDR=#{iface['ip']}" if iface['ip']
+  f.puts "NETMASK=#{iface['netmask']}" if iface['netmask']
+
+  gateway = iface['gateway']
+  return unless gateway && !gateway.empty? && Config_utils.check_ipv4(ip: gateway)
+
+  f.puts "GATEWAY=#{gateway}" if network['interfaces'].count == 1 || !Config_utils.network_contains(serf['sync_net'], gateway)
+  f.puts dev == management_interface ? 'DEFROUTE=yes' : 'DEFROUTE=no'
 end
 
 if init_conf['network'] && init_conf['network']['management_interface']
@@ -64,28 +94,26 @@ if Config_utils.check_hostname(hostname)
     # Set cdomain file
     File.open('/etc/redborder/cdomain', 'w') { |f| f.puts cdomain.to_s }
     # Also set hostname with this IP in /etc/hosts
-    unless File.open('/etc/hosts').grep(/#{hostname}/).any?
+    unless File.readlines('/etc/hosts').grep(/#{hostname}/).any?
       File.open('/etc/hosts', 'a') do |f|
         f.puts "127.0.0.1  #{hostname} #{hostname}.#{cdomain}"
       end
     end
   else
-    p err_msg = "Invalid cdomain. Please review #{INITCONF} file"
-    exit 1
+    abort "Invalid cdomain. Please review #{INITCONF} file"
   end
 else
-  p err_msg = "Invalid hostname. Please review #{INITCONF} file"
-  exit 1
+  abort "Invalid hostname. Please review #{INITCONF} file"
 end
 
 unless network.nil? # network will not be defined in cloud deployments
 
   # Disable and stop NetworkManager
-  system('systemctl disable NetworkManager &> /dev/null')
-  system('systemctl stop NetworkManager &> /dev/null')
+  `systemctl disable NetworkManager &> /dev/null`
+  `systemctl stop NetworkManager &> /dev/null`
 
-  system('systemctl enable network &> /dev/null')
-  system('systemctl start network &> /dev/null')
+  `systemctl enable network &> /dev/null`
+  `systemctl start network &> /dev/null`
 
   # Configure DNS
   unless network['dns'].nil?
@@ -95,8 +123,7 @@ unless network.nil? # network will not be defined in cloud deployments
         if Config_utils.check_ipv4({ ip: dns_ip })
           f.puts "DNS#{i + 1}=#{dns_ip}"
         else
-          p err_msg = "Invalid DNS Address. Please review #{INITCONF} file"
-          exit 1
+          abort "Invalid DNS Address. Please review #{INITCONF} file"
         end
       end
       f.puts "SEARCH=#{cdomain}"
@@ -115,41 +142,7 @@ unless network.nil? # network will not be defined in cloud deployments
       dev_uuid = File.read('/proc/sys/kernel/random/uuid').chomp
       f.puts "UUID=#{dev_uuid}"
 
-      if iface_mode != 'dhcp'
-        # Specific handling for static and management interfaces
-        if dev == management_interface || Config_utils.check_ipv4(ip: iface['ip'], netmask: iface['netmask'],
-                                                                  gateway: iface['gateway'])
-          f.puts "IPADDR=#{iface['ip']}" if iface['ip']
-          f.puts "NETMASK=#{iface['netmask']}" if iface['netmask']
-          unless iface['gateway'].nil? || iface['gateway'].empty? || !Config_utils.check_ipv4(ip: iface['gateway'])
-            if (network['interfaces'].count > 1) && !Config_utils.network_contains(serf['sync_net'], iface['gateway'])
-              f.puts "GATEWAY=#{iface['gateway']}"
-            elsif network['interfaces'].count == 1
-              f.puts "GATEWAY=#{iface['gateway']}"
-            end
-
-            if dev == management_interface
-              f.puts 'DEFROUTE=yes'
-            else
-              f.puts 'DEFROUTE=no'
-            end
-
-          end
-        else
-          p err_msg = "Invalid network configuration for device #{dev}. Please review #{INITCONF} file"
-          exit 1
-        end
-      else
-        interface_info = Config_utils.get_ipv4_network(iface['device'])
-        interface_info[:ip]
-        if network['interfaces'].count >= 1
-          if dev == management_interface
-            f.puts 'DEFROUTE=yes'
-          else
-            f.puts 'DEFROUTE=no'
-          end
-        end
-      end
+      show_interface_conf(dev, iface, iface_mode)
     end
 
     # if we have management and sync network
@@ -226,15 +219,13 @@ SERFSNAPSHOT = '/etc/serf/snapshot'
 
 serf_conf = {}
 serf_tags = {}
-sync_interface = ''
 sync_net = serf['sync_net']
 encrypt_key = serf['encrypt_key']
 multicast = serf['multicast']
 
 # local IP to bind to
 if sync_net.nil? || sync_net.empty?
-  p 'Error: unknown sync network'
-  exit 1
+  abort 'Error: unknown sync network'
 else
   # Initialize network device
   Socket.getifaddrs.each do |netdev|
@@ -245,7 +236,6 @@ else
     next unless IPAddr.new(sync_net).include?(ip)
 
     serf_conf['bind'] = ip.to_s
-    sync_interface = netdev.name
     break
   end
 
@@ -275,20 +265,20 @@ file_serf_tags.close
 
 # stop firewall till chef-client install and run the cookbook-rb-firewall
 # this allow serf/consul communication while leader is in "configuring" state
-system('systemctl stop firewalld &>/dev/null')
+`systemctl stop firewalld &>/dev/null`
 
 # TODO: maybe we should stop using rc.local and start using systemd for this
 # Configure rc.local scripts
-system('chmod a+x /etc/rc.d/rc.local')
+`chmod a+x /etc/rc.d/rc.local`
 # Stop chef-server-ctl when system boots
-system('echo /usr/lib/redborder/bin/rb_chef_server_ctl_stop.sh >> /etc/rc.d/rc.local')
+`echo /usr/lib/redborder/bin/rb_chef_server_ctl_stop.sh >> /etc/rc.d/rc.local`
 
 # Upgrade system
-system('yum install systemd -y')
+`dnf install systemd -y`
 
 #  Enable and start SERF
-system('systemctl enable serf &> /dev/null')
-system('systemctl start serf &> /dev/null')
+`systemctl enable serf &> /dev/null`
+`systemctl start serf &> /dev/null`
 #  wait a moment before start serf-join to ensure connectivity
 sleep(3)
-system('systemctl start rb-bootstrap &> /dev/null')
+`systemctl start rb-bootstrap &> /dev/null`

@@ -10,7 +10,6 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-
 Requires: bash chrony dialog postgresql s3cmd dmidecode rsync nc dhclient
 Requires: telnet redborder-serf redborder-common redborder-chef-client
 Requires: redborder-cookbooks redborder-rubyrvm redborder-cli
