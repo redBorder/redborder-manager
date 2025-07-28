@@ -13,9 +13,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 #######################################################################
+
 require 'zlib'
 
 DRUID_INDEXER_LOG_PATH = "/var/log/druid/indexer/"
+DRUID_INDEXER          = "druid-indexer"
 
 def remote_cmd(node, cmd)
   `ssh -o ConnectTimeout=5 -o LogLevel=quiet -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no -o StrictHostKeyChecking=no -i /var/www/rb-rails/config/rsa root@#{node} "#{cmd}"`.strip
@@ -25,10 +27,23 @@ def get_nodes
   `serf members | awk '{print $1}'`.split("\n").map(&:strip)
 end
 
+def is_in_node(service, node)
+  output = `consul catalog services -node=#{node}`.strip
+  output.match?(/^#{Regexp.escape(service)}$/)
+end
+
 def get_indexers
-  get_nodes.select do |node|
-    remote_cmd(node, "test -d #{DRUID_INDEXER_LOG_PATH} && echo yes") == "yes"
+  indexers = []
+  nodes = get_nodes
+
+  return indexers unless nodes.is_a?(Array) && !nodes.empty?
+
+  nodes.each do |node|
+    if is_in_node(DRUID_INDEXER, node)
+      indexers.push(node)
+    end
   end
+  indexers
 end
 
 def parse_log(line, task_id)
@@ -64,6 +79,12 @@ def main
   end
 
   task_id = ARGV[0]
+
+  unless task_id =~ /\Aindex_kafka_rb_[\w]+_[\w]+\z/
+    warn "Invalid task ID format."
+    exit 1
+  end
+
   target = ARGV[1] || 'all'
   indexer_nodes = (target != 'all') ? [target] : get_indexers
 
