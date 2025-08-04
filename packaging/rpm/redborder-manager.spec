@@ -20,6 +20,7 @@ Requires: alternatives java-1.8.0-openjdk java-1.8.0-openjdk-devel
 Requires: network-scripts network-scripts-teamd
 Requires: redborder-cgroups rb-logstatter redborder-pythonlibs
 Requires: mcli
+Requires: dnf-plugins-core
 
 Obsoletes: redborder-postgresql
 
@@ -106,6 +107,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Mon Aug 4 2025 manegron <manegron@redborder.com>
+- Install dnf-plugins-core as dependency
+
 * Mon Jul 21 2025 Rafael Gómez <rgomez@redborder.com> - 6.6.0-1
 - Remove redborder-postgresql. Obsoletes uninstall the package resolving conflicts
 
