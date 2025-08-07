@@ -3,7 +3,7 @@
 # Get cdomain
 [ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 $RBETC/cdomain | tr '\n' ' ' | awk '{print $1}')
 
-BUCKETS=("bucket", "malware")
+BUCKETS=("bucket" "malware")
 S3HOST="s3.service.${cdomain}"
 
 echo "INFO: Executing rb_configure_initial_s3"
@@ -60,7 +60,7 @@ for BUCKET in "${BUCKETS[@]}"; do
     S3CFG="/root/.s3cfg_initial"
   fi
 
-  echo "INFO: Creating bucket ($BUCKET)"
+  echo "INFO: Creating s3 bucket ($BUCKET)"
   s3cmd -c "$S3CFG" mb s3://$BUCKET
   if [ $? -ne 0 ] ; then
     echo "ERROR: s3cmd failed creating bucket"
