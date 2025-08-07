@@ -118,6 +118,8 @@ function configure_dataBags(){
   mkdir -p /var/chef/data/data_bag/certs/
   mkdir -p /var/chef/data/data_bag/backend/
 
+  e_title "\n\nAAAAAAAAAAAAAAAAAAAAAa\n\n"
+
   ## DB opscode (chef) passwords
   cat > /var/chef/data/data_bag/passwords/db_opscode_chef.json <<-_RBEOF_
 {
