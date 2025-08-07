@@ -98,6 +98,11 @@ function configure_dataBags(){
   S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`" #CHECK when {s3_external_url, host_header},
   S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
 
+  # Obtaining S3 malware bucket configuration
+  S3_MALWARE_KEY="`grep -A 3 '^malware:' s3_init_conf.yml | grep access_key | awk '{print $2}'`"
+  S3_MALWARE_SECRET="`grep -A 3 '^malware:' s3_init_conf.yml | grep secret_key | awk '{print $2}'`"
+  S3_MALWARE_BUCKET="`grep -A 3 '^malware:' s3_init_conf.yml | grep bucket | awk '{print $2}'`"
+
   # IF S3HOST not found, set default: s3.service
   [ "x$S3HOST" = "x" ] && S3HOST="s3.service"
 
@@ -163,13 +168,26 @@ _RBEOF_
 }
 _RBEOF_
 
+  # S3 malware bucket (data bag)
+  cat > /var/chef/data/data_bag/passwords/s3_malware.json <<-_RBEOF_
+{
+  "id": "s3_malware",
+  "s3_access_key_id": "$S3_MALWARE_KEY",
+  "s3_secret_key_id": "$S3_MALWARE_SECRET",
+  "s3_host": "$S3HOST",
+  "s3_url": "$S3URL",
+  "s3_external_url": "$S3EXTERNALURL",
+  "s3_bucket": "$S3_MALWARE_BUCKET"
+}
+_RBEOF_
+
   mkdir -p /var/chef/data/data_bag_encrypted/passwords/
   cat > /var/chef/data/data_bag_encrypted/passwords/vrrp.json <<-_RBEOF_
 {
   "id": "vrrp",
   "username": "vrrp",
   "start_id": "$(( ( RANDOM % 191 ) + 10 ))",
-  "pass": "$VRRPPASS" 
+  "pass": "$VRRPPASS"
 }
 _RBEOF_
 
