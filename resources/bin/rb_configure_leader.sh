@@ -99,9 +99,9 @@ function configure_dataBags(){
   S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
 
   # Obtaining S3 malware bucket configuration
-  S3_MALWARE_KEY="`grep -A 3 '^malware:' s3_init_conf.yml | grep access_key | awk '{print $2}'`"
-  S3_MALWARE_SECRET="`grep -A 3 '^malware:' s3_init_conf.yml | grep secret_key | awk '{print $2}'`"
-  S3_MALWARE_BUCKET="`grep -A 3 '^malware:' s3_init_conf.yml | grep bucket | awk '{print $2}'`"
+  S3_MALWARE_KEY="`grep -A 3 '^malware:' ${S3INITCONF} | grep access_key | awk '{print $2}'`"
+  S3_MALWARE_SECRET="`grep -A 3 '^malware:' ${S3INITCONF} | grep secret_key | awk '{print $2}'`"
+  S3_MALWARE_BUCKET="`grep -A 3 '^malware:' ${S3INITCONF} | grep bucket | awk '{print $2}'`"
 
   # IF S3HOST not found, set default: s3.service
   [ "x$S3HOST" = "x" ] && S3HOST="s3.service"
@@ -118,7 +118,7 @@ function configure_dataBags(){
   mkdir -p /var/chef/data/data_bag/certs/
   mkdir -p /var/chef/data/data_bag/backend/
 
-  e_title "\n\nAAAAAAAAAAAAAAAAAAAAAa\n\n"
+  echo -e "\n\nAAAAAAAAAAAAAAAAAAAAAa\n\n$S3INITCONF" | tee -a "/root/pepe.txt"
 
   ## DB opscode (chef) passwords
   cat > /var/chef/data/data_bag/passwords/db_opscode_chef.json <<-_RBEOF_
