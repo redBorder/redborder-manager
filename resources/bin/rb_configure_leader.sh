@@ -98,6 +98,11 @@ function configure_dataBags(){
   S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`" #CHECK when {s3_external_url, host_header},
   S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
 
+  # Obtaining S3 malware bucket configuration
+  S3_MALWARE_KEY="`grep -A 3 '^malware:' ${S3INITCONF} | grep access_key | awk '{print $2}'`"
+  S3_MALWARE_SECRET="`grep -A 3 '^malware:' ${S3INITCONF} | grep secret_key | awk '{print $2}'`"
+  S3_MALWARE_BUCKET="`grep -A 3 '^malware:' ${S3INITCONF} | grep bucket | awk '{print $2}'`"
+
   # IF S3HOST not found, set default: s3.service
   [ "x$S3HOST" = "x" ] && S3HOST="s3.service"
 
@@ -112,6 +117,8 @@ function configure_dataBags(){
   mkdir -p /var/chef/data/data_bag/rBglobal/
   mkdir -p /var/chef/data/data_bag/certs/
   mkdir -p /var/chef/data/data_bag/backend/
+
+  echo -e "\n\nComfigure databags\n\n$S3INITCONF" | tee -a "/root/pepe.txt"
 
   ## DB opscode (chef) passwords
   cat > /var/chef/data/data_bag/passwords/db_opscode_chef.json <<-_RBEOF_
@@ -163,13 +170,26 @@ _RBEOF_
 }
 _RBEOF_
 
+  # S3 malware bucket (data bag)
+  cat > /var/chef/data/data_bag/passwords/s3_malware.json <<-_RBEOF_
+{
+  "id": "s3_malware",
+  "s3_access_key_id": "$S3_MALWARE_KEY",
+  "s3_secret_key_id": "$S3_MALWARE_SECRET",
+  "s3_host": "$S3HOST",
+  "s3_url": "$S3URL",
+  "s3_external_url": "$S3EXTERNALURL",
+  "s3_bucket": "$S3_MALWARE_BUCKET"
+}
+_RBEOF_
+
   mkdir -p /var/chef/data/data_bag_encrypted/passwords/
   cat > /var/chef/data/data_bag_encrypted/passwords/vrrp.json <<-_RBEOF_
 {
   "id": "vrrp",
   "username": "vrrp",
   "start_id": "$(( ( RANDOM % 191 ) + 10 ))",
-  "pass": "$VRRPPASS" 
+  "pass": "$VRRPPASS"
 }
 _RBEOF_
 
@@ -486,6 +506,7 @@ function set_external_service_names {
 ########
 # MAIN #
 ########
+echo -e "\n\n1\n\n" | tee -a "/root/pepe.txt"
 start_script=$(date +%s) # Save init time
 
 CHEFUSER="admin" # Chef server admin user
@@ -517,7 +538,7 @@ rb_init_chef
 
 # Set chef-server.rb configuration file (S3)
 [ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb #&& rm -f /etc/redborder/chef-server-s3.rb
-
+echo -e "\n\n2\n\n" | tee -a "/root/pepe.txt"
 # Set chef-server.rb configuration file (postgresql) and obtain database credentials
 if [ -f /etc/redborder/chef-server-postgresql.rb ]; then
   cat /etc/redborder/chef-server-postgresql.rb >> /etc/opscode/chef-server.rb
@@ -541,7 +562,7 @@ e_title "Configuring Chef-Server"
 
 # TODO: check if this is the way or file acls
 [ -f /etc/opscode/private-chef-secrets.json ] && chown opscode. /etc/opscode/private-chef-secrets.json
-
+echo -e "\n\n3\n\n" | tee -a "/root/pepe.txt"
 # TODO: Check why we need to sleep here
 echo "Sleeping for 30 seconds"
 sleep 30
