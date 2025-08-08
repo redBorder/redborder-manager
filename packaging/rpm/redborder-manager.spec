@@ -20,7 +20,7 @@ Requires: alternatives java-1.8.0-openjdk java-1.8.0-openjdk-devel
 Requires: network-scripts network-scripts-teamd
 Requires: redborder-cgroups rb-logstatter redborder-pythonlibs
 Requires: mcli
-#Requires: redborder-pythonpyenv
+Requires: redborder-pythonpyenv
 
 Obsoletes: redborder-postgresql
 
