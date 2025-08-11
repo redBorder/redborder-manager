@@ -312,11 +312,12 @@ _RBEOF_
 }
 _RBEOF_
 
+  # rb_init_vip.sh
   ## Generating external virtual ip
   mkdir -p /var/chef/data/data_bag/rBglobal
-  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-webui.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-nginx.json <<-_RBEOF_
 {
-  "id": "ipvirtual-external-webui"
+  "id": "ipvirtual-external-nginx"
 }
 _RBEOF_
 
@@ -347,7 +348,6 @@ _RBEOF_
   "id": "ipvirtual-internal-postgresql"
 }
 _RBEOF_
-
 
 LICMODE=$(head -n 1 /etc/licmode 2>/dev/null)
   if [ "x$LICMODE" != "xglobal" -a "x$LICMODE" != "xorganization" ]; then
