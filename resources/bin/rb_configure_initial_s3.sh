@@ -54,14 +54,8 @@ grep -qE "s3\.service(\.${cdomain})?" /etc/hosts
 [ $? -ne 0 -a "x$MINIO_IP" != "x" ] && echo "$MINIO_IP  s3.service s3.service.${cdomain}" >> /etc/hosts
 
 for BUCKET in "${BUCKETS[@]}"; do
-  if [ "$BUCKET" == "malware" ]; then
-    S3CFG="/root/.s3cfg_malware_initial"
-  else
-    S3CFG="/root/.s3cfg_initial"
-  fi
-
   echo "INFO: Creating s3 bucket ($BUCKET)"
-  s3cmd -c "$S3CFG" mb s3://$BUCKET
+  s3cmd -c /root/.s3cfg_initial mb s3://$BUCKET
   if [ $? -ne 0 ] ; then
     echo "ERROR: s3cmd failed creating bucket"
     exit 1
