@@ -53,6 +53,11 @@ echo "INFO: Adding $S3HOST name to /etc/hosts"
 grep -qE "s3\.service(\.${cdomain})?" /etc/hosts
 [ $? -ne 0 -a "x$MINIO_IP" != "x" ] && echo "$MINIO_IP  s3.service s3.service.${cdomain}" >> /etc/hosts
 
+# Add malware.s3.service name to /etc/hosts
+echo "INFO: Adding malware.$S3HOST name to /etc/hosts"
+grep -qE "malware\.s3\.service(\.${cdomain})?" /etc/hosts
+[ $? -ne 0 -a "x$MINIO_IP" != "x" ] && echo "$MINIO_IP  malware.s3.service malware.s3.service.${cdomain}" >> /etc/hosts
+
 for BUCKET in "${BUCKETS[@]}"; do
   echo "INFO: Creating s3 bucket ($BUCKET)"
   s3cmd -c /root/.s3cfg_initial mb s3://$BUCKET
