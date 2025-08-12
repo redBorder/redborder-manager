@@ -171,7 +171,6 @@ _RBEOF_
   "s3_malware_bucket": "$S3_MALWARE_BUCKET",
   "s3_malware_host": "$S3_MALWARE_HOST"
 }
-
 _RBEOF_
 
   mkdir -p /var/chef/data/data_bag_encrypted/passwords/
