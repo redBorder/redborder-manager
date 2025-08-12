@@ -119,8 +119,6 @@ function configure_dataBags(){
   mkdir -p /var/chef/data/data_bag/certs/
   mkdir -p /var/chef/data/data_bag/backend/
 
-  echo -e "\n\nComfigure databags\n\n$S3INITCONF" | tee -a "/root/pepe.txt"
-
   ## DB opscode (chef) passwords
   cat > /var/chef/data/data_bag/passwords/db_opscode_chef.json <<-_RBEOF_
 {
@@ -499,7 +497,6 @@ function set_external_service_names {
 ########
 # MAIN #
 ########
-echo -e "\n\n1\n\n" | tee -a "/root/pepe.txt"
 start_script=$(date +%s) # Save init time
 
 CHEFUSER="admin" # Chef server admin user
@@ -531,7 +528,7 @@ rb_init_chef
 
 # Set chef-server.rb configuration file (S3)
 [ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb #&& rm -f /etc/redborder/chef-server-s3.rb
-echo -e "\n\n2\n\n" | tee -a "/root/pepe.txt"
+
 # Set chef-server.rb configuration file (postgresql) and obtain database credentials
 if [ -f /etc/redborder/chef-server-postgresql.rb ]; then
   cat /etc/redborder/chef-server-postgresql.rb >> /etc/opscode/chef-server.rb
@@ -555,7 +552,7 @@ e_title "Configuring Chef-Server"
 
 # TODO: check if this is the way or file acls
 [ -f /etc/opscode/private-chef-secrets.json ] && chown opscode. /etc/opscode/private-chef-secrets.json
-echo -e "\n\n3\n\n" | tee -a "/root/pepe.txt"
+
 # TODO: Check why we need to sleep here
 echo "Sleeping for 30 seconds"
 sleep 30
