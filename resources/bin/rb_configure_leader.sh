@@ -168,19 +168,7 @@ _RBEOF_
   "s3_external_url": "$S3EXTERNALURL",
   "s3_bucket": "$S3BUCKET"
 }
-_RBEOF_
 
-  # S3 malware bucket (data bag)
-  cat > /var/chef/data/data_bag/passwords/s3_malware.json <<-_RBEOF_
-{
-  "id": "s3_malware",
-  "s3_access_key_id": "$S3_MALWARE_KEY",
-  "s3_secret_key_id": "$S3_MALWARE_SECRET",
-  "s3_host": "$S3HOST",
-  "s3_url": "$S3URL",
-  "s3_external_url": "$S3EXTERNALURL",
-  "s3_bucket": "$S3_MALWARE_BUCKET"
-}
 _RBEOF_
 
   mkdir -p /var/chef/data/data_bag_encrypted/passwords/
