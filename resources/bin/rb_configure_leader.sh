@@ -91,12 +91,18 @@ function configure_dataBags(){
   OPSCODE_OCBIFROST_PASS="`grep db_pass $OCBIFROST_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
 
   # Obtaining chef cookbook storage current configuration
-  S3KEY="`grep access_key ${S3INITCONF} | awk '{print $2}'`"
-  S3SECRET="`grep secret_key ${S3INITCONF} | awk '{print $2}'`"
+  S3KEY="`grep -A 4 '^s3:' ${S3INITCONF} | grep access_key  | awk '{print $2}'`"
+  S3SECRET="`grep -A 4 '^s3:' ${S3INITCONF} | grep secret_key | awk '{print $2}'`"
   S3HOST="`cat /etc/redborder/rb_init_conf.yml | grep endpoint | awk {'print $2'}`" #CHECK If bookshelf enabled, this value will be empty
   S3URL="`grep s3_url, $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`" #CHECK when {s3_external_url, host_header},
   S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+
+  # Obtaining S3 malware bucket configuration
+  S3_MALWARE_KEY="`grep -A 4 '^malware:' ${S3INITCONF} | grep access_key | awk '{print $2}'`"
+  S3_MALWARE_SECRET="`grep -A 4 '^malware:' ${S3INITCONF} | grep secret_key | awk '{print $2}'`"
+  S3_MALWARE_BUCKET="`grep -A 4 '^malware:' ${S3INITCONF} | grep bucket | awk '{print $2}'`"
+  S3_MALWARE_HOST="`grep -A 4 '^malware:' ${S3INITCONF} | grep endpoint | awk '{print $2}'`"
 
   # IF S3HOST not found, set default: s3.service
   [ "x$S3HOST" = "x" ] && S3HOST="s3.service"
@@ -159,7 +165,11 @@ _RBEOF_
   "s3_host": "$S3HOST",
   "s3_url": "$S3URL",
   "s3_external_url": "$S3EXTERNALURL",
-  "s3_bucket": "$S3BUCKET"
+  "s3_bucket": "$S3BUCKET",
+  "s3_malware_access_key_id": "$S3_MALWARE_KEY",
+  "s3_malware_secret_key_id": "$S3_MALWARE_SECRET",
+  "s3_malware_bucket": "$S3_MALWARE_BUCKET",
+  "s3_malware_host": "$S3_MALWARE_HOST"
 }
 _RBEOF_
 
@@ -169,7 +179,7 @@ _RBEOF_
   "id": "vrrp",
   "username": "vrrp",
   "start_id": "$(( ( RANDOM % 191 ) + 10 ))",
-  "pass": "$VRRPPASS" 
+  "pass": "$VRRPPASS"
 }
 _RBEOF_
 
