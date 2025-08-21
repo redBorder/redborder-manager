@@ -3,7 +3,7 @@
 # Get cdomain
 [ -f /etc/redborder/cdomain ] && cdomain=$(head -n 1 $RBETC/cdomain | tr '\n' ' ' | awk '{print $1}')
 
-BUCKET="bucket"
+BUCKETS=("bucket" "malware")
 S3HOST="s3.service.${cdomain}"
 
 echo "INFO: Executing rb_configure_initial_s3"
@@ -53,12 +53,19 @@ echo "INFO: Adding $S3HOST name to /etc/hosts"
 grep -qE "s3\.service(\.${cdomain})?" /etc/hosts
 [ $? -ne 0 -a "x$MINIO_IP" != "x" ] && echo "$MINIO_IP  s3.service s3.service.${cdomain}" >> /etc/hosts
 
-echo "INFO: Creating bucket ($BUCKET)"
-s3cmd -c /root/.s3cfg_initial mb s3://$BUCKET
-if [ $? -ne 0 ] ; then
-  echo "ERROR: s3cmd failed creating bucket"
-  exit 1
-fi
+# Add malware.s3.service name to /etc/hosts
+echo "INFO: Adding malware.$S3HOST name to /etc/hosts"
+grep -qE "malware\.s3\.service(\.${cdomain})?" /etc/hosts
+[ $? -ne 0 -a "x$MINIO_IP" != "x" ] && echo "$MINIO_IP  malware.s3.service malware.s3.service.${cdomain}" >> /etc/hosts
+
+for BUCKET in "${BUCKETS[@]}"; do
+  echo "INFO: Creating s3 bucket ($BUCKET)"
+  s3cmd -c /root/.s3cfg_initial mb s3://$BUCKET
+  if [ $? -ne 0 ] ; then
+    echo "ERROR: s3cmd failed creating bucket"
+    exit 1
+  fi
+done
 
 echo "INFO: S3 service configuration finished, setting serf s3=ready tag"
 serf tags -set s3=ready
