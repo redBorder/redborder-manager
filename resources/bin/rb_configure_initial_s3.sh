@@ -67,45 +67,5 @@ for BUCKET in "${BUCKETS[@]}"; do
   fi
 done
 
-# Create s3 user and policy for malware bucket
-RBETC="/etc/redborder"
-S3INITCONF=$(if [ -f "${RBETC}/s3_init_conf.yml" ]; then echo "${RBETC}/s3_init_conf.yml"; else echo "${RBETC}/rb_init_conf.yml"; fi)
-S3_MALWARE_KEY="`grep -A 4 '^malware:' ${S3INITCONF} | grep access_key | awk '{print $2}'`"
-S3_MALWARE_SECRET="`grep -A 4 '^malware:' ${S3INITCONF} | grep secret_key | awk '{print $2}'`"
-MALWARE_POLICY_FILE="/tmp/malware-policy.json"
-
-echo "INFO: Creating s3 malware user"
-mcli admin user add local "$S3_MALWARE_KEY" "$S3_MALWARE_SECRET" || {
-  echo "ERROR: mcli failed creating malware user"
-  exit 1
-}
-
-echo "INFO: Creating s3 malware policy"
-cat > "$MALWARE_POLICY_FILE" <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": ["s3:*"],
-      "Resource": ["arn:aws:s3:::malware", "arn:aws:s3:::malware/*"]
-    }
-  ]
-}
-EOF
-
-mcli admin policy create local malware-policy "$MALWARE_POLICY_FILE" || {
-  echo "ERROR: Failed to create malware policy"
-  exit 1
-}
-
-mcli admin policy attach local malware-policy --user ${S3_MALWARE_KEY} || {
-  echo "ERROR: Failed to attach malware policy to user"
-  exit 1
-}
-
-rm -f "$MALWARE_POLICY_FILE"
-echo "INFO: Malware user and policy created successfully"
-
 echo "INFO: S3 service configuration finished, setting serf s3=ready tag"
 serf tags -set s3=ready
