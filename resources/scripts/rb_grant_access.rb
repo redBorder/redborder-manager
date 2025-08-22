@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-########################################################################
+########################################################################    
 ## Copyright (c) 2014 ENEO Tecnología S.L.
 ## This file is part of redBorder.
 ## redBorder is free software: you can redistribute it and/or modify
@@ -19,9 +19,11 @@ require 'rubygems'
 require 'chef'
 require 'json'
 require 'netaddr'
-require 'getopt/std'
+require "getopt/std"
+require 'netaddr' # TODO: remove duplicated require
 
-def usage
+
+def usage() 
   printf "rb_grant_access [ -h ] [ [ -n <network> ] [ -n <network2> ] [ ...] ] [ -m trust|md5 ]\n"
   printf "    -h: print this help\n"
   printf "    -n <network>: Grant access to this network. Format: <cidr_net>[:mode]    (The mode is optional. If not present it will take the default one)\n"
