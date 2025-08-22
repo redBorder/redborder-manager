@@ -348,7 +348,6 @@ _RBEOF_
   "id": "ipvirtual-internal-postgresql"
 }
 _RBEOF_
-
 LICMODE=$(head -n 1 /etc/licmode 2>/dev/null)
   if [ "x$LICMODE" != "xglobal" -a "x$LICMODE" != "xorganization" ]; then
     LICMODE="global"
