@@ -49,7 +49,7 @@ function upload_cookbook() {
 
 listCookbooks="rb-common rb-selinux cron rb-firewall zookeeper kafka druid http2k memcached chef-server consul
                nginx geoip webui snmp rbmonitor rbscanner redis
-               f2k logstash pmacct minio postgresql yara rbdswatcher rbevents-counter
+               f2k logstash pmacct minio postgresql aerospike yara rbdswatcher rbevents-counter
                rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rblogstatter rb-arubacentral rbcgroup rb-exporter rb-chrony rb-clamav rb-postfix
                keepalived snort barnyard2 rbaioutliers snort3 mem2incident secor rb-llm rb-druid-indexer
                rb-agents
