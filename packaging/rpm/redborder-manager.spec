@@ -23,7 +23,6 @@ Requires: mcli
 Requires: redborder-pythonpyenv
 
 Obsoletes: redborder-postgresql
-Obsoletes: redborder-llm
 
 %description
 %{summary}
@@ -108,9 +107,6 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
-* Mon Jul 21 2025 Rafael Gómez <rgomez@redborder.com>
-- Remove redborder-llm from by adding it in the obsoletes list
-
 * Mon Aug 4 2025 manegron <manegron@redborder.com>
 - Add redborder-pythonpyenv
 
