@@ -3,8 +3,6 @@ source /etc/profile
 source $RBLIB/rb_manager_functions.sh
 source $RBETC/rb_init_conf.conf
 
-[ "x$DOMAIN" == "x" ] && DOMAIN="redborder.cluster"
-
 function usage() {
   echo "$0 [druid|redborder|opscode_chef|radius]"
 }
@@ -48,7 +46,7 @@ if [ "x$USER" == "xdruid" -o "x$USER" == "xredborder" -o "x$USER" == "xopscode_c
 
 
     [ "x$PGPORT" == "x" ] && PGPORT=5432
-    [ "x$PGHOSTNAME" == "x" ] && PGHOSTNAME="master.postgresql.service.${DOMAIN}"
+    [ "x$PGHOSTNAME" == "x" ] && PGHOSTNAME="master.postgresql.service"
 
     if [ "x$PGPASSWORD" != "x" ]; then
         PGPASSWORD="$PGPASSWORD" /bin/psql -U ${USER} -h $PGHOSTNAME -p ${PGPORT} -v ON_ERROR_STOP=on
