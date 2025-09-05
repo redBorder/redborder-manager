@@ -20,7 +20,7 @@ require 'chef'
 require 'json'
 require 'netaddr'
 require "getopt/std"
-require 'netaddr'
+require 'netaddr' # TODO: remove duplicated require
 
 
 def usage() 

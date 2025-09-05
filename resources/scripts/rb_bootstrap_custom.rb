@@ -11,4 +11,3 @@ while system("serf members -status alive -tag leader=ready | grep -q leader=read
 end
 puts "INFO: execute rb_configure_custom.sh"
 system("rb_configure_custom.sh")
-
