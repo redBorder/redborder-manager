@@ -322,7 +322,6 @@ _RBEOF_
 }
 _RBEOF_
 
-  # rb_init_vip.sh
   ## Generating external virtual ip
   mkdir -p /var/chef/data/data_bag/rBglobal
   cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-nginx.json <<-_RBEOF_
