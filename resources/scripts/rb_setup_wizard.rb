@@ -76,6 +76,10 @@ general_conf = {
         "host" => "",
         "port" => ""
         },
+    "elasticache" => {
+        "cfg_address" => "",
+        "cfg_port" => ""
+    },
     "mode" => "full" # default mode
     }
 
@@ -347,6 +351,33 @@ else
     general_conf.delete("postgresql")
 end
 
+# External memcached configuration
+text = <<EOF
+
+Do you want to configure an external memcached service?
+EOF
+
+dialog = MRDialog.new
+dialog.clear = true
+dialog.title = "Confirm Configuration"
+dialog.dialog_options = "--defaultno"
+configure_memcached = dialog.yesno(text, 8, 50)
+
+if configure_memcached
+  memconf = MemcachedConf.new
+  begin
+    memconf.doit
+    if memconf.cancel
+      cancel_wizard
+    else
+      general_conf["elasticache"] = memconf.conf
+    end
+  rescue => e
+    puts "Error during memcached configuration: #{e.message}"
+  end
+else
+  general_conf.delete("elasticache")
+end
 
 # Set mode
 modeconf = ModeConf.new
@@ -409,6 +440,12 @@ unless general_conf["postgresql"].nil?
     text += "    password: #{general_conf["postgresql"]["password"]}\n"
     text += "    host: #{general_conf["postgresql"]["host"]}\n"
     text += "    port: #{general_conf["postgresql"]["port"]}\n"
+end
+
+unless general_conf["elasticache"].nil?
+    text += "\n- Elasticache:\n"
+    text += "    Domain: #{general_conf["elasticache"]["cfg_address"]}\n"
+    text += "    Port: #{general_conf["elasticache"]["cfg_port"]}\n"
 end
 
 text += "\n- Serf:\n"
