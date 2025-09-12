@@ -277,6 +277,17 @@ _RBEOF_
 }
 _RBEOF_
 
+  #airflow password token
+  AIRFLOW_USER="admin"
+  AIRFLOW_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c32 | sed 's/ //g'`"
+  cat > /var/chef/data/data_bag/passwords/airflow.json <<-_RBEOF_
+{
+  "id": "airflow",
+  "user": "$AIRFLOW_USER",
+  "pass": "$AIRFLOW_SECRET"
+}
+_RBEOF_
+
   #kafka topics #TODO
   cat > /var/chef/data/data_bag/backend/kafka_topics.json <<-_RBEOF_
 {
