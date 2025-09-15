@@ -15,11 +15,11 @@
 ########################################################################
 
 require 'getopt/std'
-require 'colorize'
 require 'yaml'
 require 'chef'
 require 'fileutils'
 require 'syslog'
+require 'io/console'
 
 def usage
   printf "Usage: rb_backup_node.rb [-f path][-b][-r][-h][-s][-v][-3][-k bucket][-n][-m][-p]\n"
@@ -37,6 +37,58 @@ def usage
   exit 0
 end
 
+def validate_options(opt)
+  # Help
+  usage if opt['h']
+
+  # Not file passed
+  usage if OPT['f'] && (OPT['f'].nil? || OPT['f'].empty?)
+
+  # Backup Or Restore (not both)
+  if opt['b'] && opt['r']
+    puts "Cannot use -b and -r together"
+    usage
+  end
+
+  # Save in S3 or Save into local file (not both)
+  if opt['3'] && opt['f']
+    puts "Cannot use -3 and -f together"
+    usage
+  end
+
+  # Backup has to be stored in S3 or into a file
+  if opt['b'] && !opt['f'] && !opt['3']
+    puts "Backup requires either -f (file) or -3 (S3)"
+    usage
+  end 
+
+  # Specify .s3cfg file require option -3 (Save in S3)
+  if opt['s'] && !opt['3']
+    puts "Option -s requires -3"
+    usage
+  end
+
+  # Specify bucket to restore from require option -3 (Save in S3)
+  if opt['k'] && !opt['3']
+    puts "Option -k requires -3"
+    usage
+  end
+
+  # restore
+  # if opt['m'] && opt['p']
+  #   puts "Cannot use -m and -p together"
+  #   usage
+  # end
+end
+
+# Indicate Status for each step
+def print_status(status: :OK, fill: "-")
+  color  = COLORS[status] || "\e[36m" # default cyan if unknown
+  reset  = COLORS[:RESET]
+  message = " [ #{color}#{status}#{reset} ] "
+  puts message.center(TERMINAL_WIDTH, fill)
+end
+
 def log (message, type)
   # $0 is the current script name
   if type == "warning"
@@ -48,178 +100,396 @@ def log (message, type)
   end
 end
 
+def check_oper (cmd, type, message)
+  commands = cmd.split(';')
+  log_file = "/root/.#{type}-manager.log"
+
+  puts "\t#{message}" if OPT['v']
+  File.open(log_file, "a") { |f| f.puts message }
+  
+  check = false
+  commands.each do |c|
+    c.strip!
+    output = `#{c} 2>&1`
+    puts "\t\t#{output}" if OPT['v']
+    File.open(log_file, "a") { |f| f.puts output }
+    check = $?.success?
+  end
+  
+  if check
+    print_status(status: :OK) if OPT['v']
+    log("#{message}  [  OK  ]", "info")
+  else
+    print_status(status: :FAIL)
+    log("Error in process: #{message} - STOP", "error")
+    exit 0
+  end
+end
+
 def read_chef_file
   # Chef config
   Chef::Config.from_file("/root/.chef/knife.rb")
   Chef::Config[:node_name]  = "admin"
-  Chef::Config[:client_key] = "/root/.chef/admin.pem"
+  Chef::Config[:client_key] = "/etc/chef/admin.pem"
   Chef::Config[:http_retry_count] = 5
 end
 
-def check_oper (cmd, mode, type, message)
-  commands = cmd.split(';')
-  if mode == "verbose"
-    printf "".center(120,'#').colorize(:light_blue)
-    printf "\n# #{message}\n".colorize(:light_blue)
-    printf "".center(120,'#').colorize(:light_blue)
-    printf "\n"
-    check = "KO"
-    commands.each {|cmd|
-      if cmd[0] == " "
-        cmd[0] = ""
-      end
-      output = system("#{cmd}")
-      check = $?.success?
-      open("/root/.#{type}-manager.log", "a") { |f|
-        f.puts "#{output}"
-      }
-    }
-    if "#{check}" == "true"
-      printf " [  OK  ] ".center(120,'#').colorize(:light_blue)
-      printf "\n"
-      log("#{message}  [  OK  ] ", "info")
-    else
-      printf " [  KO  ] ".center(120,'#').colorize(:red)
-      printf "\n"
-      log("Error in process: #{message} - STOP","error")
-      exit 0
-    end
-  else
-    printf message
-    file_log = File.open("/root/.#{type}-manager.log", "a")
-    file_log.puts "*******************************************************************************************************\n"
-    file_log.puts "* #{message}\n"
-    file_log.puts "* #{cmd}\n"
-    file_log.puts "*******************************************************************************************************\n"
-    file_log.close
-    check = "KO"
-    commands.each {|cmd|
-      if cmd[0] == " "
-        cmd[0] = ""
-      end
-      output = `#{cmd} 2>&1 >>/root/.#{type}-manager.log`
-      check = $?.success?
-    }
-    if "#{check}" == "true"
-      printf "[  OK  ]\n".colorize(:green).rjust(140-message.length)
-      log("#{message}  [  OK  ] ", "info")
-    else
-      printf "[  KO  ]\n".colorize(:red).rjust(140-message.length)
-      log("Error in process: #{message} - STOP","error")
-      exit 0
-    end
+def check_leader()
+  serf_output = `serf members 2>&1`
+  check_oper("serf members", 'backup', 'Checking leader of cluster...')
+  leader_data = serf_output.each_line.map { |l| l.strip }.find { |l| l.include?("leader=ready") }
+  if leader_data.nil?
+    puts "No leader node found."
+    exit 1
+  end
+  if HOSTNAME != leader_data.split.first
+    puts "Need to be executed in cluster leader node:\n\t#{leader_data.split.first} | #{leader_data.split[1].split(':').first}"
+    exit 1
   end
 end
 
-# Global var
-opt                            = Getopt::Std.getopts("f:bhvprms3k:nc:")
-time                           = Time.new
-date                           = time.strftime("%Y%m%d-%H%M%S")
-rsa_key                        = "/root/.ssh/rsa"
-hostname                       = `hostname -s 2>/dev/null`.strip()
-encrypted_data_bag_secret_path = "/etc/chef/encrypted_data_bag_secret"
-nring                          = 60    # Max Number of backup files to store on S3
+# Helper to process a folder into unique/common
+def process_folder(base, dest, hashes = nil, deduplicate: false)
+  Dir.glob("#{base}/**/*", File::FNM_DOTMATCH).each do |path|
+    next if [".", ".."].include?(File.basename(path))
+    next if File.directory?(path)
+    next if PATH_TO_EXCLUDE.any? { |ex| path.start_with?(ex) }
 
+    final_dest = dest 
+
+    if deduplicate
+      digest = Digest::SHA256.file(path).hexdigest
+      final_dest   = hashes[digest] ? dest[:common] : dest[:unique]
+      hashes[digest] ||= path
+    end
+
+    rel_path = path.sub(%r{^/}, "")
+    target   = File.join(final_dest, rel_path)
+
+    FileUtils.mkdir_p(File.dirname(target))
+    FileUtils.cp(path, target)
+  end
+end
+
+def limit_saved_files(pattern, limit)
+  backups = Dir.glob(pattern).sort_by { |f| File.mtime(f) }
+
+  if backups.size > limit
+    old_backups = backups[0...(backups.size - limit)]
+    old_backups.each do |dir|
+      puts "Removing old backup: #{dir}"
+      FileUtils.rm_rf(dir)
+    end
+  end
+end
+  
+
+
+# Global var
+OPT                            = Getopt::Std.getopts("f:bhvprms3k:nc")
+DATE                           = Time.new.strftime("%Y%m%d-%H%M%S")
+HOSTNAME                       = `hostname -s 2>/dev/null`.strip()
+ENCRYPTED_DATA_BAG_SECRET_PATH = "/etc/chef/encrypted_data_bag_secret"
+LIMIT_FILES_SAVE               = 5
+TERMINAL_WIDTH                 = IO.console.winsize[1] rescue 120
+VALID_MODES                    = %w[full s3 core chef]
+TAR_CREATE                     = "tar --ignore-failed-read -zvcPf"
+TAR_EXTRACT                    = "tar --ignore-failed-read -zvxPf"
+
+
+COLORS = {
+  OK:    "\e[32m",
+  FAIL:  "\e[31m",
+  WARN:  "\e[33m",
+  RESET: "\e[0m"
+}
+
+PATH_TO_EXCLUDE = [
+  "/var/opt/opscode/nginx/html",
+  "/root/.chef/syntax_check_cache",
+  "/var/chef/cookbooks",
+  "/var/chef/backup",
+  "/var/chef/data"
+]
+
+PATH_TO_BACKUP_UNIQUE = [
+  "/etc/chef/client.rb",
+  "/etc/chef/chef_guid",
+  "/etc/chef/client.pem",
+  "/etc/sysconfig/druid_*",
+  "/etc/sysconfig/network",
+  "/etc/sysconfig/webui",
+  "/etc/sysconfig/zookeeper",
+  "/etc/sysconfig/network-scripts/ifcfg-ens*",
+  "/boot/grub2",
+  "/etc/hosts",
+  "/etc/hostname",
+  "/etc/fstab",
+  "/etc/ssh/"
+]
+
+PATH_TO_BACKUP_LEADER = [
+  "/etc/opscode/admin.pem",
+  "/etc/opscode/pivotal.pem",
+  "/etc/opscode/redborder-validator.pem",
+  "/etc/opscode/webui_priv.pem",
+  "/etc/opscode/webui_pub.pem",
+  "/var/chef/nodes",
+  "/var/lib/pgsql/data",
+  "/var/opt/opscode/nginx/ca",
+  "/opt/opscode/embedded/service/opscode-erchef/etc"
+]
+
+PATH_TO_BACKUP_COMMON = [
+  "/root/.chef",
+  "/var/chef/",
+  "/var/www/rb-rails/config/",
+  "/etc/pki/tls/",
+  "/etc/ssl/",
+  "/etc/group",
+  "/etc/sudoers",
+  "/etc/sudoers.d/",
+  "/etc/selinux/",
+  "/var/chef/cookbooks/keepalived/templates/default/keepalived.conf.erb"
+]
+
+
+
+
+#
+# Only leader name -> leader_name = serf_output.each_line.map(&:strip).find { |line| line.include?("leader=ready")}&.split&.first
+# line serf memeber with leader = ready -> leader_data = serf_output.each_line.map { |l| l.strip }.find { |l| l.include?("leader=ready") }
+# Hostname, IP:PORT, Status, Services/Modes => "jenkins-manager1  10.0.225.20:7946  alive  s3=ready,consul=ready,leader=ready,mode=full,postgresql=ready"
+# option cluster => "-c", only execute in master node if not write which node is master (name, ip, status)
+# Data changes:
+#   /etc      -> /etc_hostname
+#   /var/opt  -> /var/opt_hostname
+#   /var/lib  -> only master
+#   /var/chef -> only master
+#   /var/www  -> only master
+#   
 
 # Check compatibile options
-usage() if opt['h'] or (opt['f'].nil? and opt['f']) or (opt['f'] and opt['s']) or (opt['3'] and opt['s']) or (opt['k'].nil? and opt['k'] and opt['3']) or (!opt['m'] and opt['p'])
+# usage() if OPT['h'] or (OPT['f'].nil? and OPT['f']) or (OPT['f'] and OPT['s']) or (OPT['3'] and OPT['s']) or (OPT['k'].nil? and OPT['k'] and OPT['3']) or (OPT['m'] and OPT['p'])
+validate_options(OPT)
+
+check_leader if OPT['c']
 
 read_chef_file
 
 #################
 # Backup option #
 #################
-if opt['b']
+if OPT['b']
   # Init variables
   type = "backup"
   tar = "tar --ignore-failed-read -zvcPf"
-  if opt['v']
-    verbose   = "verbose"
-    s3verbose = "-v"
-  else
-    verbose   = "quiet"
-    s3verbose = "-q"
-  end
+  log_file = "/root/.#{type}-manager.log"
+  backup_path = "/tmp/backups"
+  FileUtils.mkdir_p(backup_path)
+
+  # Verbose in commands
+  s3verbose = OPT['v'] ? "-v" : "-q"
 
   # Verify if log file exists
-  FileUtils.rm_f("/root/.backup-manager.log") if File.exists?("/root/.backup-manager.log")
+  FileUtils.rm_f(log_file) if File.exists?(log_file)
+
+  puts "Step 1. Destination"
 
   # Check backup destination
-  if opt['f']
-    if File.exists?(opt['f'])
-      printf "File #{opt['f']} already exits\n".colorize(:red)
+  if OPT['f']
+    if File.extname(OPT['f']).empty?
+      # Add .tar.gz
+      OPT['f'] += ".tar.gz"
+    elsif File.basename(OPT['f']) !~ /\.tar\.gz\z/
+      # Invalid extension
+      print_status(status: :FAIL)
+      puts "Invalid file extension. Only '.tar.gz' is allowed."
       exit 0
-    else
-      file_path = File.expand_path(opt['f'])
     end
-  elsif opt['3']
-    s3cfg          = (opt['s'] ? "/root/.s3cfg-backup" : "/root/.s3cfg")
-    file_path_name = "#{date}-#{hostname}-backup.tar.gz"
-    file_path      = "/tmp/#{file_path_name}"
-    s3bucket       = `cat /etc/druid/base.properties | grep druid.storage.bucket= | tr '=' ' '|awk '{print $2}'`.strip
 
-    # Check Options
+    if OPT['f'].include?("/")
+      file_path = OPT['f']
+    else
+      file_path = File.join(backup_path, File.basename(OPT['f']))
+    end
+
+    if File.exist?(file_path)
+      print_status(status: :WARN)
+      puts "File #{OPT['f']} already exists, replacing..."
+      File.delete(file_path)
+    end
+  elsif OPT['3']
+    s3cfg          = (OPT['s'] ? "/root/.s3cfg-backup" : "/root/.s3cfg_initial")
+    file_path_name = "#{DATE}-#{HOSTNAME}-backup.tar.gz"
+    file_path      = File.join(backup_path, file_path_name)
+    s3bucket       = `cat /etc/druid/_common/common.runtime.properties | grep druid.storage.bucket= | tr '=' ' '|awk '{print $2}'`.strip
+
     if s3bucket == "" or File.exist?(s3cfg) == "false"
-      printf "Please, check your AWS config, exiting\n".colorize(:red)
+      print_status(status: :FAIL)
+      puts "Please, check your AWS config, exiting"
       exit 0
     end
-    check_oper("nice -n 19 ionice -c2 -n7 s3cmd -c #{s3cfg} #{s3verbose} ls s3://#{s3bucket}/",verbose, type, "Checking s3://#{s3bucket}/ access ")
+    
+    message = "Checking s3://#{s3bucket}/ access "
+    check_oper("nice -n 19 ionice -c2 -n7 s3cmd -c #{s3cfg} #{s3verbose} ls s3://#{s3bucket}/", type, message)
     nbackup = `s3cmd -c #{s3cfg} -v ls s3://#{s3bucket}/backup/ | sort | cut -d/ -f5`
-    if nbackup.lines.count >= nring
+
+    if nbackup.lines.count >= LIMIT_FILES_SAVE
       deletefile = nbackup.lines.first.strip()
-      check_oper("nice -n 19 ionice -c2 -n7 s3cmd -c #{s3cfg} #{s3verbose} rm s3://#{s3bucket}/backup/#{deletefile}",verbose, type, "Deleting #{deletefile} backup file ... ")
+      message = "Deleting #{deletefile} backup file ... "
+      check_oper("nice -n 19 ionice -c2 -n7 s3cmd -c #{s3cfg} #{s3verbose} rm s3://#{s3bucket}/backup/#{deletefile}", type, message)
     end
-    printf "The backup will be stored in s3://#{s3bucket}/backup/#{file_path_name}\n"
+    puts "\tThe backup will be stored in s3://#{s3bucket}/backup/#{file_path_name}"
   else
-    printf "Destination error, check your choice\n".colorize(:red)
+    print_status(status: :FAIL)
+    puts "No backup destination specified"
     exit 0
   end
 
-  node_config  = Chef::Node.load(hostname)
+  puts "\nStep 1. Finish"
+  print_status(status: :OK)
 
-  # # Looking if actual node is the master
-  if (node_config["redborder"]["manager"]["mode"] == "master") or (node_config["redborder"]["manager"]["mode"] == "corezk") or (node_config["redborder"]["manager"]["mode"] == "core") or (node_config["redborder"]["manager"]["mode"] == "chef")
-    manager_info = File.open("/tmp/#{hostname}-backup-#{date}.txt", "w")
-    manager_info.puts "Backup date: #{date}\n"
-    manager_info.puts "Node: #{hostname}"
-    manager_info.puts "Version: #{`rpm -aq | sed -e '/redborder-manager/!d'`}"
-    manager_info.puts "Management IP Address: #{node_config["redborder"]["manager"]["bond0"]["ip"]}"
-    manager_info.puts "Management Prefixlen: #{node_config["redborder"]["manager"]["bond0"]["prefixlen"]}"
-    manager_info.puts "Sync Ip Address: #{node_config["redborder"]["manager"]["bond1"]["ip"]}"
-    manager_info.puts "Sync Prefixlen: #{node_config["redborder"]["manager"]["bond1"]["prefixlen"]}"
-    manager_info.close
+  puts "Step 2. Create backup tar.gz"
 
-    # Make database backup
-    check_oper("nice -n 19 ionice -c2 -n7 su - opscode-pgsql -m -s /bin/bash -c \"/opt/opscode/embedded/bin/pg_dumpall -c | gzip --fast > /tmp/#{hostname}-postgresql-dump-#{date}.gz\"; sync", verbose, type, "Database backup in progress ... ")      # Make important data backup
-    if opt['m']
-      tarcmd = "nice -n 19 ionice -c2 -n7 #{tar} #{file_path} --exclude=/var/opt/chef-server/nginx/html --exclude=/opt/rb/root/.chef/syntax_check_cache --exclude=/opt/rb/var/chef/cookbooks --exclude=/opt/rb/var/chef/backup --exclude=/opt/rb/var/chef/data --exclude=/opt/rb/var/chef/backups --exclude=/var/opt/chef-server/bookshelf/data /opt/rb/root/.chef /etc/chef-server /opt/rb/etc/chef /opt/rb/var/chef /opt/rb/var/www/rb-rails/config /opt/rb/etc/mode /etc/hosts /opt/rb/etc/keepalived/keepalived.conf /opt/rb/var/pgdata/pg_hba.conf /var/opt/chef-server/nginx/ca /var/opt/chef-server/erchef/etc /opt/rb/etc/manager_index /tmp/#{hostname}-postgresql-dump-#{date}.gz /tmp/#{hostname}-backup-#{date}.txt"
-    else
-      tarcmd = "nice -n 19 ionice -c2 -n7 #{tar} #{file_path} --exclude=/var/opt/chef-server/nginx/html --exclude=/opt/rb/root/.chef/syntax_check_cache --exclude=/opt/rb/var/chef/cookbooks --exclude=/opt/rb/var/chef/backup --exclude=/opt/rb/var/chef/data --exclude=/opt/rb/var/chef/cache --exclude=/opt/rb/var/chef/backups --exclude=/var/opt/chef-server/bookshelf/data /opt/rb/root/.chef /etc/chef-server /opt/rb/etc/chef /opt/rb/var/chef /opt/rb/var/www/rb-rails/config /opt/rb/etc/mode /etc/hosts /opt/rb/etc/keepalived/keepalived.conf /opt/rb/var/pgdata/pg_hba.conf /var/opt/chef-server/nginx/ca /var/opt/chef-server/erchef/etc /opt/rb/etc/manager_index /tmp/#{hostname}-postgresql-dump-#{date}.gz /tmp/#{hostname}-backup-#{date}.txt"
+  node_config  = Chef::Node.load(HOSTNAME)
+
+  if VALID_MODES.include?(node_config["redborder"]["mode"].to_s)
+    
+    tmp_dir    = OPT['c'] ? File.join(backup_path, "backup-cluster-#{DATE}") : File.join(backup_path, "backup-#{HOSTNAME}-#{DATE}")
+    common_dir = File.join(tmp_dir, "common")
+    unique_dir = File.join(tmp_dir, "unique", HOSTNAME)
+    leader_dir = File.join(tmp_dir, "leader")
+
+    FileUtils.rm_rf(tmp_dir) if Dir.exist?(tmp_dir) && tmp_dir != "/" && !tmp_dir.strip.empty?
+    FileUtils.mkdir_p(common_dir)
+    FileUtils.mkdir_p(unique_dir)
+    FileUtils.mkdir_p(leader_dir)
+
+    PATH_TO_EXCLUDE << "/var/chef/cache" unless OPT['m']
+
+    hashes = {}
+
+    # -------------------------------
+    # 1. Leader-only files
+    # -------------------------------
+    PATH_TO_BACKUP_LEADER.each do |base|
+      next if PATH_TO_EXCLUDE.any? { |ex| base.start_with?(ex) }
+      process_folder(base, leader_dir)
     end
 
-    if opt['f'] # To path
-      check_oper("#{tarcmd}; sync", verbose, type, "Making backup of #{hostname} node ... ")
-    elsif opt['3'] # To S3 AWS
-      check_oper("#{tarcmd}; nice -n 19 ionice -c2 -n7 s3cmd -c #{s3cfg} #{s3verbose} sync #{file_path} s3://#{s3bucket}/backup/; rm -f #{file_path}", verbose, type, "Making backup of #{hostname} node on s3 ... ")
+    # -------------------------------
+    # 2. Unique files for this node
+    # -------------------------------
+    PATH_TO_BACKUP_UNIQUE.each do |base|
+      next if PATH_TO_EXCLUDE.any? { |ex| base.start_with?(ex) }
+      process_folder(base, { unique: unique_dir, common: common_dir }, hashes, deduplicate: true)
     end
 
-    # Delete temporal files
-    message = "Deleting temporal files ... "
-    check_oper("nice -n 19 ionice -c2 -n7 rm -f /tmp/#{hostname}-postgresql-dump-#{date}.gz; nice -n 19 ionice -c2 -n7 rm -f /tmp/#{hostname}-backup-#{date}.txt", verbose, type, message)
+    # -------------------------------
+    # 3. Common files
+    # -------------------------------
+    PATH_TO_BACKUP_COMMON.each do |base|
+      next if PATH_TO_EXCLUDE.any? { |ex| base.start_with?(ex) }
+      process_folder(base, { unique: unique_dir, common: common_dir }, hashes, deduplicate: true)
+    end
 
+    # -------------------------------
+    # 4. If cluster mode, fetch other nodes
+    # -------------------------------
+    if OPT['c']
+      serf_output = `serf members 2>&1`
+      cluster_nodes = serf_output.each_line.map { |l| l.split.first }.reject { |n| n == HOSTNAME }
+      nodes_dir  = File.join(tmp_dir, "nodes")
+      FileUtils.mkdir_p(nodes_dir)
+    
+      puts "Cluster nodes detected: #{cluster_nodes.join(", ")}"
+      puts "Sync IP Address (this node): #{node_config['ipaddress_sync']}"
+    
+      cluster_nodes.each do |node|
+        line = serf_output.each_line.find { |l| l.start_with?(node) }
+        next unless line
+      
+        sync_ip = line.split[1].to_s.split(':').first
+        next if sync_ip.nil? || sync_ip.empty?
+      
+        node_tmp_dir = File.join(nodes_dir, node)
+        FileUtils.mkdir_p(node_tmp_dir)
+      
+        # Fetch files into temporal folder (node_tmp_dir)
+        paths_str    = (PATH_TO_BACKUP_UNIQUE + PATH_TO_BACKUP_COMMON).join(" ")
+        exclude_opts = PATH_TO_EXCLUDE.map { |e| "--exclude '#{e}'" }.join(" ")
+      
+        system("rsync -az #{exclude_opts} root@#{sync_ip}:#{paths_str} #{node_tmp_dir}")
+      
+        # Organize fetched files into unique/common
+        (PATH_TO_BACKUP_UNIQUE + PATH_TO_BACKUP_COMMON).each do |base|
+          node_base = File.join(node_tmp_dir, File.basename(base))
+          process_folder(node_base, { unique: File.join(tmp_dir, "unique", node), common: common_dir }, hashes, deduplicate: true) if Dir.exist?(node_base)
+        end
+      end
+
+      # Clear temporal folder
+      FileUtils.rm_rf(nodes_dir)
+    end
+
+    # -------------------------------
+    # 5. Manager info (leader only)
+    # -------------------------------
+    manager_info_path = File.join(leader_dir, "#{HOSTNAME}-backup-#{DATE}.txt")
+    File.open(manager_info_path, "w") do |f|
+      f.puts "Backup date: #{DATE}\n"
+      f.puts "Node: #{HOSTNAME}"
+      f.puts "Version: #{`rpm -aq | sed -e '/redborder-manager/!d'`}"
+      f.puts "Management IP Address: #{node_config['ipaddress']}"
+      f.puts "Sync Ip Address: #{node_config['ipaddress_sync']}"
+    end
+    puts "Manager_info to #{manager_info_path} >> complete!!"
+    print_status(status: :OK)
+
+    # -------------------------------
+    # 6. Database backup (leader only)
+    # -------------------------------
+    message = "Database backup in progress ... "
+    pg_dump_path = File.join(leader_dir, "#{HOSTNAME}-postgresql-dump-#{DATE}.gz")
+    check_oper("nice -n 19 ionice -c2 -n7 pg_dumpall -h 127.0.0.1 -U postgres -c | gzip --fast > #{pg_dump_path}; sync", type, message)
+
+    # -------------------------------
+    # X. Generate tar.gz backup
+    # -------------------------------
+    tarcmd = "nice -n 19 ionice -c2 -n7 #{TAR_CREATE} #{file_path} -C #{tmp_dir} ."
+    backup_pattern = OPT['c'] ? File.join(backup_path, "backup-cluster-*") : File.join(backup_path, "backup-#{HOSTNAME}-*")
+    backup_file_pattern = File.join(backup_path, "*.tar.gz")
+    
+    if OPT['f']
+      message = "Making backup in tar.gz file: #{file_path}"
+      check_oper("#{tarcmd}; sync", type, message)
+      # -- Limit folders with backup data --
+      limit_saved_files(backup_pattern, LIMIT_FILES_SAVE)
+      # -- Limit tar.gz backup files --
+      limit_saved_files(backup_file_pattern, LIMIT_FILES_SAVE)
+    elsif OPT['3']
+      message = "Making backup on s3"
+      check_oper("#{tarcmd}; nice -n 19 ionice -c2 -n7 s3cmd -c #{s3cfg} #{s3verbose} sync #{file_path} s3://#{s3bucket}/backup/; rm -f #{file_path}", type, message)
+      FileUtils.rm_rf(tmp_dir) if Dir.exist?(tmp_dir) && tmp_dir != "/" && !tmp_dir.strip.empty?
+    end
   else
-    printf "Actual node is not the master/core/corezk/chef, exiting\n".colorize(:red)
+    print_status(status: :FAIL)
+    puts "Actual node is not the #{VALID_MODES}, exiting"
     exit 0
   end
+
+  puts "\nStep 2. Finish"
+  print_status(status: :OK)
 
 ##################
 # Restore Option #
 ##################
-elsif opt['r']
+elsif OPT['r']
   type       = "restore"
   verified   = false
 
-  if opt['v']
+  if OPT['v']
     verbose   = "verbose"
     s3verbose = "-v"
   else
@@ -243,11 +513,11 @@ elsif opt['r']
   domain_rbglobal       = "redborder.cluster" if (domain_rbglobal.nil? or domain_rbglobal == "")
   publicdomain_rbglobal = domain_rbglobal     if publicdomain_rbglobal.nil?
 
-  if opt['n']
+  if OPT['n']
     verified = true
-    check_oper("rm -f /opt/rb/etc/blocked/*; touch /opt/rb/etc/s3user.txt; rm -f /opt/rb/etc/cluster.lock", verbose, type, "Deleting locking files ... ")
+    check_oper("rm -f /opt/rb/etc/blocked/*; touch /opt/rb/etc/s3user.txt; rm -f /opt/rb/etc/cluster.lock", type, "Deleting locking files ... ")
   else
-    node_config = Chef::Node.load(hostname)
+    node_config = Chef::Node.load(HOSTNAME)
     if ( !node_config.nil? and !node_config["redborder"].nil? and !node_config["redborder"]["manager"].nil? and ( (node_config["redborder"]["manager"]["mode"] == "master") or (node_config["redborder"]["manager"]["mode"] == "corezk") or (node_config["redborder"]["manager"]["mode"] == "core") or (node_config["redborder"]["manager"]["mode"] == "chef") ) )
       verified = true
     end
@@ -261,16 +531,16 @@ elsif opt['r']
     FileUtils.rm_f("/tmp/*-postgresql-dump-*.gz") if !Dir.glob('/tmp/*-postgresql-dump-*.gz').empty?
 
     # Check backup source
-    if opt['f'] and opt['3'].nil? and File.exists?(opt['f'])
-      path = File.expand_path(opt['f'])
-    elsif opt['3']
-      s3cfg    = (opt['s'] ? "/root/.s3cfg-backup" : "/root/.s3cfg")
-      s3bucket = (opt['k'] ? opt['k'] : (externals.nil? ? "redborder" : externals['S3BUCKET']))
+    if OPT['f'] and OPT['3'].nil? and File.exists?(OPT['f'])
+      path = File.expand_path(OPT['f'])
+    elsif OPT['3']
+      s3cfg    = (OPT['s'] ? "/root/.s3cfg-backup" : "/root/.s3cfg")
+      s3bucket = (OPT['k'] ? OPT['k'] : (externals.nil? ? "redborder" : externals['S3BUCKET']))
       s3bucket = "redborder" if s3bucket.nil? or s3bucket.empty?
 
-      check_oper("nice -n 19 ionice -c2 -n7 s3cmd -c #{s3cfg} #{s3verbose} ls s3://#{s3bucket}/", verbose, type, "Checking S3 access ... ")
+      check_oper("nice -n 19 ionice -c2 -n7 s3cmd -c #{s3cfg} #{s3verbose} ls s3://#{s3bucket}/", type, "Checking S3 access ... ")
       nbackup = `s3cmd -c #{s3cfg} -v ls s3://#{s3bucket}/backup/ | sort | cut -d/ -f5`
-      if opt['f'].nil?
+      if OPT['f'].nil?
         if nbackup.lines.count == 0
           printf "There is no backup files to restore on s3://#{s3bucket}/backup/\n"
           exit 0
@@ -278,20 +548,20 @@ elsif opt['r']
           file_to_restore = nbackup.lines.last.strip()
         end
       else
-        message = "Checking s3://#{s3bucket}/backup/#{opt['f']} ... "
+        message = "Checking s3://#{s3bucket}/backup/#{OPT['f']} ... "
         printf message
-        if `s3cmd -c #{s3cfg} ls s3://#{s3bucket}/backup/#{opt['f']}` == ""
+        if `s3cmd -c #{s3cfg} ls s3://#{s3bucket}/backup/#{OPT['f']}` == ""
           printf "[  KO  ]\n".colorize(:red).rjust(140-message.length)
           printf "The file doesn't exists\n"
           exit 0
         else
           printf "[  OK  ]\n".colorize(:green).rjust(140-message.length)
-          file_to_restore = opt['f']
+          file_to_restore = OPT['f']
         end
       end
       path = "/tmp/#{file_to_restore}"
       message = "Downloading #{file_to_restore} file ... "
-      check_oper("s3cmd -c #{s3cfg} #{s3verbose} sync s3://#{s3bucket}/backup/#{file_to_restore} /tmp/", verbose, type, message)
+      check_oper("s3cmd -c #{s3cfg} #{s3verbose} sync s3://#{s3bucket}/backup/#{file_to_restore} /tmp/", type, message)
     else
       printf "Source error, check your choice. Option -f or -3 are mandatory\n".colorize(:red)
       exit 0
@@ -316,32 +586,32 @@ elsif opt['r']
     filet.close()
 
     # If its a machine restore verify the correct content of files
-    failed = true if (opt['m']) and (`tar -tf #{path} | grep "opt/rb/var/chef/cache/cookbooks"` == "")
+    failed = true if (OPT['m']) and (`tar -tf #{path} | grep "opt/rb/var/chef/cache/cookbooks"` == "")
 
     if noderestore.nil? or ipmagntorestore.nil? or ipsynctorestore.nil? or failed
       printf "The backup is not valid.\n".colorize(:red)
       exit 0
     end
 
-    if hostname != noderestore
-      check_oper("hostname #{noderestore}", verbose, type, "Changing #{hostname} node name to #{noderestore} node name ... ")
+    if HOSTNAME != noderestore
+      check_oper("hostname #{noderestore}", type, "Changing #{HOSTNAME} node name to #{noderestore} node name ... ")
     end
 
     # Stop chef-client
-    check_oper("rb_service stop chef druid awslogs rb-cloudwatch rb-monitor rb-workers rb-webui nprobe n2klocd memcached kafka stanchion riak zookeeper pgpool nginx freeradius postgresql keepalived", verbose, type, "Stoping all services ... ")
+    check_oper("rb_service stop chef druid awslogs rb-cloudwatch rb-monitor rb-workers rb-webui nprobe n2klocd memcached kafka stanchion riak zookeeper pgpool nginx freeradius postgresql keepalived", type, "Stoping all services ... ")
     # Restore the node
-    check_oper("#{tar} #{path} -C /", verbose, type, "Restoring files ... ")
+    check_oper("#{tar} #{path} -C /", type, "Restoring files ... ")
     `sed -i '/rb_aws_secondary_ip.sh/d' /etc/keepalived/keepalived.conf`
     # we need to change remote ips for current ips on /etc/hosts
-    check_oper("sed -i 's/^#{ipmagntorestore} /127.0.0.1 /g' /etc/hosts; sed -i 's/^#{ipsynctorestore} /127.0.0.1 /g' /etc/hosts;", verbose, type, "Replacing ips on /etc/hosts ... ")
+    check_oper("sed -i 's/^#{ipmagntorestore} /127.0.0.1 /g' /etc/hosts; sed -i 's/^#{ipsynctorestore} /127.0.0.1 /g' /etc/hosts;", type, "Replacing ips on /etc/hosts ... ")
     # Start postgress on chef-server
-    check_oper("rb_service start keepalived postgresql", verbose, type, "Restoring postgresql service ... ")
+    check_oper("rb_service start keepalived postgresql", type, "Restoring postgresql service ... ")
     # Restore chef-server data
-    check_oper("su - opscode-pgsql -m -s /bin/bash -c \"gunzip -q -c /tmp/*-postgresql-dump-*.gz | /opt/chef-server/embedded/bin/psql -U \"opscode-pgsql\" -d postgres\"", verbose, type, "Restoring chef-server database ...")
+    check_oper("su - opscode-pgsql -m -s /bin/bash -c \"gunzip -q -c /tmp/*-postgresql-dump-*.gz | /opt/chef-server/embedded/bin/psql -U \"opscode-pgsql\" -d postgres\"", type, "Restoring chef-server database ...")
     # Ensure chef is running
-    check_oper("rb_chef restart; sleep 5; rb_create_rabbitusers.sh", verbose, type, "Starting chef-server services ... ")
+    check_oper("rb_chef restart; sleep 5; rb_create_rabbitusers.sh", type, "Starting chef-server services ... ")
 
-    if opt['n']
+    if OPT['n']
       # With this option we conserve original domain
       domain_restore = `cat /etc/chef/client.rb | grep erchef | cut -d/ -f3 | cut -d: -f1 | cut -d. -f2-`.strip()
       puts "New Domain:    #{domain_rbglobal}"
@@ -375,10 +645,10 @@ elsif opt['r']
     end
 
     # Create new certs and delete old certs
-    secret = Chef::EncryptedDataBagItem.load_secret(encrypted_data_bag_secret_path)
+    secret = Chef::EncryptedDataBagItem.load_secret(ENCRYPTED_DATA_BAG_SECRET_PATH)
 
     # Change s3 domains if proceed
-    if opt['n']
+    if OPT['n']
       s3_secrets_temp = Chef::DataBagItem.load('passwords','s3_secrets') rescue s3_secrets_temp=nil
       if !s3_secrets_temp.nil? and !s3_secrets_temp["hostname"].nil? and s3_secrets_temp["hostname"].end_with? "#{domain_restore}"
         s3_secrets_temp["hostname"] = s3_secrets_temp["hostname"].sub(domain_restore,domain_rbglobal)
@@ -393,12 +663,12 @@ elsif opt['r']
         #recreate certs
         [ domain_rbglobal, "chefwebui.#{domain_rbglobal}", "data.#{domain_rbglobal}", "erchef.#{domain_rbglobal}", "repo.#{domain_rbglobal}", "s3.#{domain_rbglobal}", "webui.#{domain_rbglobal}" ].each do |cert|
           FileUtils.rm_f("/var/opt/chef-server/nginx/ca/#{cert}.crt") if File.exists?"/var/opt/chef-server/nginx/ca/#{cert}.crt"
-          check_oper("/opt/rb/bin/rb_create_cert.sh -n #{cert}", verbose, type, "Creating #{cert} cert ...")
-          check_oper("/opt/rb/bin/rb_upload_certs.sh #{cert}"  , verbose, type, "Uploading #{cert} cert ...")
+          check_oper("/opt/rb/bin/rb_create_cert.sh -n #{cert}", type, "Creating #{cert} cert ...")
+          check_oper("/opt/rb/bin/rb_upload_certs.sh #{cert}"  , type, "Uploading #{cert} cert ...")
         end
       end
 
-      check_oper("mkdir -p /root/.chef/trusted_certs/; rsync /var/opt/chef-server/nginx/ca/erchef.#{domain_rbglobal}.crt /var/opt/chef-server/nginx/ca/#{domain_rbglobal}.crt /opt/rb/root/.chef/trusted_certs/; mkdir -p /home/redborder/.chef/trusted_certs/; rsync /var/opt/chef-server/nginx/ca/erchef.#{domain_rbglobal}.crt /var/opt/chef-server/nginx/ca/#{domain_rbglobal}.crt /home/redborder/.chef/trusted_certs/; chown -R redborder:redborder /home/redborder/.chef", verbose, type, "Copying certs to trusted certs")
+      check_oper("mkdir -p /root/.chef/trusted_certs/; rsync /var/opt/chef-server/nginx/ca/erchef.#{domain_rbglobal}.crt /var/opt/chef-server/nginx/ca/#{domain_rbglobal}.crt /opt/rb/root/.chef/trusted_certs/; mkdir -p /home/redborder/.chef/trusted_certs/; rsync /var/opt/chef-server/nginx/ca/erchef.#{domain_rbglobal}.crt /var/opt/chef-server/nginx/ca/#{domain_rbglobal}.crt /home/redborder/.chef/trusted_certs/; chown -R redborder:redborder /home/redborder/.chef", type, "Copying certs to trusted certs")
 
       # Change domain an public domain for database
       db_list = ["db_opscode_chef","db_druid","db_oozie","db_radius","db_redborder"]
@@ -418,7 +688,7 @@ elsif opt['r']
       # Overwrite domains
       new_domain = Chef::DataBagItem.load('rBglobal','domain') rescue new_domain=nil
       if !new_domain.nil? and new_domain["name"] != domain_rbglobal
-        `echo "127.0.0.1 erchef.#{new_domain["name"]} postgresql.#{new_domain["name"]}" >> /etc/extrahosts` if opt['n']
+        `echo "127.0.0.1 erchef.#{new_domain["name"]} postgresql.#{new_domain["name"]}" >> /etc/extrahosts` if OPT['n']
         new_domain["name"] = domain_rbglobal
         new_domain.save
       end
@@ -438,52 +708,52 @@ elsif opt['r']
         end
       end
     end
-    `echo "127.0.0.1 erchef.#{domain_rbglobal} postgresql.#{domain_rbglobal}" >> /etc/extrahosts` if opt['n']
+    `echo "127.0.0.1 erchef.#{domain_rbglobal} postgresql.#{domain_rbglobal}" >> /etc/extrahosts` if OPT['n']
 
     if !opt['c'].nil? and !opt['c'].empty?
-      printf "CMD: #{opt['c']}\n"
-      system(opt['c'])
+      printf "CMD: #{OPT['c']}\n"
+      system(OPT['c'])
     end
 
-    if hostname != noderestore and !opt['p']
+    if HOSTNAME != noderestore and !opt['p']
       # Change node to original
-      check_oper("rb_change_hostname.sh -s -f -n #{hostname}", verbose, type, "Restoring #{hostname} node name ... ")
+      check_oper("rb_change_hostname.sh -s -f -n #{HOSTNAME}", type, "Restoring #{HOSTNAME} node name ... ")
 
       # Check if noderestore exists
       if `knife node list | grep #{noderestore}` != ""
-        check_oper("knife node delete #{noderestore} -y; knife client delete #{noderestore} -y; knife role delete #{noderestore} -y", verbose, type, "Deleting #{noderestore} client and node ... ")
+        check_oper("knife node delete #{noderestore} -y; knife client delete #{noderestore} -y; knife role delete #{noderestore} -y", type, "Deleting #{noderestore} client and node ... ")
       end
     end
 
     # Run chef once
-    check_oper("rb_run_chef_once.sh", verbose, type, "Applying chef config 1/2 (please, be patient) ... ")
-    check_oper("rb_run_chef_once.sh", verbose, type, "Applying chef config 2/2 (please, be patient) ... ")
+    check_oper("rb_run_chef_once.sh", type, "Applying chef config 1/2 (please, be patient) ... ")
+    check_oper("rb_run_chef_once.sh", type, "Applying chef config 2/2 (please, be patient) ... ")
 
     # Deleting old certs if the domain has changed
     if !domain_restore.nil? and domain_restore != domain_rbglobal
       [domain_restore,"chefwebui.#{domain_restore}","data.#{domain_restore}","erchef.#{domain_restore}","repo.#{domain_restore}","s3.#{domain_restore}","webui.#{domain_restore}"].each do |cert|
-        check_oper("knife data bag delete certs http_#{cert}_pem -y", verbose, type, "Deleting #{cert} data bag item ... ")
+        check_oper("knife data bag delete certs http_#{cert}_pem -y", type, "Deleting #{cert} data bag item ... ")
         FileUtils.rm_f("/var/opt/chef-server/nginx/ca/#{cert}.crt") if File.exists?"/var/opt/chef-server/nginx/ca/#{cert}.crt"
       end
     end
 
-    if opt['m']
+    if OPT['m']
       #  reset riak config if necessary
-      check_oper("rb_reset_riak_conf.rb -y -v", verbose, type, "Restarting riak config ... ")
+      check_oper("rb_reset_riak_conf.rb -y -v", type, "Restarting riak config ... ")
 
       # upload cookbooks to s3
-      check_oper("rb_upload_cookbooks.sh -f", verbose, type, "Uploading cookbooks to riak ... ")
+      check_oper("rb_upload_cookbooks.sh -f", type, "Uploading cookbooks to riak ... ")
     end
 
     # start all cluster services
-    check_oper("rb_service start", verbose, type, "Starting all cluster services ... ")
+    check_oper("rb_service start", type, "Starting all cluster services ... ")
 
     # Delete temporal files
     message = "Deleting temporal files ... "
-    if opt['f']
-      check_oper("nice -n 19 ionice -c2 -n7 rm -f /tmp/*-postgresql-dump-*; nice -n 19 ionice -c2 -n7 rm -f #{file_config}; rm -f /opt/rb/etc/extrahosts", verbose, type, message)
+    if OPT['f']
+      check_oper("nice -n 19 ionice -c2 -n7 rm -f /tmp/*-postgresql-dump-*; nice -n 19 ionice -c2 -n7 rm -f #{file_config}; rm -f /opt/rb/etc/extrahosts", type, message)
     else
-      check_oper("nice -n 19 ionice -c2 -n7 rm -f /tmp/*-postgresql-dump-*; nice -n 19 ionice -c2 -n7 rm -f #{file_config}; nice -n 19 ionice -c2 -n7 rm -f /tmp/#{file_to_restore}; rm -f /opt/rb/etc/extrahosts", verbose, type, message)
+      check_oper("nice -n 19 ionice -c2 -n7 rm -f /tmp/*-postgresql-dump-*; nice -n 19 ionice -c2 -n7 rm -f #{file_config}; nice -n 19 ionice -c2 -n7 rm -f /tmp/#{file_to_restore}; rm -f /opt/rb/etc/extrahosts", type, message)
     end
     printf "Node restored successfully!!!\n".colorize(:green)
   else
