@@ -292,6 +292,8 @@ _RBEOF_
   "id": "db_airflow",
   "user": "$AIRFLOW_USER",
   "database": "airflow",
+  "hostname": "$OPSCODE_DBHOST",
+  "port": "$OPSCODE_DBPORT",
   "pass": "$AIRFLOW_SECRET"
 }
 _RBEOF_
