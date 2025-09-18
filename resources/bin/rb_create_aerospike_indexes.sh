@@ -10,7 +10,7 @@ function create_index() {
   local index_type=$5
 
   echo "INFO: Creating index $index_name on $namespace.$set($bin)"
-  echo "enable; manage sindex create $index_type $index_name ns $namespace set $set bin $bin" | asadm > /dev/null 2>&1
+  echo "enable; manage sindex create $index_type $index_name ns $namespace set $set bin $bin" | asadm
 
   if [ $? -ne 0 ]; then
     echo "ERROR: Could not create index $index_name on $namespace.$set($bin), exiting..."
