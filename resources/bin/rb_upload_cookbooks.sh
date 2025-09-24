@@ -51,8 +51,8 @@ listCookbooks="rb-common rb-selinux cron rb-firewall zookeeper kafka druid http2
                nginx geoip webui snmp rbmonitor rbscanner redis
                f2k logstash pmacct minio postgresql yara cape rbdswatcher rbevents-counter
                rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rblogstatter rb-arubacentral rbcgroup rb-exporter rb-chrony rb-clamav rb-postfix
-               keepalived snort barnyard2 rbaioutliers snort3 mem2incident secor rb-llm rb-druid-indexer
-               rb-agents
+               keepalived snort barnyard2 rbaioutliers snort3 mem2incident secor rb-druid-indexer
+               rb-agents rb-reputation
                rb-proxy rb-ips rb-intrusion rb-manager" # The order matters! (please keep proxy ips and manager at the end)
 
 max_retries=3
