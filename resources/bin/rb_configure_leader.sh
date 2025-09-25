@@ -12,6 +12,7 @@ function configure_db(){
   [ "x$DRUIDDBPASS" == "x" ] && DRUIDDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   [ "x$RADIUSPASS" == "x" ] && RADIUSPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   [ "x$MONITORSPASS" == "x" ] && MONITORSPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  [ "x$AIRFLOWPASS" == "x" ] && AIRFLOWPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
 
   # Druid DATABASE
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER druid WITH PASSWORD '$DRUIDDBPASS';"
@@ -39,6 +40,12 @@ function configure_db(){
 
   # Replication User
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER rep REPLICATION LOGIN CONNECTION LIMIT 100;"
+
+  # airflow DATABASE
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER airflow WITH PASSWORD '$AIRFLOWPASS';"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS airflow;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT airflow TO $DB_ADMINUSER;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE airflow OWNER airflow;"
 
 }
 
@@ -282,6 +289,20 @@ _RBEOF_
 {
   "id": "redis",
   "pass": "$REDIS_SECRET"
+}
+_RBEOF_
+
+  #airflow password token
+  AIRFLOW_USER="airflow"
+  AIRFLOW_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c32 | sed 's/ //g'`"
+  cat > /var/chef/data/data_bag/passwords/db_airflow.json <<-_RBEOF_
+{
+  "id": "db_airflow",
+  "user": "$AIRFLOW_USER",
+  "database": "airflow",
+  "hostname": "$OPSCODE_DBHOST",
+  "port": "$OPSCODE_DBPORT",
+  "pass": "$AIRFLOW_SECRET"
 }
 _RBEOF_
 
