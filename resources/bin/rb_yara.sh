@@ -17,4 +17,6 @@
 
 source /etc/profile.d/rvm.sh
 
+rvm gemset use web
+
 /usr/lib/redborder/scripts/rb_yara.rb $*

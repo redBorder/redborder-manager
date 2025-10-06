@@ -1,74 +1,87 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# CONSTANTS
-PATH_YARA_RULES = '/tmp/yara_rules_src'
+require 'fileutils'
+
+# === CONSTANTS ===
+DEFAULT_PATH_YARA_RULES = '/tmp/yara_rules_src'
 PATH_RAILS = '/var/www/rb-rails'
-TAR_NAME = 'yaraRules.tar.gz'
 RAILS_ENV = ENV['RAILS_ENV'] || 'production'
 
-# Usage help
+# === HELP ===
 def usage
-  puts "Usage: rb_yara.rb [import|clear]"
+  puts <<~HELP
+    Usage:
+      rb_yara import [yara_rules_path]
+      rb_yara clear
+
+    Examples:
+      rb_yara import                  # Uses default path: /tmp/yara_rules_src
+      rb_yara import /tmp/yara_rules_sources/6
+      rb_yara clear
+  HELP
   exit 1
 end
 
-# Parse action
-def get_action(s)
-  case s
-  when /^i(m(p(o(r(t)?)?)?)?)?$/ then "import"
-  when /^c(l(e(a(r)?)?)?)?$/     then "clear"
-  else
-    puts "Unknown action: #{s}"
-    usage
-  end
-end
-
+# === HELPER FUNCTIONS ===
 def log(msg)
   puts "[*] #{msg}"
 end
 
 def run_cmd(cmd, cwd: nil)
-  log("Running: #{cmd}")
+  log("Running: #{cmd.join(' ')}")
   success = Dir.chdir(cwd || Dir.pwd) { system(*cmd) }
-  abort("Command failed: #{cmd}") unless success
+  abort("Error executing: #{cmd.join(' ')}") unless success
 end
 
-# Create tarball with yara rules
-def create_yara_rules_tar
-  tar_path = File.join(PATH_YARA_RULES, TAR_NAME)
-  log("Creating tarball #{tar_path} ...")
-  run_cmd(["tar", "czf", TAR_NAME, *Dir.children(PATH_YARA_RULES)], cwd: PATH_YARA_RULES)
+# === IMPORT YARA RULES ===
+def import_yara_rules(source_path)
+  unless Dir.exist?(source_path)
+    abort("Path not found: #{source_path}")
+  end
 
-  log("Moving tarball to Rails app ..")
-  run_cmd(["mv", tar_path, PATH_RAILS])
+  tar_name = "yaraRules_#{File.basename(source_path)}.tar.gz"
+  tmp_tar_path = File.join("/tmp", tar_name)
+  
+  log("Creating temporary file #{tmp_tar_path} from #{source_path} ...")
+  run_cmd(["tar", "czf", tmp_tar_path, "-C", source_path, "." ])
+  
+  dest_path = File.join(PATH_RAILS, tar_name)
+  log("Moving file to #{dest_path} ...")
+  FileUtils.mv(tmp_tar_path, dest_path, force: true)
+
+  log("Importing YARA rules into Rails ...")
+  run_cmd(
+    ["bundle", "exec", "rake", "redBorder:import_yara_rules[#{tar_name}]", "RAILS_ENV=#{RAILS_ENV}"],
+    cwd: PATH_RAILS
+  )
+
+  log("Import completed for #{source_path}")
+rescue => e
+  abort("Error during import: #{e.message}")
+ensure
+  # Clean up temporary tarball
+  FileUtils.rm_f(File.join(PATH_RAILS, tar_name)) if File.exist?(File.join(PATH_RAILS, tar_name))
 end
 
-# Import rules into Rails
-def import_yara_rules_tar
-  log("Importing #{TAR_NAME} into Rails ..")
-  run_cmd(["bundle", "exec", "rake", "redBorder:import_yara_rules[#{TAR_NAME}]", "RAILS_ENV=#{RAILS_ENV}"], cwd: PATH_RAILS)
-end
-
-# Clear yara rules
+# === CLEAR YARA RULES ===
 def clear_yara_rules
-  log("Clearing yara rules in Rails ..")
+  log("Clearing YARA rules from the system ...")
   run_cmd(["bundle", "exec", "rake", "redBorder:clear_yara_rules", "RAILS_ENV=#{RAILS_ENV}"], cwd: PATH_RAILS)
-
-  # log("Clearing yara rules from all Logstash nodes ..")
-  # success = system("rb_manager_ssh.sh all rm -f /usr/share/logstash/yara_rules/rules.yara")
-  # abort("Failed to clear remote yara rules") unless success
-
-  log("Yara rules cleared everywhere.")
+  log("YARA rules cleared.")
 end
 
-# Main
-usage if ARGV.length != 1
+# === MAIN ===
+usage if ARGV.empty?
 
-case get_action(ARGV[0])
+action = ARGV[0].downcase
+source_path = ARGV[1] || DEFAULT_PATH_YARA_RULES
+
+case action
 when "import"
-  create_yara_rules_tar
-  import_yara_rules_tar
+  import_yara_rules(source_path)
 when "clear"
   clear_yara_rules
+else
+  usage
 end
