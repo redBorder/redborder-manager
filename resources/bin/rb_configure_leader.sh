@@ -353,9 +353,9 @@ _RBEOF_
 
   ## Generating external virtual ip
   mkdir -p /var/chef/data/data_bag/rBglobal
-  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-webui.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-nginx.json <<-_RBEOF_
 {
-  "id": "ipvirtual-external-webui"
+  "id": "ipvirtual-external-nginx"
 }
 _RBEOF_
 
