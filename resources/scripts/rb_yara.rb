@@ -35,7 +35,7 @@ def run_cmd(cmd, cwd: nil)
 end
 
 # === IMPORT YARA RULES ===
-def import_yara_rules(source_path)
+def import_yara_rules(source_path, source_id=nil)
   unless Dir.exist?(source_path)
     abort("Path not found: #{source_path}")
   end
@@ -51,16 +51,11 @@ def import_yara_rules(source_path)
   FileUtils.mv(tmp_tar_path, dest_path, force: true)
 
   log("Importing YARA rules into Rails ...")
-  run_cmd(
-    ["bundle", "exec", "rake", "redBorder:import_yara_rules[#{tar_name}]", "RAILS_ENV=#{RAILS_ENV}"],
-    cwd: PATH_RAILS
-  )
+  rake_task = "redBorder:import_yara_rules[#{tar_name}#{source_id ? ",#{source_id}" : ""}]"
+  run_cmd(["bundle", "exec", "rake", rake_task, "RAILS_ENV=#{RAILS_ENV}"], cwd: PATH_RAILS)
 
   log("Import completed for #{source_path}")
-rescue => e
-  abort("Error during import: #{e.message}")
 ensure
-  # Clean up temporary tarball
   FileUtils.rm_f(File.join(PATH_RAILS, tar_name)) if File.exist?(File.join(PATH_RAILS, tar_name))
 end
 
