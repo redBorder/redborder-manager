@@ -14,76 +14,49 @@
 ## along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 ########################################################################
 
-require 'getopt/std'
+require 'optparse'
 require 'yaml'
 require 'chef'
 require 'fileutils'
 require 'syslog'
 require 'io/console'
 
-def usage
-  printf "Usage: rb_backup_node.rb [-f path][-b][-r][-h][-s][-v][-3][-k bucket][-n][-m][-p]\n"
-  printf "    -f file (mandatory)     -> file to use for backup/restore\n"
-  printf "    -s                      -> use AWS backup\n"
-  printf "    -3                      -> use AWS S3 storage\n"
-  printf "    -h                      -> print this help\n"
-  printf "    -b                      -> use for backup\n"
-  printf "    -r                      -> use for restore\n"
-  printf "    -k bucket name          -> use this bucket for s3 restore\n"
-  printf "    -n                      -> use to restore new cluster. Conserve current cdomain\n"
-  printf "    -m                      -> use if you are on physical or virtual machine\n"
-  printf "    -p                      -> preserve hostname from backup\n"
-  printf "    -v                      -> verbose mode\n"
-  exit 0
+def validate_options(options)
+  # -- 1. Needs -b or -r
+  unless options[:backup] || options[:restore]
+    abort("Error: You must specify either --backup (-b) or --restore (-r).")
+  end
+
+  # -- 2. Needs at least one of -f or -s or -p
+  unless options[:file] || options[:s3]
+    abort("Error: You must specify at least one of --file (-f), --s3 (-s).")
+  end
+
+  # -- 3. -f and -s cannot be together
+  if options[:file] && options[:s3]
+    abort("Error: --file (-f) and --s3 (-s) cannot be used together.")
+  end
+
+  # -- 5. -k cannot be used without -s
+  if options[:k] && !options[:s3]
+    abort("Error: --bucket (-k) can only be used with --s3 (-s).")
+  end
+
+  # -- 6. --restore (-r) requires -f or -s
+  if options[:restore] && !(options[:file] || options[:s3])
+    abort("Error: --restore (-r) requires either --file (-f) or --s3 (-s).")
+  end
 end
 
-def validate_options(opt)
-  # Help
-  usage if opt['h']
-
-  # Not file passed
-  usage if OPT['f'] && (OPT['f'].nil? || OPT['f'].empty?)
-
-  # Backup Or Restore (not both)
-  if opt['b'] && opt['r']
-    puts "Cannot use -b and -r together"
-    usage
+def check_single_use!(options, key, option_name)
+  if options.key?(key)
+    abort("Error: #{option_name} cannot be used more than once.")
   end
-
-  # Save in S3 or Save into local file (not both)
-  if opt['3'] && opt['f']
-    puts "Cannot use -3 and -f together"
-    usage
-  end
-
-  # Backup has to be stored in S3 or into a file
-  if opt['b'] && !opt['f'] && !opt['3']
-    puts "Backup requires either -f (file) or -3 (S3)"
-    usage
-  end 
-
-  # Specify .s3cfg file require option -3 (Save in S3)
-  if opt['s'] && !opt['3']
-    puts "Option -s requires -3"
-    usage
-  end
-
-  # Specify bucket to restore from require option -3 (Save in S3)
-  if opt['k'] && !opt['3']
-    puts "Option -k requires -3"
-    usage
-  end
-
-  # restore
-  # if opt['m'] && opt['p']
-  #   puts "Cannot use -m and -p together"
-  #   usage
-  # end
 end
 
-# Indicate Status for each step
+# -- Indicate Status for each step
 def print_status(status: :OK, fill: "-")
-  color  = COLORS[status] || "\e[36m" # default cyan if unknown
+  color  = COLORS[status] || "\e[36m"
   reset  = COLORS[:RESET]
   message = " [ #{color}#{status}#{reset} ] "
   puts message.center(TERMINAL_WIDTH, fill)
@@ -104,20 +77,20 @@ def check_oper (cmd, type, message)
   commands = cmd.split(';')
   log_file = "/root/.#{type}-manager.log"
 
-  puts "\t#{message}" if OPT['v']
+  puts "\t#{message}" if OPT[:verbose]
   File.open(log_file, "a") { |f| f.puts message }
   
   check = false
   commands.each do |c|
     c.strip!
     output = `#{c} 2>&1`
-    puts "\t\t#{output}" if OPT['v']
+    puts "\t\t#{output}" if OPT[:verbose]
     File.open(log_file, "a") { |f| f.puts output }
     check = $?.success?
   end
   
   if check
-    print_status(status: :OK) if OPT['v']
+    print_status(status: :OK) if OPT[:verbose]
     log("#{message}  [  OK  ]", "info")
   else
     print_status(status: :FAIL)
@@ -182,20 +155,60 @@ def limit_saved_files(pattern, limit)
     end
   end
 end
-  
+
+def select_backup(opt_f, opt_s)
+  backups = []
+
+  # -- Local backups
+  if opt_f
+    base_dir = "/tmp/backups"
+    local_backups = Dir.glob(File.join(base_dir, "backup-*")).select { |f| File.directory?(f) }
+    backups += local_backups
+  end
+
+  # -- S3 backups
+  if opt_s
+    s3bucket = `cat /etc/druid/_common/common.runtime.properties | grep druid.storage.bucket= | tr '=' ' '|awk '{print $2}'`.strip
+    cmd = "s3cmd -c #{opt_s} ls s3://#{s3bucket}/backup/"
+    output = `#{cmd}`
+    s3_backups = output.split("\n").map { |line| line.split.last }.compact
+    backups += s3_backups
+  end
+
+  if backups.empty?
+    abort("No backups found to restore based on selected options.")
+  end
+
+  # -- Display menu
+  puts "Available backups:"
+  backups.each_with_index do |b, i|
+    type = File.directory?(b) ? "Local" : "S3"
+    puts "  [#{i + 1}] #{File.basename(b)} (#{type})"
+  end
+
+  print "Choose a backup to restore [1-#{backups.size}]: "
+  choice = $stdin.gets.to_i
+
+  if choice < 1 || choice > backups.size
+    abort("Invalid choice.")
+  end
+
+  selected = backups[choice - 1]
+  puts "You selected: #{File.basename(selected)}"
+
+  selected
+end
 
 
 # Global var
-OPT                            = Getopt::Std.getopts("f:bhvprms3k:nc")
 DATE                           = Time.new.strftime("%Y%m%d-%H%M%S")
 HOSTNAME                       = `hostname -s 2>/dev/null`.strip()
 ENCRYPTED_DATA_BAG_SECRET_PATH = "/etc/chef/encrypted_data_bag_secret"
 LIMIT_FILES_SAVE               = 5
 TERMINAL_WIDTH                 = IO.console.winsize[1] rescue 120
 VALID_MODES                    = %w[full s3 core chef]
-TAR_CREATE                     = "tar --ignore-failed-read -zvcPf"
+TAR_CREATE                     = "tar --ignore-failed-read -zcPf"
 TAR_EXTRACT                    = "tar --ignore-failed-read -zvxPf"
-
 
 COLORS = {
   OK:    "\e[32m",
@@ -209,7 +222,8 @@ PATH_TO_EXCLUDE = [
   "/root/.chef/syntax_check_cache",
   "/var/chef/cookbooks",
   "/var/chef/backup",
-  "/var/chef/data"
+  "/var/chef/data",
+  "/var/lib/pgsql/data"
 ]
 
 PATH_TO_BACKUP_UNIQUE = [
@@ -235,7 +249,7 @@ PATH_TO_BACKUP_LEADER = [
   "/etc/opscode/webui_priv.pem",
   "/etc/opscode/webui_pub.pem",
   "/var/chef/nodes",
-  "/var/lib/pgsql/data",
+  # "/var/lib/pgsql/data",
   "/var/opt/opscode/nginx/ca",
   "/opt/opscode/embedded/service/opscode-erchef/etc"
 ]
@@ -253,34 +267,97 @@ PATH_TO_BACKUP_COMMON = [
   "/var/chef/cookbooks/keepalived/templates/default/keepalived.conf.erb"
 ]
 
+OPT = {}
 
+DEFAULT_ARGS = {
+  file: "default",
+  s3: "/root/.s3cfg",
+  s3_NG: "/root/.s3cfg_initial"
+}
 
+opt_parser = OptionParser.new do |opts|
+  opts.banner = "Usage: rb_backup_node.rb [options]"
 
-#
-# Only leader name -> leader_name = serf_output.each_line.map(&:strip).find { |line| line.include?("leader=ready")}&.split&.first
-# line serf memeber with leader = ready -> leader_data = serf_output.each_line.map { |l| l.strip }.find { |l| l.include?("leader=ready") }
-# Hostname, IP:PORT, Status, Services/Modes => "jenkins-manager1  10.0.225.20:7946  alive  s3=ready,consul=ready,leader=ready,mode=full,postgresql=ready"
-# option cluster => "-c", only execute in master node if not write which node is master (name, ip, status)
-# Data changes:
-#   /etc      -> /etc_hostname
-#   /var/opt  -> /var/opt_hostname
-#   /var/lib  -> only master
-#   /var/chef -> only master
-#   /var/www  -> only master
-#   
+  opts.on("-h", "--help", "Print this help") do
+    puts opts
+    exit
+  end
 
-# Check compatibile options
-# usage() if OPT['h'] or (OPT['f'].nil? and OPT['f']) or (OPT['f'] and OPT['s']) or (OPT['3'] and OPT['s']) or (OPT['k'].nil? and OPT['k'] and OPT['3']) or (OPT['m'] and OPT['p'])
+  opts.on("-v", "--verbose", "Verbose mode") do
+    check_single_use!(OPT, :verbose, "--verbose (-v)")
+    OPT[:verbose] = true
+  end
+
+  opts.on("-c", "--cluster", "Action in all cluster") do |file|
+    check_single_use!(OPT, :cluster, "--cluster (-c)")
+    OPT[:cluster] = true
+  end
+
+  opts.on("-b", "--backup", "Perform backup") do
+    check_single_use!(OPT, :backup, "--backup (-b)")
+    OPT[:backup] = true
+  end
+
+  opts.on("-r", "--restore", "Perform restore") do
+    check_single_use!(OPT, :restore, "--restore (-r)")
+    OPT[:restore] = true
+  end
+
+  opts.on("-f[FILE]", "--file[=FILE]", "File to use for backup/restore (default: #{DEFAULT_ARGS[:file]})") do |file|
+    check_single_use!(OPT, :file, "--file (-f)")
+    if file.nil?
+      puts "Warning: -f option missing argument, using default: #{DEFAULT_ARGS[:file]}"
+    end
+    OPT[:file] = file || DEFAULT_ARGS[:file]
+  end
+
+  opts.on("-s[FILE]", "--s3[=FILE]", "Use AWS S3 storage (default: #{DEFAULT_ARGS[:s3]})") do |file|
+    check_single_use!(OPT, :s3, "--s3 (-s)")
+    
+    if file.nil?
+      puts "Warning: -s option missing argument, using default: #{DEFAULT_ARGS[:s3]}"
+    end
+    
+    OPT[:s3] = file || DEFAULT_ARGS[:s3]
+    
+    unless File.exist?(OPT[:s3])
+      if File.exist?(DEFAULT_ARGS[:s3_NG])
+        OPT[:s3] = DEFAULT_ARGS[:s3_NG]
+      else
+        print_status(status: :FAIL)        
+        abort("Please, check your AWS config file (Not found: #{file} nor #{DEFAULT_ARGS[:s3]} nor #{DEFAULT_ARGS[:s3_NG]}), exiting")
+      end
+    end
+  end
+
+  # opts.on("-k NAME", "--bucket NAME", "Use this bucket for S3 restore") do |name|
+  #   OPT[:bucket] = name
+  # end
+  # 
+  # opts.on("-n", "Restore into new cluster (preserve current cdomain)") do
+  #   OPT[:new_cluster] = true
+  # end
+  # 
+  opts.on("-m", "Running on physical or virtual machine") do
+    OPT[:m] = true
+  end
+  # 
+  # opts.on("-d", "Preserve hostname from backup") do
+  #   OPT[:preserve_hostname] = true
+  # end  
+end
+
+opt_parser.parse!
 validate_options(OPT)
 
-check_leader if OPT['c']
+check_leader if OPT[:cluster]
 
 read_chef_file
 
 #################
 # Backup option #
 #################
-if OPT['b']
+if OPT[:backup]
   # Init variables
   type = "backup"
   tar = "tar --ignore-failed-read -zvcPf"
@@ -289,7 +366,7 @@ if OPT['b']
   FileUtils.mkdir_p(backup_path)
 
   # Verbose in commands
-  s3verbose = OPT['v'] ? "-v" : "-q"
+  s3verbose = OPT[:verbose] ? "-v" : "-q"
 
   # Verify if log file exists
   FileUtils.rm_f(log_file) if File.exists?(log_file)
@@ -297,30 +374,28 @@ if OPT['b']
   puts "Step 1. Destination"
 
   # Check backup destination
-  if OPT['f']
-    if File.extname(OPT['f']).empty?
-      # Add .tar.gz
-      OPT['f'] += ".tar.gz"
-    elsif File.basename(OPT['f']) !~ /\.tar\.gz\z/
-      # Invalid extension
+  if OPT[:file]
+    if File.extname(OPT[:file]).empty?
+      OPT[:file] += ".tar.gz"
+    elsif File.basename(OPT[:file]) !~ /\.tar\.gz\z/
       print_status(status: :FAIL)
       puts "Invalid file extension. Only '.tar.gz' is allowed."
       exit 0
     end
 
-    if OPT['f'].include?("/")
-      file_path = OPT['f']
+    if OPT[:file].include?("/")
+      file_path = OPT[:file]
     else
-      file_path = File.join(backup_path, File.basename(OPT['f']))
+      file_path = File.join(backup_path, File.basename(OPT[:file]))
     end
 
     if File.exist?(file_path)
       print_status(status: :WARN)
-      puts "File #{OPT['f']} already exists, replacing..."
+      puts "File #{OPT[:file]} already exists, replacing..."
       File.delete(file_path)
     end
-  elsif OPT['3']
-    s3cfg          = (OPT['s'] ? "/root/.s3cfg-backup" : "/root/.s3cfg_initial")
+  elsif OPT[:s3]
+    s3cfg          = OPT[:s3]
     file_path_name = "#{DATE}-#{HOSTNAME}-backup.tar.gz"
     file_path      = File.join(backup_path, file_path_name)
     s3bucket       = `cat /etc/druid/_common/common.runtime.properties | grep druid.storage.bucket= | tr '=' ' '|awk '{print $2}'`.strip
@@ -356,15 +431,17 @@ if OPT['b']
 
   if VALID_MODES.include?(node_config["redborder"]["mode"].to_s)
     
-    tmp_dir    = OPT['c'] ? File.join(backup_path, "backup-cluster-#{DATE}") : File.join(backup_path, "backup-#{HOSTNAME}-#{DATE}")
+    tmp_dir    = OPT[:cluster] ? File.join(backup_path, "backup-cluster-#{DATE}") : File.join(backup_path, "backup-#{HOSTNAME}-#{DATE}")
     common_dir = File.join(tmp_dir, "common")
     unique_dir = File.join(tmp_dir, "unique", HOSTNAME)
     leader_dir = File.join(tmp_dir, "leader")
+    database_dir = File.join(tmp_dir, "db")
 
     FileUtils.rm_rf(tmp_dir) if Dir.exist?(tmp_dir) && tmp_dir != "/" && !tmp_dir.strip.empty?
     FileUtils.mkdir_p(common_dir)
     FileUtils.mkdir_p(unique_dir)
     FileUtils.mkdir_p(leader_dir)
+    FileUtils.mkdir_p(database_dir)
 
     PATH_TO_EXCLUDE << "/var/chef/cache" unless OPT['m']
 
@@ -397,7 +474,7 @@ if OPT['b']
     # -------------------------------
     # 4. If cluster mode, fetch other nodes
     # -------------------------------
-    if OPT['c']
+    if OPT[:cluster]
       serf_output = `serf members 2>&1`
       cluster_nodes = serf_output.each_line.map { |l| l.split.first }.reject { |n| n == HOSTNAME }
       nodes_dir  = File.join(tmp_dir, "nodes")
@@ -450,25 +527,38 @@ if OPT['b']
     # -------------------------------
     # 6. Database backup (leader only)
     # -------------------------------
-    message = "Database backup in progress ... "
-    pg_dump_path = File.join(leader_dir, "#{HOSTNAME}-postgresql-dump-#{DATE}.gz")
-    check_oper("nice -n 19 ionice -c2 -n7 pg_dumpall -h 127.0.0.1 -U postgres -c | gzip --fast > #{pg_dump_path}; sync", type, message)
+    puts "PG BACKUP DUMP"
+    pg_dumpall_path = File.join(database_dir, "#{HOSTNAME}-postgresql-dump-#{DATE}.gz")
+    message = "COMPLETE Database backup to #{pg_dumpall_path}"
+    check_oper("nice -n 19 ionice -c2 -n7 pg_dumpall -h master.postgresql.service -U postgres -c | gzip --fast > #{pg_dumpall_path}; sync", type, message)
+    
+    puts "PG BACKUP COPY"
+    message = "Stop PostgreSQL service"
+    check_oper("systemctl stop postgresql", type, message)
+    
+    pg_copy_path = File.join(database_dir,"#{HOSTNAME}-postgresql-copy-#{DATE}.tar.gz")
+    message = "Copy /lib/var/pgsql/data/ to #{pg_copy_path}"
+    cmd_tar_backup = "sudo tar -czpf #{pg_copy_path} -C /var/lib/pgsql data"
+    check_oper(cmd_tar_backup, type, message)
+    
+    message = "Start PostgreSQL service"
+    check_oper("systemctl start postgresql", type, message)
 
     # -------------------------------
-    # X. Generate tar.gz backup
+    # 7. Generate tar.gz backup
     # -------------------------------
     tarcmd = "nice -n 19 ionice -c2 -n7 #{TAR_CREATE} #{file_path} -C #{tmp_dir} ."
-    backup_pattern = OPT['c'] ? File.join(backup_path, "backup-cluster-*") : File.join(backup_path, "backup-#{HOSTNAME}-*")
+    backup_pattern = OPT[:cluster] ? File.join(backup_path, "backup-cluster-*") : File.join(backup_path, "backup-#{HOSTNAME}-*")
     backup_file_pattern = File.join(backup_path, "*.tar.gz")
     
-    if OPT['f']
+    if OPT[:file]
       message = "Making backup in tar.gz file: #{file_path}"
       check_oper("#{tarcmd}; sync", type, message)
       # -- Limit folders with backup data --
       limit_saved_files(backup_pattern, LIMIT_FILES_SAVE)
       # -- Limit tar.gz backup files --
       limit_saved_files(backup_file_pattern, LIMIT_FILES_SAVE)
-    elsif OPT['3']
+    elsif OPT[:s3]
       message = "Making backup on s3"
       check_oper("#{tarcmd}; nice -n 19 ionice -c2 -n7 s3cmd -c #{s3cfg} #{s3verbose} sync #{file_path} s3://#{s3bucket}/backup/; rm -f #{file_path}", type, message)
       FileUtils.rm_rf(tmp_dir) if Dir.exist?(tmp_dir) && tmp_dir != "/" && !tmp_dir.strip.empty?
@@ -485,11 +575,157 @@ if OPT['b']
 ##################
 # Restore Option #
 ##################
-elsif OPT['r']
+elsif OPT[:restore]
+  type = "restore"
+  # -- Select backup --
+  src = select_backup(OPT[:file], OPT[:s3])
+  backup_selected = File.basename(src)
+
+  # -- Locate restore folder for this specific backup --
+  backup_name = backup_selected.sub(/\.tar\.gz$/, "")
+  backup_path = File.join("/tmp/backups", "restore_#{backup_name}")
+
+  already_exists = Dir.exist?(backup_path)
+
+  unless already_exists
+    # -- Remove other restore_* folders except this one
+    Dir.glob("/tmp/backups/restore_*").each do |folder|
+      FileUtils.rm_rf(folder) if File.directory?(folder)
+    end
+
+    # -- Create the restore folder
+    FileUtils.mkdir_p(backup_path)
+  else
+    puts "Backup folder #{backup_path} already exists, skipping download/extract."
+  end
+  
+  unless already_exists
+    if OPT[:file]
+      backup_file_folder_path = File.join(src, "db/.")
+
+      puts "Copying backup file: #{backup_file_folder_path} -> #{backup_path}"
+      Dir.glob(File.join(backup_file_folder_path, '*')).each do |file|
+        FileUtils.cp_r(file, backup_path)
+      end
+    else
+      # -- Get backup from s3 --
+      puts "Get backup from s3: #{src} -> #{backup_path}"
+      system("s3cmd -c #{OPT[:s3]} get #{src} #{backup_path}")
+      backup_s3_path = File.join(backup_path, backup_selected)
+      # -- Descompress backup from s3 --
+      puts "Extracting tar.gz backup: #{backup_s3_path} -> #{backup_path}"
+      system("tar -xzf #{backup_s3_path} -C #{backup_path}") or abort("Error: failed to extract #{backup_s3_path}")
+    end  
+  end
+
+  if OPT[:s3]
+    db_tar_dir = File.join(backup_path, "db")
+    unless Dir.exist?(db_tar_dir)
+      abort("No 'db' directory found in backup path: #{db_tar_dir}")
+    end
+  else
+    db_tar_dir = backup_path
+  end
+
+  # -- Find all files inside db directory
+  restore_files = Dir.glob(File.join(db_tar_dir, "*.gz"))
+  if restore_files.empty?
+    abort("No restore files found in #{db_tar_dir}")
+  end
+  # -- Display menu
+  puts "Restore type options:"
+  restore_files.each_with_index do |file, i|
+    puts "  [#{i + 1}] #{File.basename(file)}"
+  end
+  puts "Choose a restore file [1-#{restore_files.size}]: "
+  choice = $stdin.gets.to_i
+  if choice < 1 || choice > restore_files.size
+    abort("Invalid choice.")
+  end
+  selected_file = restore_files[choice - 1]
+  puts "You selected: #{File.basename(selected_file)}"
+  file_selected_path = File.join(db_tar_dir, File.basename(selected_file))
+  puts "Restore file to uncompress: #{file_selected_path}"
+  # -- Decide based on file name pattern
+  if File.basename(selected_file).include?("dump")
+    puts ">> Running RESTORE from Dump (pg_dumpall)..."
+    service_name = "postgresql"
+    
+    # -- 1. Check service postgreSQL is running
+    status = `systemctl is-active #{service_name}`.strip
+    abort("#{service_name} service needs to be running.") unless status == "active"
+    
+    # -- 2. Stop postgresql
+    message = "Stop PostgreSQL service"
+    check_oper("systemctl stop #{service_name}", type, message)
+    
+    # -- 3. mv /var/lib/pgsql/data
+    message = "Save a copy & Clean /var/lib/pgsql/data"
+    mv_folder = "/var/lib/pgsql/data.bak"
+    FileUtils.rm_rf(mv_folder) if Dir.exist?(mv_folder) && mv_folder != "/" && !mv_folder.strip.empty?
+    cmd = "mv /var/lib/pgsql/data #{mv_folder}"
+    check_oper(cmd, type, message)
+    
+    # -- 4. Initdb
+    message = "Initialize Database in /var/lib/pgsql/data"
+    cmd = "sudo -u postgres initdb -D /var/lib/pgsql/data"
+    check_oper(cmd, type, message)
+    
+    # -- 5. Start postgresql
+    message = "Start PostgreSQL service"
+    check_oper("systemctl start #{service_name}", type, message)
+    
+    # -- 6. Restore file with gunzip
+    message = "Restore file with gunzip"
+    cmd = "gunzip -c #{file_selected_path} | psql -U postgres -h localhost -d postgres"
+    check_oper(cmd, type, message)
+    
+    # -- 7. Adjust configuration to access PostgreSQL
+    message = "Adjust connection: postgresql.conf"
+    config_path = "/var/lib/pgsql/data/postgresql.conf"
+    content = File.read(config_path)
+    new_listen = "listen_addresses = '*'"
+    content.sub!(/^\s*listen_addresses\s*=.*$/, new_listen) || content << "\n#{new_listen}\n"
+    new_port = "port = 5432"
+    content.sub!(/^\s*port\s*=.*$/, new_port) || content << "\n#{new_port}\n"
+    File.open(config_path, "w") { |f| f.write(content) } rescue abort("Error when writing in: #{config_path}")
+    cmd = "echo '#{config_path} updated'"
+
+    message = "Adjust connection: pg_hba.conf"
+    config_path = "/var/lib/pgsql/data/pg_hba.conf"
+    content = File.read(config_path)
+    new_host = "host    all             all           10.0.209.0/24         trust"
+    content << "\n#{new_host}\n"
+    File.open(config_path, "w") { |f| f.write(content) } rescue abort("Error when writing in: #{config_path}")
+    cmd = "echo '#{config_path} updated'"
+    check_oper(cmd, type, message)
+
+    # -- 8. Restart postgresql
+    message = "Restart PostgreSQL service"
+    check_oper("systemctl restart #{service_name}", type, message)
+
+    # -- 9. Restart services to see graph in modules
+    message = "Restart Druid Services"
+    check_oper("systemctl restart druid-*;systemctl restart rb-druid-indexer.service", type, message)
+
+    message = "Restart Webui service"
+    check_oper("systemctl restart webui", type, message)
+
+    puts ">> RESTORE COMPLETE"
+    puts "It would take some minutes to show data on module graphs!!!"
+  elsif File.basename(selected_file).include?("copy")
+    abort("RESTORE from Copy (/var/lib/pgsql/data): Not available yet.")
+  else
+    abort("Invalid choice (Not a compressed file).")
+  end
+
+  exit 1
+  # -- Exit here (in next tasks about restore of Node and other services)
+
   type       = "restore"
   verified   = false
 
-  if OPT['v']
+  if OPT[:verbose]
     verbose   = "verbose"
     s3verbose = "-v"
   else
@@ -531,16 +767,16 @@ elsif OPT['r']
     FileUtils.rm_f("/tmp/*-postgresql-dump-*.gz") if !Dir.glob('/tmp/*-postgresql-dump-*.gz').empty?
 
     # Check backup source
-    if OPT['f'] and OPT['3'].nil? and File.exists?(OPT['f'])
-      path = File.expand_path(OPT['f'])
-    elsif OPT['3']
-      s3cfg    = (OPT['s'] ? "/root/.s3cfg-backup" : "/root/.s3cfg")
+    if OPT[:file] and OPT[:s3].nil? and File.exists?(OPT[:file])
+      path = File.expand_path(OPT[:file])
+    elsif OPT[:s3]
+      s3cfg    = (OPT[:s3] ? "/root/.s3cfg-backup" : "/root/.s3cfg")
       s3bucket = (OPT['k'] ? OPT['k'] : (externals.nil? ? "redborder" : externals['S3BUCKET']))
       s3bucket = "redborder" if s3bucket.nil? or s3bucket.empty?
 
       check_oper("nice -n 19 ionice -c2 -n7 s3cmd -c #{s3cfg} #{s3verbose} ls s3://#{s3bucket}/", type, "Checking S3 access ... ")
       nbackup = `s3cmd -c #{s3cfg} -v ls s3://#{s3bucket}/backup/ | sort | cut -d/ -f5`
-      if OPT['f'].nil?
+      if OPT[:file].nil?
         if nbackup.lines.count == 0
           printf "There is no backup files to restore on s3://#{s3bucket}/backup/\n"
           exit 0
@@ -548,15 +784,15 @@ elsif OPT['r']
           file_to_restore = nbackup.lines.last.strip()
         end
       else
-        message = "Checking s3://#{s3bucket}/backup/#{OPT['f']} ... "
+        message = "Checking s3://#{s3bucket}/backup/#{OPT[:file]} ... "
         printf message
-        if `s3cmd -c #{s3cfg} ls s3://#{s3bucket}/backup/#{OPT['f']}` == ""
+        if `s3cmd -c #{s3cfg} ls s3://#{s3bucket}/backup/#{OPT[:file]}` == ""
           printf "[  KO  ]\n".colorize(:red).rjust(140-message.length)
           printf "The file doesn't exists\n"
           exit 0
         else
           printf "[  OK  ]\n".colorize(:green).rjust(140-message.length)
-          file_to_restore = OPT['f']
+          file_to_restore = OPT[:file]
         end
       end
       path = "/tmp/#{file_to_restore}"
@@ -750,7 +986,7 @@ elsif OPT['r']
 
     # Delete temporal files
     message = "Deleting temporal files ... "
-    if OPT['f']
+    if OPT[:file]
       check_oper("nice -n 19 ionice -c2 -n7 rm -f /tmp/*-postgresql-dump-*; nice -n 19 ionice -c2 -n7 rm -f #{file_config}; rm -f /opt/rb/etc/extrahosts", type, message)
     else
       check_oper("nice -n 19 ionice -c2 -n7 rm -f /tmp/*-postgresql-dump-*; nice -n 19 ionice -c2 -n7 rm -f #{file_config}; nice -n 19 ionice -c2 -n7 rm -f /tmp/#{file_to_restore}; rm -f /opt/rb/etc/extrahosts", type, message)
