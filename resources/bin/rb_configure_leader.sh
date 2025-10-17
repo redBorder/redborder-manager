@@ -12,6 +12,7 @@ function configure_db(){
   [ "x$DRUIDDBPASS" == "x" ] && DRUIDDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   [ "x$RADIUSPASS" == "x" ] && RADIUSPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   [ "x$MONITORSPASS" == "x" ] && MONITORSPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  [ "x$AIRFLOWPASS" == "x" ] && AIRFLOWPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
 
   # Druid DATABASE
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER druid WITH PASSWORD '$DRUIDDBPASS';"
@@ -39,6 +40,12 @@ function configure_db(){
 
   # Replication User
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER rep REPLICATION LOGIN CONNECTION LIMIT 100;"
+
+  # airflow DATABASE
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER airflow WITH PASSWORD '$AIRFLOWPASS';"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS airflow;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT airflow TO $DB_ADMINUSER;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE airflow OWNER airflow;"
 
 }
 
@@ -73,6 +80,7 @@ function configure_dataBags(){
   ERCHEFCFG="/opt/opscode/embedded/service/opscode-erchef/sys.config"
   #S3INITCONF="${RBETC}/s3_init_conf.yml"
   S3INITCONF=$(if [ -f "${RBETC}/s3_init_conf.yml" ]; then echo "${RBETC}/s3_init_conf.yml"; else echo "${RBETC}/rb_init_conf.yml"; fi)
+  S3MALWAREINITCONF=$(if [ -f "${RBETC}/s3_malware_init_conf.yml" ]; then echo "${RBETC}/s3_malware_init_conf.yml"; else echo "${RBETC}/rb_malware_init_conf.yml"; fi)
 
   # Data bag encrypted key
   [ "x$DATABAGKEY" == "x" ] && DATABAGKEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
@@ -91,12 +99,18 @@ function configure_dataBags(){
   OPSCODE_OCBIFROST_PASS="`grep db_pass $OCBIFROST_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
 
   # Obtaining chef cookbook storage current configuration
-  S3KEY="`grep access_key ${S3INITCONF} | awk '{print $2}'`"
-  S3SECRET="`grep secret_key ${S3INITCONF} | awk '{print $2}'`"
+  S3KEY="`grep -A 4 '^s3:' ${S3INITCONF} | grep access_key  | awk '{print $2}'`"
+  S3SECRET="`grep -A 4 '^s3:' ${S3INITCONF} | grep secret_key | awk '{print $2}'`"
   S3HOST="`cat /etc/redborder/rb_init_conf.yml | grep endpoint | awk {'print $2'}`" #CHECK If bookshelf enabled, this value will be empty
   S3URL="`grep s3_url, $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   S3EXTERNALURL="`grep s3_external_url $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`" #CHECK when {s3_external_url, host_header},
   S3BUCKET="`grep s3_platform_bucket_name $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
+
+  # Obtaining S3 malware bucket configuration
+  S3_MALWARE_KEY="`grep -A 4 '^malware:' ${S3MALWAREINITCONF} | grep access_key | awk '{print $2}'`"
+  S3_MALWARE_SECRET="`grep -A 4 '^malware:' ${S3MALWAREINITCONF} | grep secret_key | awk '{print $2}'`"
+  S3_MALWARE_BUCKET="`grep -A 4 '^malware:' ${S3MALWAREINITCONF} | grep bucket | awk '{print $2}'`"
+  S3_MALWARE_HOST="`grep -A 4 '^malware:' ${S3MALWAREINITCONF} | grep endpoint | awk '{print $2}'`"
 
   # IF S3HOST not found, set default: s3.service
   [ "x$S3HOST" = "x" ] && S3HOST="s3.service"
@@ -150,6 +164,17 @@ _RBEOF_
 
 _RBEOF_
 
+  cat > /var/chef/data/data_bag/rBglobal/malware-bucket.json <<-_RBEOF_
+{
+  "id": "malware-bucket", 
+  "s3_malware_access_key_id": "$S3_MALWARE_KEY",
+  "s3_malware_secret_key_id": "$S3_MALWARE_SECRET",
+  "s3_malware_bucket": "$S3_MALWARE_BUCKET",
+  "s3_malware_host": "$S3_MALWARE_HOST"
+}
+
+_RBEOF_
+
   # S3 passwords
   cat > /var/chef/data/data_bag/passwords/s3.json <<-_RBEOF_
 {
@@ -169,7 +194,7 @@ _RBEOF_
   "id": "vrrp",
   "username": "vrrp",
   "start_id": "$(( ( RANDOM % 191 ) + 10 ))",
-  "pass": "$VRRPPASS" 
+  "pass": "$VRRPPASS"
 }
 _RBEOF_
 
@@ -267,6 +292,20 @@ _RBEOF_
 }
 _RBEOF_
 
+  #airflow password token
+  AIRFLOW_USER="airflow"
+  AIRFLOW_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c32 | sed 's/ //g'`"
+  cat > /var/chef/data/data_bag/passwords/db_airflow.json <<-_RBEOF_
+{
+  "id": "db_airflow",
+  "user": "$AIRFLOW_USER",
+  "database": "airflow",
+  "hostname": "$OPSCODE_DBHOST",
+  "port": "$OPSCODE_DBPORT",
+  "pass": "$AIRFLOW_SECRET"
+}
+_RBEOF_
+
   #kafka topics #TODO
   cat > /var/chef/data/data_bag/backend/kafka_topics.json <<-_RBEOF_
 {
@@ -314,9 +353,9 @@ _RBEOF_
 
   ## Generating external virtual ip
   mkdir -p /var/chef/data/data_bag/rBglobal
-  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-webui.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-nginx.json <<-_RBEOF_
 {
-  "id": "ipvirtual-external-webui"
+  "id": "ipvirtual-external-nginx"
 }
 _RBEOF_
 

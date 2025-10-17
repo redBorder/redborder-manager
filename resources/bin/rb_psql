@@ -3,10 +3,8 @@ source /etc/profile
 source $RBLIB/rb_manager_functions.sh
 source $RBETC/rb_init_conf.conf
 
-[ "x$DOMAIN" == "x" ] && DOMAIN="redborder.cluster"
-
 function usage() {
-  echo "$0 [druid|redborder|opscode_chef|radius]"
+  echo "$0 [druid|redborder|opscode_chef|radius|airflow]"
 }
 
 USER="$*"
@@ -18,13 +16,13 @@ elif [ "x$USER" == "xr" -o "x$USER" == "xre" -o "x$USER" == "xred" -o "x$USER" =
     USER="redborder"
 elif [ "x$USER" == "xo" -o "x$USER" == "xop" -o "x$USER" == "xops" -o "x$USER" == "xopsc" -o "x$USER" == "xopsco" -o "x$USER" == "xopscod" -o "x$USER" == "xopsode" -o "x$USER" == "xopsode_" -o "x$USER" == "xopsode_c" -o "x$USER" == "xopsode_ch" -o "x$USER" == "xopsode_che" -o "x$USER" == "xchef" ]; then
     USER="opscode_chef"
-#elif [ "x$USER" == "xoo" -o "x$USER" == "xooz" -o "x$USER" == "xoozi" -o "x$USER" == "xoozie" ]; then
-#    USER="oozie"
 elif [ "x$USER" == "xra" -o "x$USER" == "xrad" -o "x$USER" == "xradi" -o "x$USER" == "xradiu" -o "x$USER" == "xradius" ]; then
     USER="radius"
+elif [ "x$USER" == "xa" -o "x$USER" == "xai" -o "x$USER" == "xair" -o "x$USER" == "xairf" -o "x$USER" == "xairfl" -o "x$USER" == "xairflo" -o "x$USER" == "xairflow" ]; then
+    USER="airflow"
 fi
 
-if [ "x$USER" == "xdruid" -o "x$USER" == "xredborder" -o "x$USER" == "xopscode_chef" -o "x$USER" == "xradius" ]; then
+if [ "x$USER" == "xdruid" -o "x$USER" == "xredborder" -o "x$USER" == "xopscode_chef" -o "x$USER" == "xradius" -o "x$USER" == "xairflow" ]; then
     if [ "x$USER" == "xredborder" -a -f /var/www/rb-rails/config/database.yml ]; then
         line=$(awk '/redborder/{ print NR; exit }' /var/www/rb-rails/config/database.yml)
         PGPASSWORD=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "password: " | head -n 1 | awk '{print $2}')
@@ -44,11 +42,14 @@ if [ "x$USER" == "xdruid" -o "x$USER" == "xredborder" -o "x$USER" == "xopscode_c
         PGPASSWORD=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "password: " | head -n 1 | awk '{print $2}')
         PGHOSTNAME=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "host: " | head -n 1 | awk '{print $2}')
         PGPORT=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "port: " | head -n 1 | awk '{print $2}')
+    elif [ "x$USER" == "xairflow" -a -f /var/chef/data/data_bag/passwords/airflow.json ]; then
+        PGPASSWORD=$(jq -r '.pass' /var/chef/data/data_bag/passwords/airflow.json)
+        PGHOSTNAME=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "host: " | head -n 1 | awk '{print $2}')
+        PGPORT=$(tail -n +$line /var/www/rb-rails/config/database.yml |grep "port: " | head -n 1 | awk '{print $2}')
     fi
 
-
     [ "x$PGPORT" == "x" ] && PGPORT=5432
-    [ "x$PGHOSTNAME" == "x" ] && PGHOSTNAME="master.postgresql.service.${DOMAIN}"
+    [ "x$PGHOSTNAME" == "x" ] && PGHOSTNAME="master.postgresql.service"
 
     if [ "x$PGPASSWORD" != "x" ]; then
         PGPASSWORD="$PGPASSWORD" /bin/psql -U ${USER} -h $PGHOSTNAME -p ${PGPORT} -v ON_ERROR_STOP=on
