@@ -9,6 +9,8 @@ RAILS_ENV = ENV['RAILS_ENV'] || 'production'
 
 # Usage help
 def usage
+  puts "rb_yara.rb - Script to manage Yara rules in redBorder. It can import or clear rules."
+  puts "User must ensure that rvm gemset is web, otherwise rake version will be inconsistent."
   puts "Usage: rb_yara.rb [import|clear]"
   exit 1
 end
@@ -62,9 +64,24 @@ def clear_yara_rules
   log("Yara rules cleared everywhere.")
 end
 
-# Main
-usage if ARGV.length != 1
+def validation
+  current = `rvm current`.strip
+  unless current == 'ruby-2.7.5@web'
+    log("ERROR: Wrong Ruby version of gemset: #{current}")
+    usage
+    return false
+  end
+  if ARGV.length != 1
+    log('ERROR: Check number of arguments')
+    usage
+    return false
+  end
+  return true
+end
 
+exit 1 unless validation
+
+# Main
 case get_action(ARGV[0])
 when "import"
   create_yara_rules_tar
