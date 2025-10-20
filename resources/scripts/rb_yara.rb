@@ -10,8 +10,10 @@ RAILS_ENV = ENV['RAILS_ENV'] || 'production'
 # Usage help
 def usage
   puts "rb_yara.rb - Script to manage Yara rules in redBorder. It can import or clear rules."
-  puts "User must ensure that rvm gemset is web, otherwise rake version will be inconsistent."
   puts "Usage: rb_yara.rb [import|clear]"
+  puts "  import : Create a tarball with Yara rules in #{PATH_YARA_RULES} as .yara format."
+  puts "  clear  : Remove all yara rules from rails database #{PATH_YARA_RULES}."
+  puts "User must ensure that rvm gemset is web, otherwise rake version will be inconsistent."
   exit 1
 end
 
