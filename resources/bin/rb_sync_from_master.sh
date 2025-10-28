@@ -64,4 +64,4 @@ echo "Starting PostgreSQL"
 service postgresql start
 
 echo "restart webui in all nodes"
-rbcli node execute all systemctl restart webui
+rbcli node execute all -- 'systemctl restart webui.service opscode-erchef.service'
