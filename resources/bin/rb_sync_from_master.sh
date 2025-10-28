@@ -63,5 +63,5 @@ _EOF1_
 echo "Starting PostgreSQL"
 service postgresql start
 
-echo "restart webui in all nodes"
+echo "Restart webui and opscode-erchef in all nodes"
 rbcli node execute all -- 'systemctl restart webui.service opscode-erchef.service'
