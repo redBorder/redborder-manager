@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/python
 
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements. See the NOTICE file distributed with this
@@ -19,95 +18,72 @@
 #  Copyright 2013 Endgame Inc.
 
 import sys
+sys.path.append('/opt/rb/lib/python2.6/site-packages/')
+sys.path.append('/opt/rb/lib64/python2.6/site-packages/')
 import os
 import glob
 import yara
 import json
+import codecs
 import datetime
 
-def log(msg: str):
-    """Log messages to stderr with timestamps."""
-    sys.stderr.write(f"[{datetime.datetime.now()}] {msg}\n")
+sys.stdin = os.fdopen(sys.stdin.fileno(), 'rb', 0)
+sys.stdout = codecs.getwriter('UTF-8')(sys.stdout)
+sys.stderr = codecs.getwriter('UTF-8')(sys.stderr)
+
+def log(msg):
+    sys.stderr.write("[%s] "%datetime.datetime.now())
+    sys.stderr.write(msg)
+    sys.stderr.write("\n")
     sys.stderr.flush()
 
-def output(msg: str):
-    """Write messages to stdout."""
-    sys.stdout.write(msg + "\n")
+def output(msg):
+    sys.stdout.write(msg)
+    sys.stdout.write("\n")
     sys.stdout.flush()
 
 def die():
-    """Graceful failure handler."""
     log("Process timed out, about to exit ...")
-    print(json.dumps({"_error": "timed out"}))
+    print json.dumps({"_error":"timed out"})
     sys.exit(1)
 
-# Logging basic process information
-log(f"PID={os.getpid()}")
-log(f"PARENT PID={os.getppid()}")
-log(f"CWD={os.getcwd()}")
+log("PID=%d"%os.getpid())
+log("PARENT PID=%d"%os.getppid())
+log("CWD=%s"%os.getcwd())
 
-# Get paths from command-line arguments
 if len(sys.argv) > 2:
-    path_yara_rules = sys.argv[2]
+    path_yara_rules=sys.argv[2]
 else:
-    path_yara_rules = "yara_rules/"
+    path_yara_rules="yara_rules/"
 
-# Load YARA rules
 start = datetime.datetime.now()
-sigs = {
-    os.path.basename(name).replace(".yara", "").replace(".yar", ""): name
-    for name in glob.glob(os.path.join(path_yara_rules, "*.yar*"))
-}
+sigs = dict([(name.replace(".yara", "").split("/")[-1], name) for name in glob.glob(path_yara_rules+"*.yar*")])
 rules = yara.compile(filepaths=sigs)
 end = datetime.datetime.now()
-
-log(f"Loaded yara rules in {end - start}: {json.dumps(sigs, indent=4)}")
+log("Loaded yara rules in %s: %s"%( end-start, json.dumps(sigs, indent=4)))
 
 matches = {}
 
 def match_callback(data):
-    """Callback function for YARA matches."""
     if data.get("matches", False):
-        data.pop("matches", None)
-        data.pop("strings", None)
-        # Convert rule and description to safe strings
-        if "rule" in data:
-            val = data["rule"]
-            if isinstance(val, bytes):
-                val = val.decode("utf-8", errors="ignore")
-            data["rule"] = str(val)
-
-        if "tags" in data and not data["tags"]:
-            data.pop("tags", None)
-
+        del data["matches"]
+        if "strings" in data: del data["strings"]
+        if "rule" in data: data["rule"] = unicode(data["rule"], errors='ignore')
+        if "tags" in data and not data["tags"]: del data["tags"]
         if "meta" in data and "description" in data["meta"]:
-            desc = data["meta"]["description"]
-            if isinstance(desc, bytes):
-                desc = desc.decode("utf-8", errors="ignore")
-            data["meta"]["description"] = str(desc)
-
-        matches["matches"].append(data)
+            data["meta"]["description"] = unicode(data["meta"]["description"], errors='ignore')
+        matches['matches'].append(data)
     return yara.CALLBACK_CONTINUE
 
-# Open and read target file
-if len(sys.argv) < 2:
-    log("Usage: python3 script.py <file_to_scan> [yara_rules_path]")
-    sys.exit(1)
+log("Openning %s for reading ..."%(sys.argv[1]))
+data = open(sys.argv[1], 'rb').read()
+log("Performing matching on %d bytes of data ..."%len(data))
+matches = {'filename': os.path.basename(sys.argv[1]), 'matches':[]}
 
-target_file = sys.argv[1]
-log(f"Opening {target_file} for reading ...")
-
-with open(target_file, "rb") as f:
-    data = f.read()
-
-log(f"Performing matching on {len(data)} bytes of data ...")
-matches = {"filename": os.path.basename(target_file), "matches": []}
-
-# Run YARA matching
 start = datetime.datetime.now()
 rules.match(data=data, callback=match_callback)
 end = datetime.datetime.now()
 
-log(f"Done matching {len(data)} bytes in {end - start}, printing results ...")
-output(json.dumps(matches, ensure_ascii=False, indent=2))
+log("Done matching %d bytes in %s, printing results ..."%(len(data), end-start))
+output(json.dumps(matches))
 log("Process Exiting")
