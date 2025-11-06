@@ -41,11 +41,11 @@ if [ "x$OVR" == "xy" -o "x$OVR" == "xY" ]; then
  \"public_rsa\": \"`cat /var/www/rb-rails/config/rsa.pub`\"
 }" > $JSON
 
-  knife data bag from file passwords $JSON
+  knife data bag from file rBglobal $JSON
   rm -f $JSON
   echo "Checking NEW ssh rsa databag: "
 
-  knife data bag show passwords ssh
+  knife data bag show rBglobal ssh
   if [ $? -eq 0 ]; then
     UPLOAD=1
   fi
