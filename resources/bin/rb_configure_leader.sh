@@ -122,13 +122,13 @@ function configure_dataBags(){
   HASH_FUNCTION="SHA256"
 
   ## Data bags ##
-  mkdir -p /var/chef/data/data_bag/passwords/
+  mkdir -p /var/chef/data/data_bag_encrypted/passwords/
   mkdir -p /var/chef/data/data_bag/rBglobal/
   mkdir -p /var/chef/data/data_bag/certs/
   mkdir -p /var/chef/data/data_bag/backend/
 
   ## DB opscode (chef) passwords
-  cat > /var/chef/data/data_bag/passwords/db_opscode_chef.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_opscode_chef.json <<-_RBEOF_
 {
   "id": "db_opscode_chef",
   "username": "opscode_chef",
@@ -176,7 +176,7 @@ _RBEOF_
 _RBEOF_
 
   # S3 passwords
-  cat > /var/chef/data/data_bag/passwords/s3.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/s3.json <<-_RBEOF_
 {
   "id": "s3",
   "s3_access_key_id": "$S3KEY",
@@ -188,7 +188,6 @@ _RBEOF_
 }
 _RBEOF_
 
-  mkdir -p /var/chef/data/data_bag_encrypted/passwords/
   cat > /var/chef/data/data_bag_encrypted/passwords/vrrp.json <<-_RBEOF_
 {
   "id": "vrrp",
@@ -199,7 +198,7 @@ _RBEOF_
 _RBEOF_
 
   # DB druid passwords
-  cat > /var/chef/data/data_bag/passwords/db_druid.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_druid.json <<-_RBEOF_
 {
   "id": "db_druid",
   "username": "druid",
@@ -211,7 +210,7 @@ _RBEOF_
 _RBEOF_
 
   # DB redborder passwords
-  cat > /var/chef/data/data_bag/passwords/db_redborder.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_redborder.json <<-_RBEOF_
 {
   "id": "db_redborder",
   "username": "redborder",
@@ -223,7 +222,7 @@ _RBEOF_
 _RBEOF_
 
   # DB radius passwords
-  cat > /var/chef/data/data_bag/passwords/db_radius.json <<- _RBEOF2_
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_radius.json <<- _RBEOF2_
 {
   "id": "db_radius",
   "username": "radius",
@@ -235,7 +234,7 @@ _RBEOF_
 _RBEOF2_
 
   # Vault passwords
-  cat > /var/chef/data/data_bag/passwords/vault.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/vault.json <<-_RBEOF_
 {
   "id": "vault",
   "hash_key": "$HASH_KEY",
