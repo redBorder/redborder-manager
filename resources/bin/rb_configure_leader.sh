@@ -275,7 +275,7 @@ _RBEOF_
 
   #webui secret token
   WEBISECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-  cat > /var/chef/data/data_bag/passwords/webui_secret.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/webui_secret.json <<-_RBEOF_
 {
   "id": "webui_secret",
   "secret": "$WEBISECRET"
@@ -284,7 +284,7 @@ _RBEOF_
 
   #redis password token
   REDIS_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-  cat > /var/chef/data/data_bag/passwords/redis.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/redis.json <<-_RBEOF_
 {
   "id": "redis",
   "pass": "$REDIS_SECRET"
@@ -294,7 +294,7 @@ _RBEOF_
   #airflow password token
   AIRFLOW_USER="airflow"
   AIRFLOW_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c32 | sed 's/ //g'`"
-  cat > /var/chef/data/data_bag/passwords/db_airflow.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_airflow.json <<-_RBEOF_
 {
   "id": "db_airflow",
   "user": "$AIRFLOW_USER",
