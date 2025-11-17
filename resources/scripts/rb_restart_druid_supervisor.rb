@@ -19,12 +19,13 @@
 require 'net/http'
 require 'uri'
 require 'json'
+require 'optparse'
 
 def usage
-  printf "rb_restart_druid_supervisor.rb [-h] -s <supervisor_name>\n"
-  printf "   -h             : print this help\n"
-  printf '   -s <supervisor_name>: rb_monitor | rb_monitor_<UUID> | rb_vault (etc)'
-  printf ' To get full list of active supervisors, execute rb_get_druid_supervisors'
+  p 'rb_restart_druid_supervisor.rb [-h] -s <supervisor_name>'
+  p '   -h             : print this help'
+  p '   -s <supervisor_name>: rb_monitor | rb_monitor_<UUID> | rb_vault (etc)'
+  p ' To get full list of active supervisors, execute rb_get_druid_supervisors'
 end
 
 def post_to_supervisor(supervisor_name, action)
@@ -33,7 +34,7 @@ def post_to_supervisor(supervisor_name, action)
 
   request = Net::HTTP::Post.new(uri)
   request['Content-Type'] = 'application/json'
-  request.body = {}.to_json # Druid expects valid JSON body for POST
+  request.body = { feed: supervisor_name }.to_json
 
   response = Net::HTTP.start(uri.hostname, uri.port) do |http|
     http.request(request)
@@ -41,23 +42,20 @@ def post_to_supervisor(supervisor_name, action)
   puts response.body
 end
 
-opt = Getopt::Std.getopts('s:h')
+options = {}
+OptionParser.new do |opts|
+  opts.on('-s VALUE', 'Specify supervisor name') { |v| options[:s] = v }
+  opts.on('-h', 'Display help') { options[:h] = true }
+end.parse!
 
-if opt['h']
+if options[:h]
   usage
-  exit 0
-elsif opt['s'].nil?
+elsif options[:s].nil?
   usage
   exit 1
 else
-  supervisor_name = opt['s']
+  supervisor_name = options[:s]
   post_to_supervisor(supervisor_name, 'suspend')
   post_to_supervisor(supervisor_name, 'reset')
   post_to_supervisor(supervisor_name, 'resume')
-
-  # `curl -X POST -H 'Content-Type: application/json' "http://localhost:8090/druid/indexer/v1/supervisor/#{supervisor_name}/suspend"`
-
-  # `curl -X POST -H 'Content-Type: application/json' "http://localhost:8090/druid/indexer/v1/supervisor/#{supervisor_name}/reset`
-
-  # `curl -X POST -H 'Content-Type: application/json' "http://localhost:8090/druid/indexer/v1/supervisor/#{supervisor_name}/resume"`
 end
