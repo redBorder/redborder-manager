@@ -29,6 +29,7 @@ def usage
 end
 
 def post_to_supervisor(supervisor_name, action)
+  puts "On #{action} to supervisor #{supervisor_name}..."
   url = 'http://localhost:8090/druid/indexer/v1/supervisor'
   uri = URI("#{url}/#{supervisor_name}/#{action}")
 
@@ -39,7 +40,8 @@ def post_to_supervisor(supervisor_name, action)
   response = Net::HTTP.start(uri.hostname, uri.port) do |http|
     http.request(request)
   end
-  puts response.body
+  # puts response.body
+  puts "Action: #{action} to supervisor #{supervisor_name} done."
 end
 
 options = {}
