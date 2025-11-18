@@ -30,7 +30,9 @@ end
 
 def post_to_supervisor(supervisor_name, action)
   puts "On #{action} to supervisor #{supervisor_name}..."
-  url = 'http://localhost:8090/druid/indexer/v1/supervisor'
+
+  druid_port = 8081
+  url = "http://localhost:#{druid_port}/druid/indexer/v1/supervisor"
   uri = URI("#{url}/#{supervisor_name}/#{action}")
 
   request = Net::HTTP::Post.new(uri)
