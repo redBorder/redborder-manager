@@ -123,6 +123,7 @@ function configure_dataBags(){
 
   ## Data bags ##
   mkdir -p /var/chef/data/data_bag_encrypted/passwords/
+  mkdir -p /var/chef/data/data_bag/passwords/
   mkdir -p /var/chef/data/data_bag/rBglobal/
   mkdir -p /var/chef/data/data_bag/certs/
   mkdir -p /var/chef/data/data_bag/backend/
@@ -176,8 +177,7 @@ _RBEOF_
 _RBEOF_
 
   # S3 passwords
-  cat > /var/chef/data/data_bag_encrypted/passwords/s3.json <<-_RBEOF_
-{
+  cat > /var/chef/data/data_bag/passwords/s3.json <<-_RBEOF_{
   "id": "s3",
   "s3_access_key_id": "$S3KEY",
   "s3_secret_key_id": "$S3SECRET",
