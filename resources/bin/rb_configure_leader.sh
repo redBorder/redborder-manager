@@ -177,7 +177,7 @@ _RBEOF_
 _RBEOF_
 
   # S3 passwords
-  cat > /var/chef/data/data_bag/passwords/s3.json <<-_RBEOF_{
+  cat > /var/chef/data/data_bag/passwords/s3.json <<-_RBEOF_
   "id": "s3",
   "s3_access_key_id": "$S3KEY",
   "s3_secret_key_id": "$S3SECRET",
