@@ -55,7 +55,7 @@ function upload_data_bag(){
             retry_delay=5        
             for ((retry = 1; retry <= max_retries; retry++)); do
               echo -n "    - $(echo $n2 | sed "s|/var/chef/data/||") attempt ($retry/$max_retries)"
-              knife data bag -c /root/.chef/knife.rb from file $n1 $n2 --secret-file $key
+              knife data bag -c /root/.chef/knife.rb from file $n1 $n2 --secret-file $key &>/dev/null
               RET=$?
               if [ $RET -eq 0 ]; then 
                 rm -f $n2
@@ -77,7 +77,7 @@ function upload_data_bag(){
             retry_delay=5 
             for ((retry = 1; retry <= max_retries; retry++)); do
               echo -n "    - $(echo $n2 | sed "s|/var/chef/data/||") attempt ($retry/$max_retries)"
-              knife data bag -c /root/.chef/knife.rb from file $n1 $n2
+              knife data bag -c /root/.chef/knife.rb from file $n1 $n2 &>/dev/null
               RET=$?
               if [ $RET -eq 0 ]; then
                 print_result $RET
@@ -107,7 +107,7 @@ function upload_data_bag(){
             for ((retry = 1; retry <= max_retries; retry++)); do
               echo -n "  > Uploading \"$n1\" data bag: attempt ($retry/$max_retries)"
               [ "x$key" != "x" ] && echo -n " encrypted"
-              knife data bag -c /root/.chef/knife.rb create $n1 --secret-file $key
+              knife data bag -c /root/.chef/knife.rb create $n1 --secret-file $key &>/dev/null
               RET=$?
               if [ $RET -eq 0 ]; then
                 print_result $RET
@@ -129,7 +129,7 @@ function upload_data_bag(){
             for ((retry = 1; retry <= max_retries; retry++)); do
               echo -n "  > Uploading \"$n1\" data bag: attempt ($retry/$max_retries)"
               [ "x$key" != "x" ] && echo -n " encrypted"
-              knife data bag -c /root/.chef/knife.rb create $n1
+              knife data bag -c /root/.chef/knife.rb create $n1 &>/dev/null
               RET=$?
               if [ $RET -eq 0 ]; then
                 print_result $RET
@@ -162,7 +162,7 @@ function upload_data_bag(){
                 retry_delay=5
                 for ((retry = 1; retry <= max_retries; retry++)); do
                   echo -n "    - $(echo $n2 | sed "s|${RBDIR}/var/chef/data/||") ($retry/$max_retries)"
-                  knife data bag -c /root/.chef/knife.rb from file $n1 $n2 --secret-file $key
+                  knife data bag -c /root/.chef/knife.rb from file $n1 $n2 --secret-file $key &>/dev/null
                   RET=$?
                   if [ $RET -eq 0 ]; then
                     rm -f $n2
@@ -184,7 +184,7 @@ function upload_data_bag(){
                 retry_delay=5
                 for ((retry = 1; retry <= max_retries; retry++)); do
                   echo -n "    - $(echo $n2 | sed "s|${RBDIR}/var/chef/data/||") ($retry/$max_retries)"
-                  knife data bag -c /root/.chef/knife.rb from file $n1 $n2
+                  knife data bag -c /root/.chef/knife.rb from file $n1 $n2 &>/dev/null
                   RET=$?
                   if [ $RET -eq 0 ]; then
                     print_result $RET
@@ -236,7 +236,7 @@ function upload_x(){
           retry_delay=5                    
           for ((retry = 1; retry <= max_retries; retry++)); do
             echo -n "    - $(echo $n | sed "s|/var/chef/data/||") attempt ($retry/$max_retries)"
-            knife $X -c /root/.chef/knife.rb from file $n
+            knife $X -c /root/.chef/knife.rb from file $n &>/dev/null
             if [ $? -eq 0 ]; then
               print_result $?
               break
