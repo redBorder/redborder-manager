@@ -33,17 +33,22 @@ def post_to_supervisor(supervisor_name, action)
 
   druid_port = 8081
   url = "http://localhost:#{druid_port}/druid/indexer/v1/supervisor"
-  uri = URI("#{url}/#{supervisor_name}/#{action}")
+  begin
+    uri = URI("#{url}/#{supervisor_name}/#{action}")
 
-  request = Net::HTTP::Post.new(uri)
-  request['Content-Type'] = 'application/json'
-  request.body = { feed: supervisor_name }.to_json
+    request = Net::HTTP::Post.new(uri)
+    request['Content-Type'] = 'application/json'
+    request.body = { feed: supervisor_name }.to_json
 
-  response = Net::HTTP.start(uri.hostname, uri.port) do |http|
-    http.request(request)
+    _response = Net::HTTP.start(uri.hostname, uri.port) do |http|
+      http.request(request)
+    end
+
+    # puts response.body
+    puts "Action: #{action} to supervisor #{supervisor_name} done."
+  rescue e
+    puts "ERROR: #{action} to supervisor #{supervisor_name} failed."
   end
-  # puts response.body
-  puts "Action: #{action} to supervisor #{supervisor_name} done."
 end
 
 options = {}
