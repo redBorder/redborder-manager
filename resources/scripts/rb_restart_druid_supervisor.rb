@@ -81,9 +81,9 @@ def post_to_supervisor(supervisor_name, action)
     raise "HTTP #{response.code} #{response.message} - #{response.body}"
   end
 
-  puts "✔ Action '#{action}' completed successfully."
+  puts "Action '#{action}' completed successfully."
 rescue => e
-  puts "✖ ERROR performing '#{action}' on supervisor '#{supervisor_name}': #{e.message}"
+  puts "ERROR performing '#{action}' on supervisor '#{supervisor_name}': #{e.message}"
 end
 
 # ----------------------------------------------------------
