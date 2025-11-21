@@ -62,10 +62,11 @@ end
 # ----------------------------------------------------------
 #  POST action to supervisor via Druid Router
 # ----------------------------------------------------------
-def post_to_supervisor(supervisor_name, action)
-  r = resolve_druid_router
-  address = r['address'] # druid api address
-  port = r['port'] # druid api port
+def post_to_supervisor(params)
+  address = params[:address]
+  port    = params[:port]
+  supervisor_name = params[:supervisor_name]
+  action = params[:action]
 
   puts "Performing '#{action}' on supervisor '#{supervisor_name}' via #{address}:#{port}"
 
@@ -77,9 +78,7 @@ def post_to_supervisor(supervisor_name, action)
 
   response = Net::HTTP.start(uri.hostname, uri.port) { |http| http.request(request) }
 
-  unless response.is_a?(Net::HTTPSuccess)
-    raise "HTTP #{response.code} #{response.message} - #{response.body}"
-  end
+  raise "HTTP #{response.code} #{response.message} - #{response.body}"   unless response.is_a?(Net::HTTPSuccess)
 
   puts "Action '#{action}' completed successfully."
 rescue => e
@@ -95,18 +94,17 @@ OptionParser.new do |opts|
   opts.on('-h', 'Help') { options[:h] = true }
 end.parse!
 
-if options[:h]
+if options[:h] || options[:s].nil?
   usage
   exit 0
 end
 
-if options[:s].nil?
-  usage
-  exit 0
-end
+router = resolve_druid_router
 
-supervisor_name = options[:s]
-
-post_to_supervisor(supervisor_name, 'suspend')
-post_to_supervisor(supervisor_name, 'reset')
-post_to_supervisor(supervisor_name, 'resume')
+params = { supervisor_name: options[:s], address: router['address'], port: router['port'] }
+params['action'] = 'suspend'
+post_to_supervisor(params)
+params['action'] = 'reset'
+post_to_supervisor(params)
+params['action'] = 'resume'
+post_to_supervisor(params)
