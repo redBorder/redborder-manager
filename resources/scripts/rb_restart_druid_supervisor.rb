@@ -102,9 +102,9 @@ end
 router = resolve_druid_router
 
 params = { supervisor_name: options[:s], address: router['address'], port: router['port'] }
-params['action'] = 'suspend'
+params[:action] = 'suspend'
 post_to_supervisor(params)
-params['action'] = 'reset'
+params[:action] = 'reset'
 post_to_supervisor(params)
-params['action'] = 'resume'
+params[:action] = 'resume'
 post_to_supervisor(params)
