@@ -26,6 +26,7 @@ def usage
   puts 'rb_restart_druid_supervisor.rb [-h] -s <supervisor_name>'
   puts '   -h                     : show help'
   puts '   -s <supervisor_name>   : rb_monitor | rb_monitor_<UUID> | rb_vault | ...'
+  puts '   -a <action>            : delete | suspend | restart | resume'
   puts 'To list active supervisors, run: rb_get_druid_supervisors'
 end
 
@@ -43,7 +44,6 @@ def resolve_druid_router
     routers = zk.children(druid_router_path)
     raise 'ERROR: No routers found. Please enable druid router at least in one node.' if routers.empty?
 
-    # Pick one router randomly
     router_id = routers.sample
     data, _stat = zk.get("#{druid_router_path}/#{router_id}")
 
@@ -60,7 +60,7 @@ def resolve_druid_router
 end
 
 # ----------------------------------------------------------
-#  POST action to supervisor via Druid Router
+#  Send action to supervisor via Druid Router
 # ----------------------------------------------------------
 def post_to_supervisor(params)
   address = params[:address]
