@@ -6,6 +6,13 @@ require 'fileutils'
 require 'optparse'
 require 'securerandom'
 
+def remove_comments(file_path)
+  json_string = File.read(file_path)
+  json_string.gsub!(%r{//.*$}, '')        # single-line comments
+  json_string.gsub!(%r{/\*.*?\*/}m, '')   # multi-line comments
+  File.write(file_path, json_string)
+end
+
 def multiplicate_monitors(file_path, factor, test: false, sensor_name: 'Device')
   # Leer y parsear el JSON
   sensor_index = -1
@@ -18,8 +25,10 @@ def multiplicate_monitors(file_path, factor, test: false, sensor_name: 'Device')
     sensor_index = i
     if factor >= 1
       sensor['monitors'] = sensor['monitors'] * factor
+      original_count = sensor['monitors'].size / factor
+      new_elements = sensor['monitors'][original_count..] # get the new ones
 
-      sensor['monitors'].each do |mon|
+      new_elements.each do |mon|
         next unless mon['name']
         mon['name'] = SecureRandom.uuid
       end
@@ -80,6 +89,7 @@ OptionParser.new do |opts|
 end.parse!
 
 # Ejecutar función
+remove_comments(File.read(options[:file]))
 sensor_index, s_proc = multiplicate_monitors(options[:file], options[:factor], test: options[:test])
 
 puts "Total de sensores procesados: #{s_proc}"
