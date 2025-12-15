@@ -92,5 +92,3 @@ sensor_index, _s_proc = multiplicate_monitors(options[:file], options[:factor], 
 # puts "Total de sensores procesados: #{s_proc}"
 
 puts count_monitors(options[:file], sensor_index)
-
-sensor_index, _s_proc = multiplicate_monitors(options[:file], options[:factor], test: options[:test])
