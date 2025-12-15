@@ -8,8 +8,8 @@ require 'securerandom'
 
 def remove_comments(file_path)
   json_string = File.read(file_path)
-  json_string.gsub!(%r{//.*$}, '')        # single-line comments
-  json_string.gsub!(%r{/\*.*?\*/}m, '')   # multi-line comments
+  json_string.gsub!(%r{/\*.*?\*/}m, '') # multi-line comments
+  json_string.gsub!(%r{,(\s*[\}\]])}, '\1')
   File.write(file_path, json_string)
 end
 
