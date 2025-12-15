@@ -6,13 +6,6 @@ require 'fileutils'
 require 'optparse'
 require 'securerandom'
 
-def remove_comments(file_path)
-  json_string = File.read(file_path)
-  json_string.gsub!(%r{/\*.*?\*/}m, '') # multi-line comments
-  json_string.gsub!(%r{,(\s*[\}\]])}, '\1')
-  File.write(file_path, json_string)
-end
-
 def multiplicate_monitors(file_path, factor, test: false, sensor_name: 'Device')
   # Leer y parsear el JSON
   sensor_index = -1
@@ -37,6 +30,11 @@ def multiplicate_monitors(file_path, factor, test: false, sensor_name: 'Device')
     else
       sensor['monitors'] = sensor['monitors'].first((factor * sensor['monitors'].size).floor)
     end
+  end
+
+  def count_monitors(file_path, sensor_index)
+    json = JSON.parse(File.read(file_path))
+    puts "monitors in sensor Device: #{json['sensors'][sensor_index]['monitors'].size}"
   end
 
   # Determinar la ruta de salida
@@ -89,10 +87,10 @@ OptionParser.new do |opts|
 end.parse!
 
 # Ejecutar función
-remove_comments(File.read(options[:file]))
-sensor_index, s_proc = multiplicate_monitors(options[:file], options[:factor], test: options[:test])
+sensor_index, _s_proc = multiplicate_monitors(options[:file], options[:factor], test: options[:test])
 
-puts "Total de sensores procesados: #{s_proc}"
-# puts `cat /etc/redborder-monitor/config.json | jq '.sensors[sensor_index]'`
+# puts "Total de sensores procesados: #{s_proc}"
 
-puts `cat /etc/redborder-monitor/config.json | jq '.sensors[#{sensor_index}].monitors | length'`
+puts count_monitors(options[:file], sensor_index)
+
+sensor_index, _s_proc = multiplicate_monitors(options[:file], options[:factor], test: options[:test])
