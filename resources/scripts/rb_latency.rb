@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 require 'open3'
 
 TABLE_WIDTH = 70
@@ -12,7 +14,7 @@ end
 def remote_cmd(node_ip, cmd)
   `ssh -o ConnectTimeout=5 -o LogLevel=quiet -o UserKnownHostsFile=/dev/null \
   -o PasswordAuthentication=no -o StrictHostKeyChecking=no \
-  -i /var/www/rb-rails/config/rsa root@#{node_ip} "#{cmd}"`.strip
+  -i /root/.ssh/rsa root@#{node_ip} "#{cmd}"`.strip
 end
 
 def ping_remote(from_node_ip, target_ip)
