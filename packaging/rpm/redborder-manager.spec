@@ -114,120 +114,120 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 * Mon Aug 4 2025 manegron <manegron@redborder.com>
 - Add redborder-pythonpyenv
 
-* Mon Jul 21 2025 Rafael Gómez <rgomez@redborder.com> - 6.6.0-1
+* Mon Jul 21 2025 Rafael Gómez <rgomez@redborder.com>
 - Remove redborder-postgresql. Obsoletes uninstall the package resolving conflicts
 
-* Tue Apr 22 2025 Rafael Gómez <rgomez@redborder.com> - 5.1.1-1
+* Tue Apr 22 2025 Rafael Gómez <rgomez@redborder.com>
 - Remove openssl gemspec file handling from chef-workstation package
 
-* Fri Mar 28 2025 Vicente Mesa, José Navarro <vimesa@redborder.com, jnavarro@redborder.com> - 5.1.0-1
+* Fri Mar 28 2025 Vicente Mesa, José Navarro <vimesa@redborder.com, jnavarro@redborder.com>
 - Chef-workstation update handling conflict with embedded openssl gemspec
 
-* Mon Jul 29 2024 Miguel Alvarez <malvarez@redborder.com> - 2.4.0-1
+* Mon Jul 29 2024 Miguel Alvarez <malvarez@redborder.com>
 - Add redboder tools path
 
-* Fri Jan 19 2024 Miguel Negrón <manegron@redborder.com> - 1.0.7-1
+* Fri Jan 19 2024 manegron <manegron@redborder.com>
 - Add journald script to configure logs storage
 
-* Fri Jan 19 2024 David Vanhoucke <dvanhoucke@redborder.com> - 1.0.6-1
+* Fri Jan 19 2024 David Vanhoucke <dvanhoucke@redborder.com>
 - Add rb-arubacentral
 
-* Mon Dec 18 2023 Miguel Álvarez <malvarez@redborder.com> - 1.0.5-1
+* Mon Dec 18 2023 Miguel Álvarez <malvarez@redborder.com>
 - Add rb-logstatter
 
-* Thu Dec 14 2023 Miguel Negrón <manegron@redborder.com> - 1.0.4-1
+* Thu Dec 14 2023 manegron <manegron@redborder.com>
 - Fix order of cookbooks
 
-* Fri Dec 01 2023 David Vanhoucke <dvanhoucke@redborder.com> - 1.0.3-1
+* Fri Dec 01 2023 David Vanhoucke <dvanhoucke@redborder.com>
 - Add selinux
 
-* Thu Nov 30 2023 David Vanhoucke <dvanhoucke@redborder.com> - 1.0.2-1
+* Thu Nov 30 2023 David Vanhoucke <dvanhoucke@redborder.com>
 - Change rescue of json parse
 
-* Wed Nov 29 2023 David Vanhoucke <dvanhoucke@redborder.com> - 1.0.1-1
+* Wed Nov 29 2023 David Vanhoucke <dvanhoucke@redborder.com>
 - Fix firewall public zone broadcast
 
-* Wed Nov 29 2023 Miguel Álvarez <malvarez@redborder.com> - 1.0.0-1
+* Wed Nov 29 2023 Miguel Álvarez <malvarez@redborder.com>
 - Add cgroup
 
-* Tue Nov 28 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.9-1
+* Tue Nov 28 2023 David Vanhoucke <dvanhoucke@redborder.com>
 - Fix single interface manager configuration
 
-* Tue Nov 28 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.8-1
+* Tue Nov 28 2023 David Vanhoucke <dvanhoucke@redborder.com>
 - Fix sync network routes and allow no gateways
 
-* Tue Nov 21 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.7-1
+* Tue Nov 21 2023 David Vanhoucke <dvanhoucke@redborder.com>
 - Add support for sync network
 
-* Tue Nov 21 2023 David Vanhoucke, Vicente Mesa <dvanhoucke@redborder.com, vimesa@redborder.com> - 0.9.6-1
+* Tue Nov 21 2023 David Vanhoucke, Vicente Mesa <dvanhoucke@redborder.com, vimesa@redborder.com>
 - Fix firewall direct rules
 - Add dhclient
 
-* Thu Nov 16 2023 Vicente Mesa <vimesa@redborder.com> - 0.9.5-1
+* Thu Nov 16 2023 Vicente Mesa <vimesa@redborder.com>
 - Fix random hostname
 
-* Wed Nov 15 2023 Miguel Negron, Miguel Álvarez <manegron@redborder.com, malvarez@redborder.com> - 0.9.4-1
+* Wed Nov 15 2023 manegron, Miguel Álvarez <manegron@redborder.com, malvarez@redborder.com>
 - Fix chef license auto accept and fix serf DNS
 
-* Tue Nov 14 2023 David Vanhoucke <dvanhoucke@redborder.com> - 0.9.3-1
+* Tue Nov 14 2023 David Vanhoucke <dvanhoucke@redborder.com>
 - Fix RSA creation for RHEL9
 
-* Tue Nov 14 2023 Miguel Negron <manegron@redborder.com> - 0.9.2-1
+* Tue Nov 14 2023 manegron <manegron@redborder.com>
 - Add network scripts
 
-* Fri Sep 22 2023 Miguel Álvarez <malvarez@redborder.com> - 0.9.1-1
+* Fri Sep 22 2023 Miguel Álvarez <malvarez@redborder.com>
 - Change ntp by chrony
 - Added rbaioutliers in cookbook list for upload in rb_configure_leader.sh
 - Updated manager.json chef role for outliers adaption
 
-* Thu Sep 14 2023 Julio Peralta <jperalta@redborder.com> - 0.9.0
+* Thu Sep 14 2023 Julio Peralta <jperalta@redborder.com>
 - Removed IF="," when accesing zookeeper in rb_get_zkinfo.sh
 
-* Wed Sep 13 2023 Julio Peralta <jperalta@redborder.com> - 0.8.9-1
+* Wed Sep 13 2023 Julio Peralta <jperalta@redborder.com>
 - Fix chef running duplicate on boot
 
-* Thu May 04 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.8-1
+* Thu May 04 2023 Luis J. Blanco <ljblanco@redborder.com>
 - Add ohai recipe to the list
 
-* Mon Apr 24 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.7-1
+* Mon Apr 24 2023 Luis J. Blanco <ljblanco@redborder.com>
 - Scripts recovery from old version for monitor sensors
 
-* Tue Apr 18 2023 Luis J. Blanco <ljblanco@redborder.com> - 0.8.6-1
+* Tue Apr 18 2023 Luis J. Blanco <ljblanco@redborder.com>
 - Databag monitors
 
-* Thu Jan 26 2023 Luis Blanco <ljblanco@redborder.com> - 0.8.4-1
+* Thu Jan 26 2023 Luis Blanco <ljblanco@redborder.com>
 - Check config.json is a directory when the setup of s3
 
-* Wed Jan 25 2023 Luis Blanco <ljblanco@redborder.com> -
+* Wed Jan 25 2023 Luis Blanco <ljblanco@redborder.com>
 - Open snmp ports
 
-* Wed May 11 2022 Eduardo Reyes <eareyes@redborder.com> -
+* Wed May 11 2022 Eduardo Reyes <eareyes@redborder.com>
 - Add check directory
 
-* Fri Jan 28 2022 Eduardo Reyes <eareyes@redborder.com> -
+* Fri Jan 28 2022 Eduardo Reyes <eareyes@redborder.com>
 - Add rb_synthetic_producer.rb
 
-* Wed Jan 31 2018 Alberto Rodriguez <arodriguez@redborder.com> - 0.0.11-1
+* Wed Jan 31 2018 Alberto Rodriguez <arodriguez@redborder.com>
 - Add chef-solo files
 
-* Tue Nov 22 2016 Juan J. Prieto <jjprieto@redborder.com> - 0.0.10-1
+* Tue Nov 22 2016 Juan J. Prieto <jjprieto@redborder.com>
 - Change rvm require and fix pack versioning.
 
-* Wed Oct 26 2016 Juan J. Prieto <jjprieto@redborder.com> - 0.0.6-1
+* Wed Oct 26 2016 Juan J. Prieto <jjprieto@redborder.com>
 - Add directory scripts and support for wrapper on ruby.
 
-* Tue Sep 06 2016 Carlos J. Mateos <cjmateos@redborder.com> - 0.0.5-1
+* Tue Sep 06 2016 Carlos J. Mateos <cjmateos@redborder.com>
 - Add rb-init-conf service and remove chef package installation
 - Remove rb_manager_functions.rb from spec
 
-* Fri Sep 02 2016 Carlos J. Mateos <cjmateos@redborder.com> - 0.0.4-1
+* Fri Sep 02 2016 Carlos J. Mateos <cjmateos@redborder.com>
 - Add YML config files
 
-* Tue Aug 30 2016 Carlos J. Mateos <cjmateos@redborder.com> - 0.0.3-1
+* Tue Aug 30 2016 Carlos J. Mateos <cjmateos@redborder.com>
 - Change chef packages
 
-* Thu Jul 07 2016 Carlos J. Mateos <cjmateos@redborder.com> - 0.0.2-1
+* Thu Jul 07 2016 Carlos J. Mateos <cjmateos@redborder.com>
 - Added various rb scripts and chef data
 
-* Thu Jun 23 2016 Juan J. Prieto <jjprieto@redborder.com> - 0.0.1-1
+* Thu Jun 23 2016 Juan J. Prieto <jjprieto@redborder.com>
 - first spec version
