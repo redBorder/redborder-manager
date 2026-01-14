@@ -21,6 +21,7 @@ Requires: network-scripts network-scripts-teamd
 Requires: redborder-cgroups rb-logstatter redborder-pythonlibs
 Requires: mcli
 Requires: redborder-pythonpyenv
+Requires: ipmitool
 
 Obsoletes: redborder-postgresql
 
@@ -107,6 +108,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Wed Jan 14 2026 manegron <manegron@redborder.com>
+- Add ipmitool as require
+
 * Mon Aug 4 2025 manegron <manegron@redborder.com>
 - Add redborder-pythonpyenv
 
