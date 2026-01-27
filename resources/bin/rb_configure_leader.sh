@@ -453,6 +453,9 @@ function configure_leader(){
   # Delete encrypted data BAGS
   rm -rf /var/chef/data/data_bag_encrypted/*
 
+  # Configure data bags permissions
+  $RBBIN/rb_configure_chef_data_bag_acls.sh
+
   # COOKBOOKS
   # Save into cache directory
   e_title "Uploading cookbooks"
