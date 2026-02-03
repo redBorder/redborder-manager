@@ -23,7 +23,7 @@ require 'json'
 require 'optparse'
 
 def usage
-  puts 'rb_restart_druid_supervisor.rb [-h] -s <supervisor_name>'
+  puts 'rb_druid_supervisor_action.rb [-h] -s <supervisor_name>'
   puts '   -h                     : show help'
   puts '   -s <supervisor_name>   : rb_monitor | rb_monitor_<UUID> | rb_vault | ...'
   puts '   -a <action>            : shutdown | suspend | restart | resume'
@@ -70,18 +70,11 @@ def post_to_supervisor(params)
 
   puts "Performing '#{action}' on supervisor '#{supervisor_name}' via #{address}:#{port}"
 
-  # if action == 'delete'
-  #   # DELETE /supervisor/{name}
-  #   uri = URI("http://#{address}:#{port}/druid/indexer/v1/supervisor/#{supervisor_name}")
-
-  #   request = Net::HTTP::Delete.new(uri)
-  # else
   uri = URI("http://#{address}:#{port}/druid/indexer/v1/supervisor/#{supervisor_name}/#{action}")
 
   request = Net::HTTP::Post.new(uri)
   request['Content-Type'] = 'application/json'
   request.body = { feed: supervisor_name }.to_json
-  # end
 
   response = Net::HTTP.start(uri.hostname, uri.port) { |http| http.request(request) }
 
