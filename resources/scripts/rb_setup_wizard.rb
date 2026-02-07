@@ -36,6 +36,34 @@ def strip_ansi_for_dialog(text)
     text.gsub(/\e\[[0-9;]*[A-Za-z]/, '')
 end
 
+def format_elapsed_time(total_seconds)
+    hours = total_seconds / 3600
+    minutes = (total_seconds % 3600) / 60
+    seconds = total_seconds % 60
+
+    format("%02d:%02d:%02d", hours, minutes, seconds)
+end
+
+def manager_ip_for_url(general_conf)
+    management_iface = general_conf.dig("network", "management_interface")
+
+    configured_iface = general_conf.dig("network", "interfaces")&.find do |iface|
+        iface["device"] == management_iface
+    end
+
+    configured_ip = configured_iface&.dig("ip")
+    return configured_ip unless configured_ip.nil? || configured_ip.empty?
+
+    Socket.getifaddrs.each do |ifaddr|
+        next unless ifaddr.name == management_iface
+        next unless ifaddr.addr&.ipv4?
+
+        return ifaddr.addr.ip_address
+    end
+
+    nil
+end
+
 if File.exist?('/etc/redborder/cluster-installed.txt')
 
     dialog = MRDialog.new
@@ -449,6 +477,7 @@ command = "#{ENV['RBBIN']}/rb_init_conf"
 log_file = "/tmp/rb_init_conf_wizard.log"
 
 File.open(log_file, 'w') {}
+start_time = Time.now
 pid = Process.spawn('script', '-qefc', command, log_file, out: '/dev/null', err: '/dev/null')
 
 progress = 0
@@ -496,13 +525,17 @@ IO.popen(dialog_command, "w") do |gauge_io|
 end
 
 exit_status = rb_init_conf_status.exitstatus
+elapsed_seconds = (Time.now - start_time).to_i
+elapsed_time = format_elapsed_time(elapsed_seconds)
+manager_ip = manager_ip_for_url(general_conf)
+manager_url = manager_ip.nil? ? 'https://<ip>/' : "https://#{manager_ip}/"
 
 dialog = MRDialog.new
 dialog.clear = true
 dialog.title = "Configuration result"
 
 if exit_status.zero?
-  dialog.msgbox("rb_init_conf and bootstrap have finished successfully.", 6, 70)
+  dialog.msgbox("Manager configuration finished successfully.\nYou can visit the web interface at #{manager_url}\nTotal configuration time: #{elapsed_time}", 9, 90)
 else
   dialog.msgbox("rb_init_conf/bootstrap failed (exit code #{exit_status}).\nCheck #{log_file} for details.", 8, 80)
 end
