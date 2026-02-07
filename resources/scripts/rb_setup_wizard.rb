@@ -507,11 +507,14 @@ IO.popen(dialog_command, "w") do |gauge_io|
     end
 
     status_output = recent_lines.reject(&:empty?).join("\n")
-    status_output = "(waiting for output...)" if status_output.empty?
+    status_output = "(waiting for configuration...)" if status_output.empty?
+
+    elapsed_seconds = (Time.now - start_time).to_i
+    elapsed_time = format_elapsed_time(elapsed_seconds)
 
     gauge_io.puts("XXX")
     gauge_io.puts(progress)
-    gauge_io.puts("Running rb_init_conf/rb_bootstrap...\n\nLatest output:\n#{status_output}")
+    gauge_io.puts("Running initial configuration: #{elapsed_time}\n\n#{status_output}")
     gauge_io.puts("XXX")
     gauge_io.flush
 
@@ -535,7 +538,7 @@ dialog.clear = true
 dialog.title = "Configuration result"
 
 if exit_status.zero?
-  dialog.msgbox("Manager configuration finished successfully.\n\nTotal configuration time: #{elapsed_time}\n\nYou can now visit the web interface at #{manager_url}", 9, 90)
+  dialog.msgbox("Manager configuration finished successfully.\nTotal configuration time: #{elapsed_time}\n\nYou can now visit the web interface at #{manager_url}", 9, 90)
 else
   dialog.msgbox("rb_init_conf/bootstrap failed (exit code #{exit_status}).\nCheck #{log_file} for details.", 8, 80)
 end
