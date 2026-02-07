@@ -474,7 +474,7 @@ File.open(CONFFILE, 'w') {|f| f.write general_conf.to_yaml } #Store
 
 #exec("#{ENV['RBBIN']}/rb_init_conf.sh")
 command = "#{ENV['RBBIN']}/rb_init_conf"
-log_file = "/tmp/rb_init_conf_wizard.log"
+log_file = "/root/.install-rb-init-conf.log"
 
 File.open(log_file, 'w') {}
 start_time = Time.now
