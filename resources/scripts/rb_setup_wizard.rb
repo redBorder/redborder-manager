@@ -442,10 +442,46 @@ File.open(CONFFILE, 'w') {|f| f.write general_conf.to_yaml } #Store
 
 #exec("#{ENV['RBBIN']}/rb_init_conf.sh")
 command = "#{ENV['RBBIN']}/rb_init_conf"
+log_file = "/tmp/rb_init_conf_wizard.log"
+
+pid = Process.spawn(command, out: log_file, err: log_file)
+
+progress = 0
+dialog_command = [
+  "dialog",
+  "--title", "Applying Configuration",
+  "--gauge", "Executing rb_init_conf", "10", "70", "0"
+]
+
+rb_init_conf_status = nil
+
+IO.popen(dialog_command, "w") do |gauge_io|
+  while Process.waitpid(pid, Process::WNOHANG).nil?
+    gauge_io.puts("XXX")
+    gauge_io.puts(progress)
+    gauge_io.puts("Running rb_init_conf... please wait")
+    gauge_io.puts("XXX")
+    gauge_io.flush
+
+    progress = (progress + 5) % 100
+    sleep 0.5
+  end
+
+  rb_init_conf_status = $?
+  gauge_io.puts("100")
+  gauge_io.flush
+end
+
+exit_status = rb_init_conf_status.exitstatus
 
 dialog = MRDialog.new
-dialog.clear = false
-dialog.title = "Applying Configuration"
-dialog.prgbox(command,20,100, "Executing rb_init_conf")
+dialog.clear = true
+dialog.title = "Configuration result"
+
+if exit_status.zero?
+  dialog.msgbox("rb_init_conf has finished successfully.", 6, 60)
+else
+  dialog.msgbox("rb_init_conf failed (exit code #{exit_status}).\nCheck #{log_file} for details.", 8, 70)
+end
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
