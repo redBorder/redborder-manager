@@ -32,6 +32,10 @@ EOF
 end
 
 
+def strip_ansi_for_dialog(text)
+    text.gsub(/\e\[[0-9;]*[A-Za-z]/, '')
+end
+
 if File.exist?('/etc/redborder/cluster-installed.txt')
 
     dialog = MRDialog.new
@@ -445,7 +449,7 @@ command = "#{ENV['RBBIN']}/rb_init_conf"
 log_file = "/tmp/rb_init_conf_wizard.log"
 
 File.open(log_file, 'w') {}
-pid = Process.spawn(command, out: log_file, err: log_file)
+pid = Process.spawn('script', '-qefc', command, log_file, out: '/dev/null', err: '/dev/null')
 
 progress = 0
 dialog_command = [
@@ -466,7 +470,8 @@ IO.popen(dialog_command, "w") do |gauge_io|
         new_output = f.read
         last_position = f.pos
         if new_output && !new_output.empty?
-          recent_lines.concat(new_output.split(/\r?\n/))
+          sanitized_output = strip_ansi_for_dialog(new_output)
+          recent_lines.concat(sanitized_output.split(/\r?\n/))
           recent_lines = recent_lines.last(8)
         end
       end
