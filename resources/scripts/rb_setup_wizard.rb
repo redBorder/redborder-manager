@@ -444,26 +444,44 @@ File.open(CONFFILE, 'w') {|f| f.write general_conf.to_yaml } #Store
 command = "#{ENV['RBBIN']}/rb_init_conf"
 log_file = "/tmp/rb_init_conf_wizard.log"
 
+File.open(log_file, 'w') {}
 pid = Process.spawn(command, out: log_file, err: log_file)
 
 progress = 0
 dialog_command = [
   "dialog",
   "--title", "Applying Configuration",
-  "--gauge", "Executing rb_init_conf", "10", "70", "0"
+  "--gauge", "Executing rb_init_conf", "20", "100", "0"
 ]
 
+last_position = 0
+recent_lines = []
 rb_init_conf_status = nil
 
 IO.popen(dialog_command, "w") do |gauge_io|
   while Process.waitpid(pid, Process::WNOHANG).nil?
+    if File.exist?(log_file)
+      File.open(log_file, 'r') do |f|
+        f.seek(last_position)
+        new_output = f.read
+        last_position = f.pos
+        if new_output && !new_output.empty?
+          recent_lines.concat(new_output.split(/\r?\n/))
+          recent_lines = recent_lines.last(8)
+        end
+      end
+    end
+
+    status_output = recent_lines.reject(&:empty?).join("\n")
+    status_output = "(waiting for output...)" if status_output.empty?
+
     gauge_io.puts("XXX")
     gauge_io.puts(progress)
-    gauge_io.puts("Running rb_init_conf... please wait")
+    gauge_io.puts("Running rb_init_conf/rb_bootstrap...\n\nLatest output:\n#{status_output}")
     gauge_io.puts("XXX")
     gauge_io.flush
 
-    progress = (progress + 5) % 100
+    progress = (progress + 3) % 100
     sleep 0.5
   end
 
@@ -479,9 +497,9 @@ dialog.clear = true
 dialog.title = "Configuration result"
 
 if exit_status.zero?
-  dialog.msgbox("rb_init_conf has finished successfully.", 6, 60)
+  dialog.msgbox("rb_init_conf and bootstrap have finished successfully.", 6, 70)
 else
-  dialog.msgbox("rb_init_conf failed (exit code #{exit_status}).\nCheck #{log_file} for details.", 8, 70)
+  dialog.msgbox("rb_init_conf/bootstrap failed (exit code #{exit_status}).\nCheck #{log_file} for details.", 8, 80)
 end
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
