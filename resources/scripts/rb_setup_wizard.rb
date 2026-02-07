@@ -535,7 +535,7 @@ dialog.clear = true
 dialog.title = "Configuration result"
 
 if exit_status.zero?
-  dialog.msgbox("Manager configuration finished successfully.\nYou can visit the web interface at #{manager_url}\nTotal configuration time: #{elapsed_time}", 9, 90)
+  dialog.msgbox("Manager configuration finished successfully.\n\nYou can visit the web interface at #{manager_url}\n\nTotal configuration time: #{elapsed_time}", 9, 90)
 else
   dialog.msgbox("rb_init_conf/bootstrap failed (exit code #{exit_status}).\nCheck #{log_file} for details.", 8, 80)
 end
