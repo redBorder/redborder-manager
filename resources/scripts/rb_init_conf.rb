@@ -284,4 +284,4 @@ system('systemctl enable serf &> /dev/null')
 system('systemctl start serf &> /dev/null')
 # wait a moment before start serf-join to ensure connectivity
 sleep(3)
-system('systemctl start rb-bootstrap &> /dev/null')
+system('/usr/lib/redborder/bin/rb_bootstrap.sh')
