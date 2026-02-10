@@ -32,6 +32,38 @@ EOF
 end
 
 
+def strip_ansi_for_dialog(text)
+    text.gsub(/\e\[[0-9;]*[A-Za-z]/, '')
+end
+
+def format_elapsed_time(total_seconds)
+    hours = total_seconds / 3600
+    minutes = (total_seconds % 3600) / 60
+    seconds = total_seconds % 60
+
+    format("%02d:%02d:%02d", hours, minutes, seconds)
+end
+
+def manager_ip_for_url(general_conf)
+    management_iface = general_conf.dig("network", "management_interface")
+
+    configured_iface = general_conf.dig("network", "interfaces")&.find do |iface|
+        iface["device"] == management_iface
+    end
+
+    configured_ip = configured_iface&.dig("ip")
+    return configured_ip unless configured_ip.nil? || configured_ip.empty?
+
+    Socket.getifaddrs.each do |ifaddr|
+        next unless ifaddr.name == management_iface
+        next unless ifaddr.addr&.ipv4?
+
+        return ifaddr.addr.ip_address
+    end
+
+    nil
+end
+
 if File.exist?('/etc/redborder/cluster-installed.txt')
 
     dialog = MRDialog.new
@@ -442,10 +474,86 @@ File.open(CONFFILE, 'w') {|f| f.write general_conf.to_yaml } #Store
 
 #exec("#{ENV['RBBIN']}/rb_init_conf.sh")
 command = "#{ENV['RBBIN']}/rb_init_conf"
+log_file = "/root/.install-rb-init-conf.log"
+
+File.open(log_file, 'w') {}
+start_time = Time.now
+pid = Process.spawn('script', '-qefc', command, log_file, out: '/dev/null', err: '/dev/null')
+
+progress = 0
+MILESTONES = {
+  "Registering chef-client"           => 30,
+  "/var/www/rb-rails/config/aws.yml"  => 50,
+  "/etc/logstash/pipelines"           => 75,
+  "private-chef-server"               => 95,
+  "Configuring cgroups"               => 99
+}
+dialog_command = [
+  "dialog",
+  "--title", "Applying Configuration",
+  "--gauge", "Executing rb_init_conf", "20", "100", "0"
+]
+
+last_position = 0
+recent_lines = []
+rb_init_conf_status = nil
+
+IO.popen(dialog_command, "w") do |gauge_io|
+  while Process.waitpid(pid, Process::WNOHANG).nil?
+    if File.exist?(log_file)
+      File.open(log_file, 'r') do |f|
+        f.seek(last_position)
+        new_output = f.read
+        last_position = f.pos
+        if new_output && !new_output.empty?
+          MILESTONES.each do |keyword, target_pct|
+            if new_output.include?(keyword) && progress < target_pct
+                progress = target_pct.to_f
+            end
+          end
+
+          sanitized_output = strip_ansi_for_dialog(new_output)
+          recent_lines.concat(sanitized_output.split(/\r?\n/))
+          recent_lines = recent_lines.last(8)
+        end
+      end
+    end
+
+    status_output = recent_lines.reject(&:empty?).join("\n")
+    status_output = "(waiting for configuration...)" if status_output.empty?
+
+    elapsed_seconds = (Time.now - start_time).to_i
+    elapsed_time = format_elapsed_time(elapsed_seconds)
+
+    gauge_io.puts("XXX")
+    gauge_io.puts(progress.to_i)
+    gauge_io.puts("Running initial configuration: #{elapsed_time}\n\n#{status_output}")
+    gauge_io.puts("XXX")
+    gauge_io.flush
+
+    progress += (100 - progress) * 0.0005
+    sleep 0.5
+  end
+
+  rb_init_conf_status = $?
+  gauge_io.puts("100")
+  gauge_io.flush
+end
+
+exit_status = rb_init_conf_status.exitstatus
+elapsed_seconds = (Time.now - start_time).to_i
+elapsed_time = format_elapsed_time(elapsed_seconds)
+manager_ip = manager_ip_for_url(general_conf)
+manager_url = manager_ip.nil? ? 'https://<ip>/' : "https://#{manager_ip}/"
 
 dialog = MRDialog.new
-dialog.clear = false
-dialog.title = "Applying Configuration"
-dialog.prgbox(command,20,100, "Executing rb_init_conf")
+dialog.clear = true
+dialog.title = "Configuration result"
+
+if exit_status.zero?
+  dialog.msgbox("Manager configuration finished successfully.\nTotal configuration time: #{elapsed_time}\n\nYou can now visit the web interface at #{manager_url}", 9, 90)
+else
+  dialog.msgbox("rb_init_conf/bootstrap failed (exit code #{exit_status}).\nCheck #{log_file} for details.", 8, 80)
+end
 
 ## vim:ts=4:sw=4:expandtab:ai:nowrap:formatoptions=croqln:
