@@ -481,6 +481,13 @@ start_time = Time.now
 pid = Process.spawn('script', '-qefc', command, log_file, out: '/dev/null', err: '/dev/null')
 
 progress = 0
+MILESTONES = {
+  "Registering chef-client"           => 30,
+  "/var/www/rb-rails/config/aws.yml"  => 50,
+  "/etc/logstash/pipelines"           => 75,
+  "private-chef-server"               => 95,
+  "Configuring cgroups"               => 99
+}
 dialog_command = [
   "dialog",
   "--title", "Applying Configuration",
@@ -499,6 +506,12 @@ IO.popen(dialog_command, "w") do |gauge_io|
         new_output = f.read
         last_position = f.pos
         if new_output && !new_output.empty?
+          MILESTONES.each do |keyword, target_pct|
+            if new_output.include?(keyword) && progress < target_pct
+                progress = target_pct.to_f
+            end
+          end
+
           sanitized_output = strip_ansi_for_dialog(new_output)
           recent_lines.concat(sanitized_output.split(/\r?\n/))
           recent_lines = recent_lines.last(8)
@@ -513,12 +526,12 @@ IO.popen(dialog_command, "w") do |gauge_io|
     elapsed_time = format_elapsed_time(elapsed_seconds)
 
     gauge_io.puts("XXX")
-    gauge_io.puts(progress)
+    gauge_io.puts(progress.to_i)
     gauge_io.puts("Running initial configuration: #{elapsed_time}\n\n#{status_output}")
     gauge_io.puts("XXX")
     gauge_io.flush
 
-    progress = (progress + 3) % 100
+    progress += (100 - progress) * 0.0005
     sleep 0.5
   end
 
