@@ -24,7 +24,7 @@ init_conf = YAML.load_file(INITCONF)
 
 # Parse command-line options
 opts = Getopt::Std.getopts("s")
-opt["s"] ? rb_bootstrap_service = true : rb_bootstrap_service = false
+opts["s"] ? rb_bootstrap_service = true : rb_bootstrap_service = false
 
 def iproute2_version
   stdout, _stderr, _status = Open3.capture3('rpm -q iproute')
