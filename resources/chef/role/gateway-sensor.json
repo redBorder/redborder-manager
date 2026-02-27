@@ -8,10 +8,7 @@
   },
   "chef_type": "role",
   "run_list": [
-    "recipe[snmp]",
-    "recipe[rsyslog]",
-    "recipe[redborder-common]",
-    "recipe[redborder-mail-sensor]"
+    "recipe[rb-mailgateway]"
   ],
   "env_run_lists": {
   }

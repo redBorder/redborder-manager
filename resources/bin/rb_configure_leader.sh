@@ -12,6 +12,7 @@ function configure_db(){
   [ "x$DRUIDDBPASS" == "x" ] && DRUIDDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   [ "x$RADIUSPASS" == "x" ] && RADIUSPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   [ "x$MONITORSPASS" == "x" ] && MONITORSPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  [ "x$AIRFLOWPASS" == "x" ] && AIRFLOWPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
 
   # Druid DATABASE
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER druid WITH PASSWORD '$DRUIDDBPASS';"
@@ -39,6 +40,12 @@ function configure_db(){
 
   # Replication User
   env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER rep REPLICATION LOGIN CONNECTION LIMIT 100;"
+
+  # airflow DATABASE
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE USER airflow WITH PASSWORD '$AIRFLOWPASS';"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "DROP DATABASE IF EXISTS airflow;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "GRANT airflow TO $DB_ADMINUSER;"
+  env PGPASSWORD=$DB_ADMINPASS psql -U $DB_ADMINUSER -h $DB_HOST -c "CREATE DATABASE airflow OWNER airflow;"
 
 }
 
@@ -115,13 +122,14 @@ function configure_dataBags(){
   HASH_FUNCTION="SHA256"
 
   ## Data bags ##
+  mkdir -p /var/chef/data/data_bag_encrypted/passwords/
   mkdir -p /var/chef/data/data_bag/passwords/
   mkdir -p /var/chef/data/data_bag/rBglobal/
   mkdir -p /var/chef/data/data_bag/certs/
   mkdir -p /var/chef/data/data_bag/backend/
 
   ## DB opscode (chef) passwords
-  cat > /var/chef/data/data_bag/passwords/db_opscode_chef.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_opscode_chef.json <<-_RBEOF_
 {
   "id": "db_opscode_chef",
   "username": "opscode_chef",
@@ -181,7 +189,6 @@ _RBEOF_
 }
 _RBEOF_
 
-  mkdir -p /var/chef/data/data_bag_encrypted/passwords/
   cat > /var/chef/data/data_bag_encrypted/passwords/vrrp.json <<-_RBEOF_
 {
   "id": "vrrp",
@@ -192,7 +199,7 @@ _RBEOF_
 _RBEOF_
 
   # DB druid passwords
-  cat > /var/chef/data/data_bag/passwords/db_druid.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_druid.json <<-_RBEOF_
 {
   "id": "db_druid",
   "username": "druid",
@@ -204,7 +211,7 @@ _RBEOF_
 _RBEOF_
 
   # DB redborder passwords
-  cat > /var/chef/data/data_bag/passwords/db_redborder.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_redborder.json <<-_RBEOF_
 {
   "id": "db_redborder",
   "username": "redborder",
@@ -216,7 +223,7 @@ _RBEOF_
 _RBEOF_
 
   # DB radius passwords
-  cat > /var/chef/data/data_bag/passwords/db_radius.json <<- _RBEOF2_
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_radius.json <<- _RBEOF2_
 {
   "id": "db_radius",
   "username": "radius",
@@ -228,7 +235,7 @@ _RBEOF_
 _RBEOF2_
 
   # Vault passwords
-  cat > /var/chef/data/data_bag/passwords/vault.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/vault.json <<-_RBEOF_
 {
   "id": "vault",
   "hash_key": "$HASH_KEY",
@@ -269,7 +276,7 @@ _RBEOF_
 
   #webui secret token
   WEBISECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-  cat > /var/chef/data/data_bag/passwords/webui_secret.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/webui_secret.json <<-_RBEOF_
 {
   "id": "webui_secret",
   "secret": "$WEBISECRET"
@@ -278,10 +285,24 @@ _RBEOF_
 
   #redis password token
   REDIS_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
-  cat > /var/chef/data/data_bag/passwords/redis.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag_encrypted/passwords/redis.json <<-_RBEOF_
 {
   "id": "redis",
   "pass": "$REDIS_SECRET"
+}
+_RBEOF_
+
+  #airflow password token
+  AIRFLOW_USER="airflow"
+  AIRFLOW_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c32 | sed 's/ //g'`"
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_airflow.json <<-_RBEOF_
+{
+  "id": "db_airflow",
+  "user": "$AIRFLOW_USER",
+  "database": "airflow",
+  "hostname": "$OPSCODE_DBHOST",
+  "port": "$OPSCODE_DBPORT",
+  "pass": "$AIRFLOW_SECRET"
 }
 _RBEOF_
 
@@ -332,9 +353,9 @@ _RBEOF_
 
   ## Generating external virtual ip
   mkdir -p /var/chef/data/data_bag/rBglobal
-  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-webui.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-nginx.json <<-_RBEOF_
 {
-  "id": "ipvirtual-external-webui"
+  "id": "ipvirtual-external-nginx"
 }
 _RBEOF_
 
@@ -431,6 +452,9 @@ function configure_leader(){
 
   # Delete encrypted data BAGS
   rm -rf /var/chef/data/data_bag_encrypted/*
+
+  # Configure data bags permissions
+  $RBBIN/rb_configure_chef_data_bag_acls.sh
 
   # COOKBOOKS
   # Save into cache directory

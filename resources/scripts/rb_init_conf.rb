@@ -14,12 +14,17 @@ require 'netaddr'
 require 'system/getifaddrs'
 require 'json'
 require 'open3'
+require 'getopt/std'
 require File.join(ENV['RBLIB'].nil? ? '/usr/lib/redborder/lib' : ENV['RBLIB'],'rb_config_utils.rb')
 
 RBETC = ENV['RBETC'].nil? ? '/etc/redborder' : ENV['RBETC']
 INITCONF="#{RBETC}/rb_init_conf.yml"
 
 init_conf = YAML.load_file(INITCONF)
+
+# Parse command-line options
+opts = Getopt::Std.getopts("s")
+opts["s"] ? rb_bootstrap_service = true : rb_bootstrap_service = false
 
 def iproute2_version
   stdout, _stderr, _status = Open3.capture3('rpm -q iproute')
@@ -284,4 +289,8 @@ system('systemctl enable serf &> /dev/null')
 system('systemctl start serf &> /dev/null')
 # wait a moment before start serf-join to ensure connectivity
 sleep(3)
-system('systemctl start rb-bootstrap &> /dev/null')
+if rb_bootstrap_service
+  system('systemctl start rb-bootstrap &> /dev/null')
+else
+  system('/usr/lib/redborder/bin/rb_bootstrap.sh')
+end
