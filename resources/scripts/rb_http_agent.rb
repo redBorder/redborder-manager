@@ -25,18 +25,24 @@ logger.formatter = proc do |severity, _datetime, _progname, msg|
   "#{severity}: #{msg}\n"
 end
 
-options = { redirect: false, status: 200 }
+# Define default options
+options = { redirect: false, status: 200, timeout: 5, headers: {} }
 
 OptionParser.new do |opts|
   opts.banner = "Usage: #{__FILE__} [-i IP_ADDRESS] [-p PORT] [-t TYPE] [-b BODY] [-h HEADERS] [-status STATUS]"
-  opts.on('-u URL', '--url URL', 'URL to request') { |v| options[:url] = v }
-  opts.on('-X TYPE', '--type TYPE', 'Request type') { |v| options[:type] = v }
+  opts.on('-u URL', '--url URL', 'URL to connect to and retrieve data') { |v| options[:url] = v }
+  opts.on('-X TYPE', '--type TYPE', 'Request method type: GET, POST, PUT or HEAD') { |v| options[:type] = v.upcase }
   opts.on('-d BODY', '--body BODY', 'Request body') { |v| options[:body] = v }
-  opts.on('-H HEADERS', '--headers HEADERS', 'Request headers (JSON)') { |v| options[:headers] = JSON.parse(v) }
-  opts.on('-s STATUS', '--status STATUS', Integer, 'Expected response status') { |v| options[:status] = v }
+  opts.on('-H HEADERS', '--headers HEADERS', 'Custom request headers (JSON)') do |v|
+    options[:headers] = JSON.parse(v)
+  rescue JSON::ParserError
+    logger.error("Invalid JSON for headers: #{v}")
+    exit 1
+  end
+  opts.on('-s STATUS', '--status STATUS', Integer, 'Expected HTTP response status') { |v| options[:status] = v }
 
-  opts.on('-L', '--redirect', 'Follow redirects') { options[:redirect] = true }
-  opts.on('-x PROXY', '--proxy PROXY', 'Proxy URL') { |v| options[:proxy] = v }
+  opts.on('-L', '--redirect', 'Follow HTTP redirects') { options[:redirect] = true }
+  opts.on('-x PROXY', '--proxy PROXY', 'HTTP Proxy URL using format [protocol://][username[:password]@]proxy.example.com[:port]') { |v| options[:proxy] = v }
 
   opts.on('-a AUTH', '--http-auth AUTH', 'HTTP server authentication method') { |v| options[:http_auth] = v }
   opts.on('-U USER', '--user USER', 'HTTP server authentication user') { |v| options[:http_user] = v }
@@ -46,12 +52,18 @@ OptionParser.new do |opts|
   opts.on('--ssl-cert CERT', 'Path to SSL certificate') { |v| options[:ssl_cert] = v }
   opts.on('--ssl-key KEY', 'Path to SSL private key') { |v| options[:ssl_key] = v }
   opts.on('--ssl-key-pass PASS', 'Password for SSL private key') { |v| options[:ssl_key_pass] = v }
-  opts.on('--timeout TIMEOUT', Integer, 'Request timeout in seconds') { |v| options[:timeout] = v }
+
+  opts.on('--timeout TIMEOUT', Integer, 'Request timeout in seconds') { |v| options[:timeout] = v if v > 0 }
   opts.on('-h', '--help', 'Show this help') { puts opts; exit }
 end.parse!
 
 unless options[:url] && options[:type]
   logger.error('Must specify --url URL and --type TYPE')
+  exit 1
+end
+
+if (options[:ssl_cert] && !options[:ssl_key]) || (!options[:ssl_cert] && options[:ssl_key])
+  logger.error('Both --ssl-cert and --ssl-key must be provided together')
   exit 1
 end
 
