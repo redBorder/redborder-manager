@@ -49,6 +49,7 @@ OptionParser.new do |opts|
   opts.on('-P PASS', '--password PASS', 'HTTP server authentication password') { |v| options[:http_pass] = v }
 
   opts.on('--ssl-verify-peer', 'Verify SSL peer') { options[:ssl_peer] = true }
+  opts.on('--ssl-ca-file FILE', 'Path to CA certificate file for SSL verification') { |v| options[:ssl_ca_file] = v }
   opts.on('--ssl-cert CERT', 'Path to SSL certificate') { |v| options[:ssl_cert] = v }
   opts.on('--ssl-key KEY', 'Path to SSL private key') { |v| options[:ssl_key] = v }
   opts.on('--ssl-key-pass PASS', 'Password for SSL private key') { |v| options[:ssl_key_pass] = v }
@@ -77,8 +78,23 @@ begin
          else
            Net::HTTP.new(uri.host, uri.port)
          end
+
   http.use_ssl = (uri.scheme == 'https')
-  http.verify_mode = options[:ssl_peer] ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
+
+  if http.use_ssl?
+    if options[:ssl_peer]
+      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+
+      cert_store = OpenSSL::X509::Store.new
+      cert_store.set_default_paths
+      cert_store.add_file(options[:ssl_ca_file]) if options[:ssl_ca_file]
+
+      http.cert_store = cert_store
+    else
+      http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    end
+  end
+
   if options[:ssl_cert] && options[:ssl_key]
     http.cert = OpenSSL::X509::Certificate.new(File.read(options[:ssl_cert]))
     http.key = OpenSSL::PKey.read(File.read(options[:ssl_key]), options[:ssl_key_pass])
