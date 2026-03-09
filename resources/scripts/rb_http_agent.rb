@@ -71,7 +71,9 @@ begin
   uri = URI(options[:url])
   http = if options[:proxy]
            proxy_uri = URI(options[:proxy])
-           Net::HTTP.new(uri.host, uri.port, proxy_uri.host, proxy_uri.port)
+           proxy_user = proxy_uri.user
+           proxy_pass = proxy_uri.password
+           Net::HTTP.new(uri.host, uri.port, proxy_uri.host, proxy_uri.port, proxy_user, proxy_pass)
          else
            Net::HTTP.new(uri.host, uri.port)
          end
