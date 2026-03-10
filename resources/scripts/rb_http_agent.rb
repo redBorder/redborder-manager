@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+
 #######################################################################
 ## Copyright (c) 2026 ENEO Tecnología S.L.
 ## This file is part of redBorder.
@@ -42,7 +43,10 @@ OptionParser.new do |opts|
   opts.on('-s STATUS', '--status STATUS', Integer, 'Expected HTTP response status') { |v| options[:status] = v }
 
   opts.on('-L', '--redirect', 'Follow HTTP redirects') { options[:redirect] = true }
-  opts.on('-x PROXY', '--proxy PROXY', 'HTTP Proxy URL using format [protocol://][username[:password]@]proxy.example.com[:port]') { |v| options[:proxy] = v }
+  opts.on('-x PROXY', '--proxy PROXY',
+          'HTTP Proxy URL using format [protocol://][username[:password]@]proxy.example.com[:port]') do |v|
+            options[:proxy] = v
+          end
 
   opts.on('-a AUTH', '--http-auth AUTH', 'HTTP server authentication method') { |v| options[:http_auth] = v }
   opts.on('-U USER', '--user USER', 'HTTP server authentication user') { |v| options[:http_user] = v }
@@ -54,8 +58,11 @@ OptionParser.new do |opts|
   opts.on('--ssl-key KEY', 'Path to SSL private key') { |v| options[:ssl_key] = v }
   opts.on('--ssl-key-pass PASS', 'Password for SSL private key') { |v| options[:ssl_key_pass] = v }
 
-  opts.on('--timeout TIMEOUT', Integer, 'Request timeout in seconds') { |v| options[:timeout] = v if v > 0 }
-  opts.on('-h', '--help', 'Show this help') { puts opts; exit }
+  opts.on('--timeout TIMEOUT', Integer, 'Request timeout in seconds') { |v| options[:timeout] = v if v.positive? }
+  opts.on('-h', '--help', 'Show this help') do
+    puts opts
+    exit
+  end
 end.parse!
 
 unless options[:url] && options[:type]
