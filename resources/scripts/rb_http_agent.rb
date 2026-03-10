@@ -97,7 +97,7 @@ begin
 
   if options[:ssl_cert] && options[:ssl_key]
     http.cert = OpenSSL::X509::Certificate.new(File.read(options[:ssl_cert]))
-    http.key = OpenSSL::PKey.read(File.read(options[:ssl_key]), options[:ssl_key_pass])
+    http.key = OpenSSL::PKey::RSA.new(File.read(options[:ssl_key]), options[:ssl_key_pass])
   elsif options[:ssl_cert] || options[:ssl_key]
     logger.error('Both -ssl-cert and -ssl-key must be specified together')
     exit 1
