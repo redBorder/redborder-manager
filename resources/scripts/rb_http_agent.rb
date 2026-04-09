@@ -59,6 +59,7 @@ OptionParser.new do |opts|
   opts.on('--ssl-key-pass PASS', 'Password for SSL private key') { |v| options[:ssl_key_pass] = v }
 
   opts.on('--timeout TIMEOUT', Integer, 'Request timeout in seconds') { |v| options[:timeout] = v if v.positive? }
+  opts.on('--only-status', 'Only show HTTP status') { options[:only_status] = true }
   opts.on('-h', '--help', 'Show this help') do
     puts opts
     exit
@@ -158,14 +159,18 @@ begin
       body: response.body
     }
 
-    puts JSON.pretty_generate(result)
+    if options[:only_status]
+      print result[:status]
+    else
+      puts JSON.pretty_generate(result)
+    end
   end
 
   if response.code.to_i == options[:status]
-    logger.info("Request successful with expected status #{options[:status]}")
+    logger.info("Request successful with expected status #{options[:status]}") unless options[:only_status]
     exit 0
   else
-    logger.error("Unexpected response status: #{response.code}")
+    logger.error("Unexpected response status: #{response.code}") unless options[:only_status]
     exit 1
   end
 rescue => e
