@@ -27,7 +27,7 @@ logger.formatter = proc do |severity, _datetime, _progname, msg|
 end
 
 # Define default options
-options = { redirect: false, status: 200, timeout: 5, headers: {} }
+options = { redirect: false, status: 200, timeout: 15, headers: {} }
 
 OptionParser.new do |opts|
   opts.banner = "Usage: #{__FILE__} [-i IP_ADDRESS] [-p PORT] [-t TYPE] [-b BODY] [-h HEADERS] [-status STATUS]"
@@ -109,8 +109,6 @@ def run_http_agent(uri, options, logger)
     logger.error('Both -ssl-cert and -ssl-key must be specified together')
     exit 1
   end
-  http.open_timeout = options[:timeout] if options[:timeout]
-  http.read_timeout = options[:timeout] if options[:timeout]
 
   request_class = case options[:type].upcase
                   when 'GET' then Net::HTTP::Get
@@ -147,14 +145,28 @@ rescue => e
 end
 
 begin
-  response = run_http_agent(URI(options[:url]), options, logger)
-
   MAX_REDIRECTS = 20
   redirect_count = 0
-  if options[:redirect]
-    while response.is_a?(Net::HTTPRedirection) && redirect_count < MAX_REDIRECTS
-      response = run_http_agent(URI(response['location']), options, logger)
-      redirect_count += 1
+
+  if options[:timeout]
+    Timeout.timeout(options[:timeout]) do
+      response = run_http_agent(URI(options[:url]), options, logger)
+
+      if options[:redirect]
+        while response.is_a?(Net::HTTPRedirection) && redirect_count < MAX_REDIRECTS
+          response = run_http_agent(URI(response['location']), options, logger)
+          redirect_count += 1
+        end
+      end
+    end
+  else
+    response = run_http_agent(URI(options[:url]), options, logger)
+
+    if options[:redirect]
+      while response.is_a?(Net::HTTPRedirection) && redirect_count < MAX_REDIRECTS
+        response = run_http_agent(URI(response['location']), options, logger)
+        redirect_count += 1
+      end
     end
   end
 
@@ -180,6 +192,9 @@ begin
     logger.error("Unexpected response status: #{response.code}") unless options[:only_status]
     exit 1
   end
+rescue Timeout::Error => e
+  logger.error("Request timed out after #{options[:timeout]}s")
+  exit 1
 rescue => e
   logger.error("Request failed: #{e.message}")
   exit 1
