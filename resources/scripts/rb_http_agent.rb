@@ -26,6 +26,15 @@ logger.formatter = proc do |severity, _datetime, _progname, msg|
   "#{severity}: #{msg}\n"
 end
 
+# MACROS
+
+MAX_REDIRECTS = 20
+MAX_HEADER_NAME_LENGTH  = 256
+MAX_HEADER_VALUE_LENGTH = 8192
+
+HEADER_NAME_REGEX  = /\A[a-zA-Z0-9\-]+\z/.freeze
+HEADER_VALUE_REGEX = /\A[^\r\n]+\z/.freeze
+
 # Define default options
 options = { redirect: false, status: 200, timeout: 15, headers: {} }
 
@@ -145,8 +154,8 @@ rescue => e
 end
 
 begin
-  MAX_REDIRECTS = 20
   redirect_count = 0
+  response = nil
 
   if options[:timeout]
     Timeout.timeout(options[:timeout]) do
@@ -183,13 +192,16 @@ begin
     else
       puts JSON.pretty_generate(result)
     end
-  end
 
-  if response.code.to_i == options[:status]
-    logger.info("Request successful with expected status #{options[:status]}") unless options[:only_status]
-    exit 0
+    if response.code.to_i == options[:status]
+      logger.info("Request successful with expected status #{options[:status]}") unless options[:only_status]
+      exit 0
+    else
+      logger.error("Unexpected response status: #{response.code}") unless options[:only_status]
+      exit 1
+    end
   else
-    logger.error("Unexpected response status: #{response.code}") unless options[:only_status]
+    logger.error('No response received')
     exit 1
   end
 rescue Timeout::Error => e
@@ -198,4 +210,25 @@ rescue Timeout::Error => e
 rescue => e
   logger.error("Request failed: #{e.message}")
   exit 1
+end
+
+def sanitize_headers(headers, logger)
+  return {} unless headers.is_a?(Hash)
+
+  headers.each_with_object({}) do |(name, value), sanitized|
+    name = name.to_s.strip
+    value = value.to_s.strip
+
+    unless name.length <= MAX_HEADER_NAME_LENGTH && value.length <= MAX_HEADER_VALUE_LENGTH
+      logger.warn("Header '#{name}' exceeds maximum length and will be skipped")
+      next
+    end
+
+    unless HEADER_NAME_REGEX.match?(name) && HEADER_VALUE_REGEX.match?(value)
+      logger.warn("Header '#{name}' contains invalid characters and will be skipped")
+      next
+    end
+
+    sanitized[name] = value
+  end
 end
