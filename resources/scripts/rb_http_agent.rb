@@ -76,8 +76,7 @@ if (options[:ssl_cert] && !options[:ssl_key]) || (!options[:ssl_cert] && options
   exit 1
 end
 
-begin
-  uri = URI(options[:url])
+def run_http_agent(uri, options, logger)
   http = if options[:proxy]
            proxy_uri = URI(options[:proxy])
            proxy_user = proxy_uri.user
@@ -141,13 +140,21 @@ begin
     end
   end
 
-  response = http.request(request)
+  http.request(request)
+rescue => e
+  logger.error("Request failed: #{e.message}")
+  exit 1
+end
 
+begin
+  response = run_http_agent(URI(options[:url]), options, logger)
+
+  MAX_REDIRECTS = 20
+  redirect_count = 0
   if options[:redirect]
-    while response.is_a?(Net::HTTPRedirection)
-      uri = URI(response['location'])
-      request = request_class.new(uri)
-      response = http.request(request)
+    while response.is_a?(Net::HTTPRedirection) && redirect_count < MAX_REDIRECTS
+      response = run_http_agent(URI(response['location']), options, logger)
+      redirect_count += 1
     end
   end
 
