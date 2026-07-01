@@ -292,6 +292,15 @@ _RBEOF_
 }
 _RBEOF_
 
+  #drill password token
+  DRILL_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
+  cat > /var/chef/data/data_bag_encrypted/passwords/drill.json <<-_RBEOF_
+{
+  "id": "drill",
+  "truststore_password": "$DRILL_SECRET"
+}
+_RBEOF_
+
   #airflow password token
   AIRFLOW_USER="airflow"
   AIRFLOW_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c32 | sed 's/ //g'`"
