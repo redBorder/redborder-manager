@@ -18,7 +18,7 @@ Requires: synthetic-producer tcpdump
 Requires: chef-workstation
 Requires: alternatives java-1.8.0-openjdk java-1.8.0-openjdk-devel
 Requires: network-scripts network-scripts-teamd
-Requires: redborder-cgroups rb-logstatter redborder-pythonlibs
+Requires: rb-logstatter redborder-pythonlibs
 Requires: mcli
 Requires: redborder-pythonpyenv
 Requires: ipmitool
