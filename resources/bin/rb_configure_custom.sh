@@ -126,13 +126,6 @@ systemctl start chef-client
 
 # Copy dhclient hook
 cp -f /usr/lib/redborder/lib/dhclient-enter-hooks /etc/dhcp/dhclient-enter-hooks
-
-e_title "Configuring cgroups (first time), please wait..."
-
-rb_configure_cgroups &>/dev/null
-
-echo "Cgroups configured in /sys/fs/cgroup/redborder.slice/"
-
 end_script=$(date +%s) # Save finish scrip time
 runtime=$((end_script-start_script)) # Calculate duration of script
 runtime_min=$(echo "scale=2; $runtime / 60" | bc -l) # Calculate duration of script in minutes
