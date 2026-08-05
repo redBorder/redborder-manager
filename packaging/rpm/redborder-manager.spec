@@ -108,6 +108,9 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Wed Aug 5 2026 Nils Verschaeve <nverschaeve@redborder.com> - 1.0.0
+- Remove redborder-cgroups
+
 * Wed Jan 14 2026 manegron <manegron@redborder.com>
 - Add ipmitool as require
 
