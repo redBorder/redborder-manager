@@ -329,6 +329,11 @@ _RBEOF_
       "partitions": 1,
       "replication_factor": 1,
       "log_compaction": false
+    },
+    "rb_veeam_backup_jobs": {
+      "partitions": 1,
+      "replication_factor": 1,
+      "log_compaction": false
     }
   }
 }
