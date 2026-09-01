@@ -18,8 +18,10 @@ SOURCES:
 
 archive: SOURCES
 	cd ../../ && \
-	git archive --prefix=$(PACKAGE_NAME)-$(VERSION)/ \
-		-o packaging/rpm/SOURCES/$(PACKAGE_NAME)-$(VERSION).tar.gz $(LATEST)
+        tar --exclude='.git' --exclude='.gitignore' \
+            --exclude='packaging/rpm/pkgs' --exclude='packaging/rpm/SOURCES' \
+            -czvf packaging/rpm/SOURCES/$(PACKAGE_NAME)-$(VERSION).tar.gz \
+            --transform="s/./$(PACKAGE_NAME)-$(VERSION)/" ./
 
 build_prepare: archive
 	mkdir -p $(RESULT_DIR)
