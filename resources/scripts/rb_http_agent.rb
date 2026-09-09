@@ -195,11 +195,10 @@ begin
 
     if response.code.to_i == options[:status]
       logger.info("Request successful with expected status #{options[:status]}") unless options[:only_status]
-      exit 0
     else
       logger.error("Unexpected response status: #{response.code}") unless options[:only_status]
-      exit 1
     end
+    exit 0
   else
     logger.error('No response received')
     exit 1
