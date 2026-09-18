@@ -58,7 +58,7 @@ install -D -m 0644 resources/lib/rb_wiz_lib.rb %{buildroot}/usr/lib/redborder/li
 install -D -m 0644 resources/lib/rb_config_utils.rb %{buildroot}/usr/lib/redborder/lib
 install -D -m 0644 resources/lib/rb_manager_functions.sh %{buildroot}/usr/lib/redborder/lib
 cp -r resources/chef/role %{buildroot}/var/chef/data/
-chmod -R u+rwX,go+rX,go-w %{buildroot}/var/chef/data
+chmod -R 0644 %{buildroot}/var/chef/data
 cp -r resources/chef/solo %{buildroot}/var/chef/
 install -D -m 0644 resources/etc/mode-list.yml %{buildroot}/usr/lib/redborder
 install -D -m 0644 resources/systemd/rb-init-conf.service %{buildroot}/usr/lib/systemd/system/rb-init-conf.service
