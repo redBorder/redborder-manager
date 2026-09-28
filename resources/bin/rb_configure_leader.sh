@@ -315,6 +315,28 @@ _RBEOF_
 }
 _RBEOF_
 
+  #grr passwords
+  GRR_DB_USER="grr"
+  GRR_DB_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c32 | sed 's/ //g'`"
+
+  FLEETSPEAK_DB_USER="fleetspeak"
+  FLEETSPEAK_DB_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c32 | sed 's/ //g'`"
+
+  GRR_ADMIN_USER="admin"
+  GRR_ADMIN_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c32 | sed 's/ //g'`"
+
+  cat > /var/chef/data/data_bag_encrypted/passwords/db_grr.json <<-_RBEOF_
+{
+  "id": "db_grr",
+  "grr_db_user": "$GRR_DB_USER",
+  "grr_db_password": "$GRR_DB_SECRET",
+  "fleetspeak_db_user": "$FLEETSPEAK_DB_USER",
+  "fleetspeak_db_password": "$FLEETSPEAK_DB_SECRET",
+  "admin_username": "$GRR_ADMIN_USER",
+  "admin_password": "$GRR_ADMIN_SECRET"
+}
+_RBEOF_
+
   #kafka topics #TODO
   cat > /var/chef/data/data_bag/backend/kafka_topics.json <<-_RBEOF_
 {
