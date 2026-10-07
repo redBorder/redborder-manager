@@ -13,7 +13,7 @@ def usage
   puts "Usage: rb_yara.rb [import|clear]"
   puts "  import : Create a tarball with Yara rules in #{PATH_YARA_RULES} as .yara format."
   puts "  clear  : Remove all yara rules from rails database #{PATH_YARA_RULES}."
-  puts "User must ensure that rvm gemset is web, otherwise rake version will be inconsistent."
+  puts "User must ensure that rvm is using ruby-3.4.11@web (rvm use ruby-3.4.11@web), otherwise rake version will be inconsistent."
   exit 1
 end
 
@@ -68,7 +68,7 @@ end
 
 def validation
   current = `rvm current`.strip
-  unless current == 'ruby-2.7.5@web'
+  unless current == 'ruby-3.4.11@web'
     log("ERROR: Wrong Ruby version of gemset: #{current}")
     usage
     return false
