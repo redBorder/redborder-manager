@@ -24,7 +24,7 @@ source /etc/profile
 
 pushd /var/www/rb-rails &>/dev/nul
 
-rvm gemset use web &>/dev/null
+rvm use ruby-3.4.11@web &>/dev/null
 
 ruby /var/www/rb-rails/script/rb_get_delayed_job.rb $*
 

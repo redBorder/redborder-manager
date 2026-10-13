@@ -20,8 +20,9 @@ source /etc/profile.d/rvm.sh
 
 pushd /var/www/rb-rails/ &>/dev/null
 
-if [[ "$GEM_HOME" != *@web ]]; then
-    rvm gemset use web
+# The webui has its own ruby: the default one belongs to the platform scripts
+if [[ "$GEM_HOME" != *ruby-3.4.11@web ]]; then
+    rvm use ruby-3.4.11@web
 fi
 
 rake redBorder:request_trial_license
