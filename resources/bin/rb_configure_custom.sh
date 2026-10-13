@@ -54,13 +54,13 @@ IP_PG=$(serf members -tag postgresql=ready | awk {'print $2'} |cut -d ":" -f 1 |
 echo "$IP_PG master.postgresql.service" >> /etc/hosts
 
 # Get chef validator and admin certificates
-$RBBIN/serf-query-file -q certificate-validator > /tmp/cert && mv /tmp/cert /etc/chef/redborder-validator.pem
+$RBBIN/serf-query-file -q certificate-validator > /tmp/cert && mv -Z /tmp/cert /etc/chef/redborder-validator.pem
 [ "x$?" != "x0" ] && error_title "ERROR getting redborder-validator.pem Chef certificate" && exit 1
 
-$RBBIN/serf-query-file -q certificate-admin > /tmp/cert && mv /tmp/cert /etc/chef/admin.pem
+$RBBIN/serf-query-file -q certificate-admin > /tmp/cert && mv -Z /tmp/cert /etc/chef/admin.pem
 [ "x$?" != "x0" ] && error_title "ERROR getting admin.pem Chef certificate" && exit 1
 
-$RBBIN/serf-query-file -q databag-secret > /tmp/encrypted_data_bag_secret && mv /tmp/encrypted_data_bag_secret /etc/chef/encrypted_data_bag_secret
+$RBBIN/serf-query-file -q databag-secret > /tmp/encrypted_data_bag_secret && mv -Z /tmp/encrypted_data_bag_secret /etc/chef/encrypted_data_bag_secret
 [ "x$?" != "x0" ] && error_title "ERROR getting encrypted_data_bag_secret Chef data bag secret" && exit 1
 
 #############################
