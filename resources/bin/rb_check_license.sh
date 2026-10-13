@@ -56,7 +56,7 @@ if [ "x$lictime" != x ]; then
       echo "INFO: $msg"
     else
       pushd /var/www/rb-rails &>/dev/null
-      bundle exec rake redBorder:admin_email["License expiration for $(hostname -f)","$msg"]
+      rvm ruby-3.4.11@web do bundle exec rake redBorder:admin_email["License expiration for $(hostname -f)","$msg"]
       popd &>/dev/null
     fi
   fi

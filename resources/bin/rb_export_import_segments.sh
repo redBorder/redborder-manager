@@ -281,7 +281,7 @@ if [ $import -eq 1 ]; then
                     else
                       printf "\r- import/update druid metadata : %.0f%%" "$progress"
                     fi
-                    rvm ruby-2.7.5@web 2>/dev/null do rb_druid_metadata -f $rule
+                    rvm ruby-3.4.11@web 2>/dev/null do rb_druid_metadata -f $rule
                     if [ $debug -eq 1 ]; then
                       print_result $RET
                     fi
@@ -400,7 +400,7 @@ else # we are going to export the segments to a tar
           IFS='/' read -ra parts <<< "$n"
           descriptorid="${parts[4]}_${parts[5]}_${parts[6]}"
           if [ "x$descriptorid" != "x" ]; then
-            rvm ruby-2.7.5@web 2>/dev/null do rb_druid_metadata -i "$descriptorid" > "$(dirname $n)/rule.json"
+            rvm ruby-3.4.11@web 2>/dev/null do rb_druid_metadata -i "$descriptorid" > "$(dirname $n)/rule.json"
             if [ $debug -eq 1 ]; then
               if [ -s $f ]; then
                 e_ok

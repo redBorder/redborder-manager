@@ -21,7 +21,7 @@ if [ -d /var/www/rb-rails ]; then
                         continue
                     else
                         # license next to expire (<7d), generate email
-                        rvm gemset use web &>/dev/null
+                        rvm use ruby-3.4.11@web &>/dev/null
                         pushd /var/www/rb-rails &>/dev/null
                         rake redBorder:admin_email['License next to expire',"The license with UUID ${license_uuid} will expire in 1 week"]
                         popd &>/dev/null
