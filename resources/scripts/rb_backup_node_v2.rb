@@ -194,7 +194,7 @@ if opt['e']
   modify_pg_hba(:remove, verbose)
   
   # Restore original pg_hba.conf
-  restore_pg_hba if File.exists?(PG_HBA_BACKUP)
+  restore_pg_hba if File.exist?(PG_HBA_BACKUP)
 
   # Create tar.gz archive of all files
   create_tar_gz(final_archive, [pg_dump_file, segment_file_path], verbose)
