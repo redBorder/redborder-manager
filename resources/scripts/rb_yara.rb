@@ -6,6 +6,9 @@ PATH_YARA_RULES = '/tmp/yara_rules_src'
 PATH_RAILS = '/var/www/rb-rails'
 TAR_NAME = 'yaraRules.tar.gz'
 RAILS_ENV = ENV['RAILS_ENV'] || 'production'
+# The rake tasks run with the ruby and gemset of the webui, whatever the ruby of
+# this script is (rb_yara runs it with the rvm default)
+RAKE = ['/usr/lib/rvm/bin/rvm', 'ruby-3.4.11@web', 'do', 'bundle', 'exec', 'rake'].freeze
 
 # Usage help
 def usage
@@ -13,7 +16,6 @@ def usage
   puts "Usage: rb_yara.rb [import|clear]"
   puts "  import : Create a tarball with Yara rules in #{PATH_YARA_RULES} as .yara format."
   puts "  clear  : Remove all yara rules from rails database #{PATH_YARA_RULES}."
-  puts "User must ensure that rvm is using ruby-3.4.11@web (rvm use ruby-3.4.11@web), otherwise rake version will be inconsistent."
   exit 1
 end
 
@@ -51,13 +53,13 @@ end
 # Import rules into Rails
 def import_yara_rules_tar
   log("Importing #{TAR_NAME} into Rails ..")
-  run_cmd(["bundle", "exec", "rake", "redBorder:import_yara_rules[#{TAR_NAME}]", "RAILS_ENV=#{RAILS_ENV}"], cwd: PATH_RAILS)
+  run_cmd([*RAKE, "redBorder:import_yara_rules[#{TAR_NAME}]", "RAILS_ENV=#{RAILS_ENV}"], cwd: PATH_RAILS)
 end
 
 # Clear yara rules
 def clear_yara_rules
   log("Clearing yara rules in Rails ..")
-  run_cmd(["bundle", "exec", "rake", "redBorder:clear_yara_rules", "RAILS_ENV=#{RAILS_ENV}"], cwd: PATH_RAILS)
+  run_cmd([*RAKE, "redBorder:clear_yara_rules", "RAILS_ENV=#{RAILS_ENV}"], cwd: PATH_RAILS)
 
   # log("Clearing yara rules from all Logstash nodes ..")
   # success = system("rb_manager_ssh.sh all rm -f /usr/share/logstash/yara_rules/rules.yara")
@@ -67,12 +69,6 @@ def clear_yara_rules
 end
 
 def validation
-  current = `rvm current`.strip
-  unless current == 'ruby-3.4.11@web'
-    log("ERROR: Wrong Ruby version of gemset: #{current}")
-    usage
-    return false
-  end
   if ARGV.length != 1
     log('ERROR: Check number of arguments')
     usage

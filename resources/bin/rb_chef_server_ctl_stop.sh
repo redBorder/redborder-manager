@@ -16,7 +16,9 @@
 #######################################################################
 
 if [ -f /opt/opscode/bin/chef-server-ctl ]; then
-  source /etc/profile.d/rvm.sh
+  # chef-server-ctl runs on the ruby embedded in chef-server: without the gems
+  # of the rvm ruby, which are not compatible with it
+  unset GEM_HOME GEM_PATH GEM_ROOT RUBYOPT RUBYLIB BUNDLE_GEMFILE
 
   echo "Calling chef-server-ctl graceful-kill.."
   /opt/opscode/bin/chef-server-ctl graceful-kill

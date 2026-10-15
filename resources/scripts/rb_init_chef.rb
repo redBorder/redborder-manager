@@ -11,7 +11,7 @@ PGINITCONF="#{RBETC}/postgresql_init_conf.yml"
 # S3 configuration #
 ####################
 
-if File.exists?(S3INITCONF)
+if File.exist?(S3INITCONF)
   s3_init_conf = YAML.load_file(S3INITCONF)
 else
   s3_init_conf = YAML.load_file(INITCONF)
@@ -57,7 +57,7 @@ end
 # DB configuration #
 ####################
 
-if File.exists?(PGINITCONF)
+if File.exist?(PGINITCONF)
   pg_init_conf = YAML.load_file(PGINITCONF)
 else
   pg_init_conf = YAML.load_file(INITCONF)
