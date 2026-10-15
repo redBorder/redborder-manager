@@ -73,7 +73,7 @@ if opt["h"].nil?
           break if opt["a"].nil?
         end
       end
-    elsif File.exists?(opt["f"])
+    elsif File.exist?(opt["f"])
       file = File.read(opt["f"])
       data = JSON.parse(file)
 
