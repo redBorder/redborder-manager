@@ -6,6 +6,13 @@ source /etc/profile
 source $RBLIB/rb_manager_functions.sh
 source $RBETC/rb_init_conf.conf
 
+# chef-server-ctl runs on the ruby embedded in chef-server (2.7). It must not
+# see the gems of the rvm ruby loaded by /etc/profile (ruby-3.4.11): their
+# native extensions are not compatible with it ("incompatible library version")
+function chef_server_ctl() {
+  env -u GEM_HOME -u GEM_PATH -u GEM_ROOT -u RUBYOPT -u RUBYLIB -u BUNDLE_GEMFILE /usr/bin/chef-server-ctl "$@"
+}
+
 function configure_db(){
   # Configuring database passwords
   [ "x$REDBORDERDBPASS" == "x" ] && REDBORDERDBPASS="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
@@ -509,10 +516,10 @@ function configure_leader(){
   chef-client | tee -a /root/.install-chef-client.log
 
   # Replace chef-server SV init scripts by systemd scripts
-  /usr/bin/chef-server-ctl graceful-kill &>/dev/null
+  chef_server_ctl graceful-kill &>/dev/null
   if [ "$(ls -A /opt/opscode/service)" ]; then
     e_title "Stopping default private-chef-server services"
-    /usr/bin/chef-server-ctl stop &>/dev/null
+    chef_server_ctl stop &>/dev/null
     e_title "Starting systemd chef-server services"
     for i in `ls /opt/opscode/service/ | sed 's/opscode-//g'`;do
       systemctl enable opscode-$i &>/dev/null && systemctl start opscode-$i &>/dev/null
@@ -588,7 +595,7 @@ echo "nginx['non_ssl_port'] = 4480" >> /etc/opscode/chef-server.rb
 
 # Chef server initial configuration
 e_title "Configuring Chef-Server"
-/usr/bin/chef-server-ctl reconfigure --chef-license=accept | tee -a /root/.install-chef-server.log
+chef_server_ctl reconfigure --chef-license=accept | tee -a /root/.install-chef-server.log
 
 # TODO: check if this is the way or file acls
 [ -f /etc/opscode/private-chef-secrets.json ] && chown opscode. /etc/opscode/private-chef-secrets.json
@@ -599,10 +606,10 @@ sleep 30
 
 # Chef user creation
 # $ chef-server-ctl user-create USER_NAME FIRST_NAME LAST_NAME EMAIL 'PASSWORD' --filename FILE_NAME
-/usr/bin/chef-server-ctl user-create $CHEFUSER $CHEFUSER $CHEFUSER $CHEFUSER@$cdomain \'$CHEFPASS\' --filename /etc/opscode/$CHEFUSER.pem
+chef_server_ctl user-create $CHEFUSER $CHEFUSER $CHEFUSER $CHEFUSER@$cdomain \'$CHEFPASS\' --filename /etc/opscode/$CHEFUSER.pem
 # Chef organization creation
 # $ chef-server-ctl org-create short_name 'full_organization_name' --association_user user_name --filename ORGANIZATION-validator.pem
-/usr/bin/chef-server-ctl org-create $CHEFORG \'$CHEFORG\' --association_user $CHEFUSER --filename /etc/opscode/$CHEFORG-validator.pem
+chef_server_ctl org-create $CHEFORG \'$CHEFORG\' --association_user $CHEFUSER --filename /etc/opscode/$CHEFORG-validator.pem
 
 # Copy and create certs
 [ ! -f /etc/chef/$CHEFUSER.pem ] && cp /etc/opscode/$CHEFUSER.pem /etc/chef

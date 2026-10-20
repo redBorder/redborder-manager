@@ -50,13 +50,13 @@ def build_custom_tabs(dimensions = [])
 end
 
 def get_domain
-if File.exists?("/etc/externals.yml")
+if File.exist?("/etc/externals.yml")
     externals             = YAML.load_file('/etc/externals.yml')
     domain_rbglobal       = externals['CDOMAIN']
-  elsif File.exists?("/etc/manager.yml")
+  elsif File.exist?("/etc/manager.yml")
     manager_config        = YAML.load_file('/etc/manager.yml')
     domain_rbglobal       = manager_config['DOMAIN']
-  elsif File.exists?("/etc/resolv.conf")
+  elsif File.exist?("/etc/resolv.conf")
     domain_rbglobal = `cat /etc/resolv.conf | grep domain | cut -d " " -f2`.strip()
   end
   domain_rbglobal       = "redborder.cluster" if (domain_rbglobal.nil? or domain_rbglobal == "")

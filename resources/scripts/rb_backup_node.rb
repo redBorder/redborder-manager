@@ -142,11 +142,11 @@ if opt['b']
   end
 
   # Verify if log file exists
-  FileUtils.rm_f("/root/.backup-manager.log") if File.exists?("/root/.backup-manager.log")
+  FileUtils.rm_f("/root/.backup-manager.log") if File.exist?("/root/.backup-manager.log")
 
   # Check backup destination
   if opt['f']
-    if File.exists?(opt['f'])
+    if File.exist?(opt['f'])
       printf "File #{opt['f']} already exits\n".colorize(:red)
       exit 0
     else
@@ -229,14 +229,14 @@ elsif opt['r']
 
   manufacturer=`dmidecode -t 1| grep "Manufacturer:" | sed 's/.*Manufacturer: //'`.chomp
 
-  if File.exists?("/opt/rb/etc/externals.yml")
+  if File.exist?("/opt/rb/etc/externals.yml")
     externals             = YAML.load_file('/opt/rb/etc/externals.yml')
     domain_rbglobal       = externals['CDOMAIN']
     publicdomain_rbglobal = externals['PUBLICCDOMAIN']
-  elsif File.exists?("/opt/rb/etc/manager.yml")
+  elsif File.exist?("/opt/rb/etc/manager.yml")
     manager_config        = YAML.load_file('/opt/rb/etc/manager.yml')
     domain_rbglobal       = manager_config['DOMAIN']
-  elsif File.exists?("/etc/resolv.conf")
+  elsif File.exist?("/etc/resolv.conf")
     domain_rbglobal = `cat /etc/resolv.conf | grep domain | cut -d " " -f2`.strip()
   end
 
@@ -261,7 +261,7 @@ elsif opt['r']
     FileUtils.rm_f("/tmp/*-postgresql-dump-*.gz") if !Dir.glob('/tmp/*-postgresql-dump-*.gz').empty?
 
     # Check backup source
-    if opt['f'] and opt['3'].nil? and File.exists?(opt['f'])
+    if opt['f'] and opt['3'].nil? and File.exist?(opt['f'])
       path = File.expand_path(opt['f'])
     elsif opt['3']
       s3cfg    = (opt['s'] ? "/root/.s3cfg-backup" : "/root/.s3cfg")
@@ -392,7 +392,7 @@ elsif opt['r']
       if !domain_restore.nil? and domain_restore != domain_rbglobal
         #recreate certs
         [ domain_rbglobal, "chefwebui.#{domain_rbglobal}", "data.#{domain_rbglobal}", "erchef.#{domain_rbglobal}", "repo.#{domain_rbglobal}", "s3.#{domain_rbglobal}", "webui.#{domain_rbglobal}" ].each do |cert|
-          FileUtils.rm_f("/var/opt/chef-server/nginx/ca/#{cert}.crt") if File.exists?"/var/opt/chef-server/nginx/ca/#{cert}.crt"
+          FileUtils.rm_f("/var/opt/chef-server/nginx/ca/#{cert}.crt") if File.exist?"/var/opt/chef-server/nginx/ca/#{cert}.crt"
           check_oper("/opt/rb/bin/rb_create_cert.sh -n #{cert}", verbose, type, "Creating #{cert} cert ...")
           check_oper("/opt/rb/bin/rb_upload_certs.sh #{cert}"  , verbose, type, "Uploading #{cert} cert ...")
         end
@@ -413,7 +413,7 @@ elsif opt['r']
         end
       }
 
-      FileUtils.rm_f("/etc/extrahosts") if File.exists?"/etc/extrahosts"
+      FileUtils.rm_f("/etc/extrahosts") if File.exist?"/etc/extrahosts"
 
       # Overwrite domains
       new_domain = Chef::DataBagItem.load('rBglobal','domain') rescue new_domain=nil
@@ -463,7 +463,7 @@ elsif opt['r']
     if !domain_restore.nil? and domain_restore != domain_rbglobal
       [domain_restore,"chefwebui.#{domain_restore}","data.#{domain_restore}","erchef.#{domain_restore}","repo.#{domain_restore}","s3.#{domain_restore}","webui.#{domain_restore}"].each do |cert|
         check_oper("knife data bag delete certs http_#{cert}_pem -y", verbose, type, "Deleting #{cert} data bag item ... ")
-        FileUtils.rm_f("/var/opt/chef-server/nginx/ca/#{cert}.crt") if File.exists?"/var/opt/chef-server/nginx/ca/#{cert}.crt"
+        FileUtils.rm_f("/var/opt/chef-server/nginx/ca/#{cert}.crt") if File.exist?"/var/opt/chef-server/nginx/ca/#{cert}.crt"
       end
     end
 

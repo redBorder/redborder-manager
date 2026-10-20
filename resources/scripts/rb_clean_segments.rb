@@ -16,7 +16,6 @@
 
 require 'json'
 require 'socket'
-require 'aws'
 require 'aws-sdk-s3'
 require 'zk'
 require 'pg'
