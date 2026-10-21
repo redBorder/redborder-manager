@@ -15,7 +15,7 @@
   },
   "chef_type": "role",
   "run_list": [
-    "recipe[rb-flow-agent]"
+    "recipe[redborder-exporter]"
   ],
   "env_run_lists": {
 
