@@ -164,14 +164,6 @@ _RBEOF_
 }
 _RBEOF_
 
-  cat > /var/chef/data/data_bag/rBglobal/splittraffic.json <<-_RBEOF_
-{
-  "id": "splittraffic",
-  "logstash": false
-}
-
-_RBEOF_
-
   cat > /var/chef/data/data_bag/rBglobal/malware-bucket.json <<-_RBEOF_
 {
   "id": "malware-bucket", 
