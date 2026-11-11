@@ -22,20 +22,33 @@ require 'pg'
 require 'iso8601'
 require 'fileutils'
 
+def remove_from_minio(bucket_name, s3_prefix, datasource, limitDate)
+  minio_storage = ["/var/minio/data", bucket_name, s3_prefix, datasource].reject { |x| x.nil? || x.empty? }.join("/")
+  if Dir.exist?(minio_storage)
+    logit "Removing files from MinIO storage"
+    removeFiles("#{minio_storage}/*", limitDate)
+  end
+end
+
 def removeFiles(path, limitDate)
   files = Dir[path]
   removed = 0
   files.each do |file|
     split = file.split("/")
     lastStr = split[split.length - 1]
-    return if lastStr.nil?
+    next if lastStr.nil?
+
     split = lastStr.split("_")
-    return if (split.length - 2) < 0
-    date = Time.parse split[split.length - 2]
-    if date < limitDate
-      #puts "Removing directory #{file}"
-      FileUtils.rm_rf(file)
-      removed += 1
+    next if (split.length - 2) < 0
+
+    begin
+      date = Time.parse split[split.length - 2]
+      if date < limitDate
+        #puts "Removing directory #{file}"
+        FileUtils.rm_rf(file)
+        removed += 1
+      end
+    rescue ArgumentError, TypeError
     end
   end
 
@@ -157,7 +170,7 @@ rules.each do |rule|
       next
     end
   end
-    
+
   # Get default tier data and the period to mantain the data
   defaultTier = rules_set.select{|x| 
                             #x["tier"] == "_default_tier" if !x["tier"].nil?
@@ -178,6 +191,10 @@ rules.each do |rule|
     logit "No segments must be removed because druid period is 'forever'"
     next
   end
+
+  druid_deep_storage = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.storage.type='|tr '=' ' '|awk '{print $2}'].chomp
+  bucket_name = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.storage.bucket='|tr '=' ' '|awk '{print $2}'].chomp
+  s3_prefix = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.storage.baseKey='|tr '=' ' '|awk '{print $2}'].chomp
 
   if !remove_only_indexCache
     
@@ -209,7 +226,6 @@ rules.each do |rule|
     end
     
     # Remove segments from S3 if necessary
-    druid_deep_storage = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.storage.type='|tr '=' ' '|awk '{print $2}'].chomp
     if druid_deep_storage == "s3"
       s3_access_key_id = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.s3.accessKey='|tr '=' ' '|awk '{print $2}'].chomp
       s3_secret_access_key = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.s3.secretKey='|tr '=' ' '|awk '{print $2}'].chomp
@@ -218,26 +234,28 @@ rules.each do |rule|
         region: 'us-east-1',
         endpoint: 'https://s3.service'
         )
-      bucket_name = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.storage.bucket='|tr '=' ' '|awk '{print $2}'].chomp
-      s3_prefix= %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.storage.baseKey='|tr '=' ' '|awk '{print $2}'].chomp
-
     
       # Get all the segments from S3
       segments_to_delete_from_s3 = []
       segments_on_s3 = []
-      continuation_token = nil
+      clean_prefix = [s3_prefix, datasource].reject { |x| x.nil? || x.empty? }.join("/").gsub(%r{^/+}, "").gsub(%r{/+$}, "") + "/"
 
-      begin
-        response = s3.list_objects_v2(bucket: bucket_name, prefix: "#{s3_prefix}/#{datasource}/",continuation_token: continuation_token)
-        segments_on_s3.concat(response.contents.map(&:key))
-        continuation_token = response.next_continuation_token
-      end while continuation_token
+      s3.list_objects_v2(bucket: bucket_name, prefix: clean_prefix).each_page do |page|
+        segments_on_s3.concat(page.contents.map(&:key))
+      end
 
       # Filter by date
       segments_on_s3.each do |segment|
-        date = Time.parse segment.split("/")[2].split("_")[0]
-        if date < limitDate
-          segments_to_delete_from_s3 << segment
+        relative = segment.sub(/^#{Regexp.escape(clean_prefix)}/, '')
+        start_date_str = relative.split("/").first&.split("_")&.first
+        next unless start_date_str
+
+        begin
+          date = Time.parse(start_date_str)
+          if date < limitDate
+            segments_to_delete_from_s3 << segment
+          end
+        rescue ArgumentError, TypeError
         end
 
       end
@@ -270,7 +288,8 @@ rules.each do |rule|
     logit "Removing files from localStorage"
     removeFiles("/var/druid/data/#{datasource}/*", limitDate)
   end
-  
+
+  remove_from_minio(bucket_name, s3_prefix, datasource, limitDate) if druid_deep_storage == "s3"
 end
 
 if !remove_only_indexCache
