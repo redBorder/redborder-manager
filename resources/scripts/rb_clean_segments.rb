@@ -22,6 +22,15 @@ require 'pg'
 require 'iso8601'
 require 'fileutils'
 
+def usage
+  script = File.basename($PROGRAM_NAME)
+  puts <<~USAGE
+    Usage: #{script} [-h]
+
+    Removes expired Druid segments (PG, S3, MinIO storage, and local caches) older than the retention period.
+  USAGE
+end
+
 def remove_from_minio(bucket_name, s3_prefix, datasource, limitDate)
   minio_storage = ["/var/minio/data", bucket_name, s3_prefix, datasource].reject { |x| x.nil? || x.empty? }.join("/")
   if Dir.exist?(minio_storage)
