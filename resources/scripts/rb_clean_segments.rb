@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-########################################################################    
+########################################################################
 ## Copyright (c) 2014 ENEO Tecnología S.L.
 ## This file is part of redBorder.
 ## redBorder is free software: you can redistribute it and/or modify
@@ -21,290 +21,312 @@ require 'zk'
 require 'pg'
 require 'iso8601'
 require 'fileutils'
+require 'optparse'
 
-def usage
-  script = File.basename($PROGRAM_NAME)
-  puts <<~USAGE
-    Usage: #{script} [-h]
-
-    Removes expired Druid segments (PG, S3, MinIO storage, and local caches) older than the retention period.
-  USAGE
-end
-
-def remove_from_minio(bucket_name, s3_prefix, datasource, limitDate)
-  minio_storage = ["/var/minio/data", bucket_name, s3_prefix, datasource].reject { |x| x.nil? || x.empty? }.join("/")
-  if Dir.exist?(minio_storage)
-    logit "Removing files from MinIO storage"
-    removeFiles("#{minio_storage}/*", limitDate)
+module CleanDruidSegments
+  DRUID_RUNTIME_PROPS = '/etc/druid/_common/common.runtime.properties'
+  MINIO_DATA_DIR      = '/var/minio/data'
+  DRUID_INDEX_CACHE   = '/var/druid/historical/indexCache'
+  DRUID_LOCAL_DATA    = '/var/druid/data'
+  ZK_HOST             = 'zookeeper.service:2181'
+  ZK_LOCK_PATH        = '/cleanDruidSegments'
+  
+  # TODO: Reemplazar %x[cat...grep...awk] por lectura directa del archivo
+  def self.read_druid_config(key)
+    %x[cat #{DRUID_RUNTIME_PROPS} 2>/dev/null | grep '^#{key}=' | tr '=' ' ' | awk '{print $2}'].chomp
   end
-end
 
-def removeFiles(path, limitDate)
-  files = Dir[path]
-  removed = 0
-  files.each do |file|
-    split = file.split("/")
-    lastStr = split[split.length - 1]
-    next if lastStr.nil?
+  def self.logit(text)
+    printf('%s\n', text)
+  end
 
-    split = lastStr.split("_")
-    next if (split.length - 2) < 0
-
-    begin
-      date = Time.parse split[split.length - 2]
-      if date < limitDate
-        #puts "Removing directory #{file}"
-        FileUtils.rm_rf(file)
-        removed += 1
+  def self.parse_args(args)
+    options = { help: false }
+    parser = OptionParser.new do |opts|
+      opts.banner = "Usage: #{File.basename($PROGRAM_NAME)} [-h]"
+      opts.on('-h', '--help', 'Show this help') do
+        options[:help] = true
       end
-    rescue ArgumentError, TypeError
     end
+    parser.parse!(args)
+    options
   end
 
-  logit "#{removed} directories removed"
-end
-
-def logit(text)
-  printf("%s\n", text)
-end
-
-remove_only_indexCache = false
-
-Aws.config.update({ssl_verify_peer: false,
-                 force_path_style: true
-                 })
-
-zk_host = 'zookeeper.service:2181'
-
-begin
-  zk = ZK.new(zk_host)
-  # Do nothing if path exists
-  if zk.exists? '/cleanDruidSegments'
-    logit "Another node have the lock. Only remove local data..."
-    remove_only_indexCache = true
-  else
-    # Create the lock
-    zk.create('/cleanDruidSegments', ephemeral: true)
-  end
-rescue ZK::Exceptions::ConnectionLoss, StandardError => e
-  logit "Failed to connect to ZooKeeper: #{e.message}. Only remove local data..."
-  remove_only_indexCache = true
-end
-
-# PG connection and check druid service in node
-
-if !File.exist?("/etc/druid/_common/common.runtime.properties")
-  logit "Druid propierties not found. Check if any druid services is enabled. No segments to delete"
-  exit
-end
-
-druid_db_uri = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.metadata.storage.connector.connectURI='|tr '=' ' '|awk '{print $2}'].chomp
-druid_db_user = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.metadata.storage.connector.user='|tr '=' ' '|awk '{print $2}'].chomp
-druid_db_pass = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.metadata.storage.connector.password='|tr '=' ' '|awk '{print $2}'].chomp
-druid_db_host = druid_db_uri.match(/:\/\/(.*?):/)[1]
-druid_db_port = druid_db_uri.match(/:(\d+)\//)[1]
-druid_db_name = druid_db_uri.match(/\/([^\/]+)$/)[1]
-
-begin
-  db =  PG.connect(dbname: druid_db_name, user: druid_db_user,
-                  password: druid_db_pass, port: druid_db_port,
-                  host: druid_db_host)
-  logit "Getting druid rules from PG..."
-rescue PG::Error => e
-  logit "Error connecting to Druid Db: #{e.message}. Unable to load druid rules. Check druid propierties"
-  exit
-end
-
-# Get rules info from PG
-
-rules = []
-db.exec("SELECT DISTINCT ON (datasource) * FROM druid_rules  ORDER BY datasource, version DESC") do |result|
-  result.each do |row|
-    if row["payload"] && !row["payload"].empty?
-      # Decode the payload of the rule
-      begin
-        decoded_payload = JSON.parse(row["payload"][2..-1].gsub(/../) { |pair| pair.hex.chr })
-        rules << {rules_set: decoded_payload, datasource: row["datasource"]}
-      rescue JSON::ParserError => e
-        logit "Unacceptable druid rules format for datasource #{row["datasource"]}: #{e.message}"
-      end
-    else
-      logit "Skipping row due to empty or invalid payload for datasource #{row["datasource"]}"
+  def self.acquire_zk_lock
+    zk = ZK.new(ZK_HOST)
+    if zk.exists?(ZK_LOCK_PATH)
+      zk.close!
+      return nil
     end
-  end
-end
-
-default_rules_set = rules.find { |rule| rule[:datasource] == '_default' }&.dig(:rules_set)
-
-if default_rules_set.empty?
-  logit "Unacceptable druid rules format"
-  exit
-end
-
-# Add datasources without rules to rules array
-
-logit "Adding rest of datasources without rules"
-db.exec("SELECT DISTINCT ON (datasource) datasource FROM druid_segments") do |result|
-  result.each do |row|
-    datasource_exists_on_db_rules = rules.any? { |rule| rule[:datasource] == row["datasource"] }
-    if datasource_exists_on_db_rules
-      logit "#{row["datasource"]} already has rules"
-      next
-    else
-      logit "Create empty druid rules set for #{row["datasource"]} datasource"
-      rules << {rules_set: [], datasource: row["datasource"]}
-    end
-  end
-end
-
-# Delete segments for each datasource
-
-rules.each do |rule|
-  rules_set = rule[:rules_set]
-  datasource = rule[:datasource]
-
-  logit("---------------------Segments from datasource: #{datasource}---------------------")
-
-  if rules_set.empty?
-    logit "No rules set found for datasource, applying default rules set"
-    rules_set = default_rules_set
-  end
-  if not rules_set.first["tieredReplicants"].nil?
-    tieredReplicants = rules_set.first.fetch("tieredReplicants", {}).fetch("_default_tier", 0).to_i
-    logit "tieredReplicants = #{tieredReplicants}"
-    type = rules_set.first["type"]
-    #if tieredReplicants == 1 and type == "loadForever"
-    if type == "loadForever"
-      logit "No segments must be removed because druid period is 'forever'"
-      next
-    end
+    zk.create(ZK_LOCK_PATH, ephemeral: true)
+    zk
+  rescue ZK::Exceptions::ConnectionLoss, StandardError => e
+    # TODO: Rescatar solo ZK::Exceptions::ZKException, no StandardError genérico
+    logit "Failed to connect to ZooKeeper: #{e.message}. Only remove local data..."
+    nil
   end
 
-  # Get default tier data and the period to mantain the data
-  defaultTier = rules_set.select{|x| 
-                            #x["tier"] == "_default_tier" if !x["tier"].nil?
-                            x["tieredReplicants"].first.first == "_default_tier" if !x["tieredReplicants"].nil?                        
-                            }.first
-  logit "defaultTier is #{defaultTier}"
-  if defaultTier.nil?
-    logit "No default tier exists on PG. Exiting..."
-    next
-  end
-    
-  period = defaultTier["period"].upcase
-  periodInSecs = ISO8601::Duration.new(period).to_seconds
-  limitDate = Time.now - periodInSecs
-  logit "limitDate is #{limitDate}"
-    
-  if period == "P5000Y"
-    logit "No segments must be removed because druid period is 'forever'"
-    next
+  def self.release_zk_lock(zk)
+    return unless zk
+    zk.delete(ZK_LOCK_PATH)
+    zk.close!
   end
 
-  druid_deep_storage = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.storage.type='|tr '=' ' '|awk '{print $2}'].chomp
-  bucket_name = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.storage.bucket='|tr '=' ' '|awk '{print $2}'].chomp
-  s3_prefix = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.storage.baseKey='|tr '=' ' '|awk '{print $2}'].chomp
+  def self.connect_pg
+    druid_db_uri  = read_druid_config('druid.metadata.storage.connector.connectURI')
+    druid_db_user = read_druid_config('druid.metadata.storage.connector.user')
+    druid_db_pass = read_druid_config('druid.metadata.storage.connector.password')
+    druid_db_host = druid_db_uri.match(/:\/\/(.*?):/)[1]
+    druid_db_port = druid_db_uri.match(/:(\d+)\//)[1]
+    druid_db_name = druid_db_uri.match(/\/([^\/]+)$/)[1]
 
-  if !remove_only_indexCache
-    
-    logit "Deleting segments older than #{limitDate} (Period #{period})"
-    
-    # Get all the segments from PG
-    segments_to_delete_from_pg = []
-    db.exec("SELECT * FROM druid_segments WHERE datasource = '#{datasource}'") do |result|
+    PG.connect(dbname: druid_db_name, user: druid_db_user,
+               password: druid_db_pass, port: druid_db_port,
+               host: druid_db_host)
+  rescue PG::Error => e
+    logit "Error connecting to Druid Db: #{e.message}. Unable to load druid rules. Check druid properties"
+    exit 1
+  end
+
+  def self.load_rules(db)
+    rules = []
+    db.exec('SELECT DISTINCT ON (datasource) * FROM druid_rules ORDER BY datasource, version DESC') do |result|
       result.each do |row|
-        date = Time.parse row.values_at('start').first
-        if date < limitDate
-          segments_to_delete_from_pg << row
+        if row['payload'] && !row['payload'].empty?
+          begin
+            decoded_payload = JSON.parse(row['payload'][2..-1].gsub(/../) { |pair| pair.hex.chr })
+            rules << { rules_set: decoded_payload, datasource: row['datasource'] }
+          rescue JSON::ParserError => e
+            logit "Unacceptable druid rules format for datasource #{row['datasource']}: #{e.message}"
+          end
+        else
+          logit "Skipping row due to empty or invalid payload for datasource #{row['datasource']}"
         end
       end
     end
-    
-    # Remove segments from PG
-    if segments_to_delete_from_pg.size > 0
-      logit "#{segments_to_delete_from_pg.size} segments marked for removing on PG"
-    
-      segments_to_delete_from_pg.each do |segment|
-        #puts "Removing PG segment id #{segment['id']}"
-    
-        # Remove it from PG
+
+    default_rules_set = rules.find { |r| r[:datasource] == '_default' }&.dig(:rules_set)
+    # TODO: default_rules_set puede ser nil → NoMethodError en .empty?
+
+    if default_rules_set.empty?
+      logit 'Unacceptable druid rules format'
+      exit 1
+    end
+
+    db.exec('SELECT DISTINCT ON (datasource) datasource FROM druid_segments') do |result|
+      result.each do |row|
+        datasource_exists = rules.any? { |r| r[:datasource] == row['datasource'] }
+        if datasource_exists
+          logit "#{row['datasource']} already has rules"
+        else
+          logit "Create empty druid rules set for #{row['datasource']} datasource"
+          rules << { rules_set: [], datasource: row['datasource'] }
+        end
+      end
+    end
+
+    [rules, default_rules_set]
+  end
+
+  def self.compute_limit_date(rules_set)
+    return nil if rules_set.empty?
+
+    first_rule = rules_set.first
+    return nil if first_rule['type'] == 'loadForever'
+
+    default_tier = rules_set.select do |x|
+      x['tieredReplicants'] && x['tieredReplicants'].first&.first == '_default_tier'
+    end.first
+
+    return nil if default_tier.nil?
+
+    period = default_tier['period'].upcase
+    return nil if period == 'P5000Y'
+
+    period_in_secs = ISO8601::Duration.new(period).to_seconds
+    Time.now - period_in_secs
+  end
+
+  def self.extract_date_from_path(path)
+    basename = File.basename(path)
+    parts = basename.split('_')
+    return nil if parts.length < 2
+    Time.parse(parts[-2])
+  rescue ArgumentError, TypeError
+    nil
+  end
+
+  def self.remove_files(pattern, limit_date)
+    files = Dir[pattern]
+    removed = 0
+    files.each do |file|
+      date = extract_date_from_path(file)
+      next unless date
+      next unless date < limit_date
+      FileUtils.rm_rf(file)
+      removed += 1
+    end
+    logit "#{removed} directories removed"
+  end
+
+  def self.remove_from_minio(bucket_name, s3_prefix, datasource, limit_date)
+    minio_storage = [MINIO_DATA_DIR, bucket_name, s3_prefix, datasource]
+                      .reject { |x| x.nil? || x.empty? }
+                      .join('/')
+    if Dir.exist?(minio_storage)
+      logit 'Removing files from MinIO storage'
+      remove_files("#{minio_storage}/*", limit_date)
+    end
+  end
+
+  def self.remove_from_pg(db, datasource, limit_date)
+    # TODO: SQL Injection — usar query parametrizada:
+    #   db.exec('SELECT * FROM druid_segments WHERE datasource = $1', datasource)
+    segments_to_delete = []
+    db.exec("SELECT * FROM druid_segments WHERE datasource = '#{datasource}'") do |result|
+      result.each do |row|
+        date = Time.parse(row.values_at('start').first)
+        segments_to_delete << row if date < limit_date
+      end
+    end
+
+    if segments_to_delete.size > 0
+      logit "#{segments_to_delete.size} segments marked for removing on PG"
+      segments_to_delete.each do |segment|
+        # TODO: SQL Injection — usar query parametrizada:
+        #   db.exec('DELETE FROM druid_segments WHERE id = $1', segment['id'])
         db.exec("DELETE FROM druid_segments WHERE id = '#{segment['id']}'")
       end
     else
-      logit "No segments must be removed from PG"
+      logit 'No segments must be removed from PG'
     end
-    
-    # Remove segments from S3 if necessary
-    if druid_deep_storage == "s3"
-      s3_access_key_id = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.s3.accessKey='|tr '=' ' '|awk '{print $2}'].chomp
-      s3_secret_access_key = %x[cat /etc/druid/_common/common.runtime.properties 2>/dev/null |grep '^druid.s3.secretKey='|tr '=' ' '|awk '{print $2}'].chomp
-      s3 = Aws::S3::Client.new(access_key_id: s3_access_key_id,
-        secret_access_key: s3_secret_access_key,
-        region: 'us-east-1',
-        endpoint: 'https://s3.service'
-        )
-    
-      # Get all the segments from S3
-      segments_to_delete_from_s3 = []
-      segments_on_s3 = []
-      clean_prefix = [s3_prefix, datasource].reject { |x| x.nil? || x.empty? }.join("/").gsub(%r{^/+}, "").gsub(%r{/+$}, "") + "/"
+  end
 
-      s3.list_objects_v2(bucket: bucket_name, prefix: clean_prefix).each_page do |page|
-        segments_on_s3.concat(page.contents.map(&:key))
+  def self.remove_from_s3(s3_client, bucket_name, s3_prefix, datasource, limit_date)
+    clean_prefix = [s3_prefix, datasource]
+                    .reject { |x| x.nil? || x.empty? }
+                    .join('/')
+                    .gsub(%r{^/+}, '')
+                    .gsub(%r{/+$}, '') + '/'
+
+    segments_on_s3 = []
+    s3_client.list_objects_v2(bucket: bucket_name, prefix: clean_prefix).each_page do |page|
+      segments_on_s3.concat(page.contents.map(&:key))
+    end
+
+    segments_to_delete = segments_on_s3.select do |segment|
+      relative = segment.sub(/^#{Regexp.escape(clean_prefix)}/, '')
+      start_date_str = relative.split('/').first&.split('_')&.first
+      next false unless start_date_str
+      begin
+        Time.parse(start_date_str) < limit_date
+      rescue ArgumentError, TypeError
+        false
       end
+    end
 
-      # Filter by date
-      segments_on_s3.each do |segment|
-        relative = segment.sub(/^#{Regexp.escape(clean_prefix)}/, '')
-        start_date_str = relative.split("/").first&.split("_")&.first
-        next unless start_date_str
+    if segments_to_delete.size > 0
+      logit "#{segments_to_delete.size} objects marked for removing on S3"
+      segments_to_delete.each do |object_key|
+        s3_client.delete_object(bucket: bucket_name, key: object_key)
+      end
+    else
+      logit 'No segments must be removed from S3'
+    end
+  end
 
-        begin
-          date = Time.parse(start_date_str)
-          if date < limitDate
-            segments_to_delete_from_s3 << segment
+  def self.remove_local_caches(datasource, limit_date)
+    if Dir.exist?(DRUID_INDEX_CACHE)
+      logit 'Removing files from druid historical indexCache'
+      remove_files("#{DRUID_INDEX_CACHE}/#{datasource}/*", limit_date)
+    else
+      logit 'Warning: Historical folder does not exist. No segments to remove'
+    end
+
+    if Dir.exist?(DRUID_LOCAL_DATA)
+      logit 'Removing files from localStorage'
+      remove_files("#{DRUID_LOCAL_DATA}/#{datasource}/*", limit_date)
+    else
+      logit 'Warning: Druid localStorage folder does not exist. No segments to remove'
+    end
+  end
+
+  def self.run(args = ARGV)
+    options = parse_args(args)
+    if options[:help]
+      puts "Usage: #{File.basename($PROGRAM_NAME)} [-h]\n\nRemoves expired Druid segments (PG, S3, MinIO storage, and local caches) older than the retention period."
+      return
+    end
+
+    Aws.config.update(ssl_verify_peer: false, force_path_style: true)
+
+    zk = acquire_zk_lock
+    remove_only_index_cache = zk.nil?
+    if remove_only_index_cache
+      logit 'Another node has the lock. Only remove local data...'
+    end
+
+    unless File.exist?(DRUID_RUNTIME_PROPS)
+      logit 'Druid properties not found. Check if any druid service is enabled. No segments to delete'
+      return
+    end
+
+    db = connect_pg
+    logit 'Getting druid rules from PG...'
+
+    begin
+      rules, default_rules_set = load_rules(db)
+
+      logit 'Adding rest of datasources without rules'
+
+      rules.each do |rule|
+        rules_set  = rule[:rules_set]
+        datasource = rule[:datasource]
+
+        logit("----- Segments from datasource: #{datasource} -----")
+
+        rules_set = default_rules_set if rules_set.empty?
+
+        limit_date = compute_limit_date(rules_set)
+        if limit_date.nil?
+          logit 'No segments must be removed (forever or no default tier)'
+          next
+        end
+
+        logit "limitDate is #{limit_date}"
+
+        druid_deep_storage = read_druid_config('druid.storage.type')
+        bucket_name        = read_druid_config('druid.storage.bucket')
+        s3_prefix          = read_druid_config('druid.storage.baseKey')
+
+        unless remove_only_index_cache
+          logit "Deleting segments older than #{limit_date}"
+
+          remove_from_pg(db, datasource, limit_date)
+
+          if druid_deep_storage == 's3'
+            s3_access_key_id     = read_druid_config('druid.s3.accessKey')
+            s3_secret_access_key = read_druid_config('druid.s3.secretKey')
+            s3_client = Aws::S3::Client.new(
+              access_key_id:     s3_access_key_id,
+              secret_access_key: s3_secret_access_key,
+              region:            'us-east-1',
+              endpoint:          'https://s3.service'
+            )
+            remove_from_s3(s3_client, bucket_name, s3_prefix, datasource, limit_date)
           end
-        rescue ArgumentError, TypeError
         end
 
+        remove_local_caches(datasource, limit_date)
+        remove_from_minio(bucket_name, s3_prefix, datasource, limit_date) if druid_deep_storage == 's3'
       end
-      #end
-      # Remove segments from S3
-      if segments_to_delete_from_s3.size > 0
-        logit "#{segments_to_delete_from_s3.size} objects marked for removing on S3"
-        segments_to_delete_from_s3.each do |object_key|
-          # puts "Removing S3 object with path #{object_key}"
-          # Delete the object
-          s3.delete_object(bucket: bucket_name, key: object_key)
-        end
-      else
-        logit "No segments must be removed from S3"
-      end
+    ensure
+      release_zk_lock(zk) unless remove_only_index_cache
+      db&.close
     end
   end
-
-  # Remove segments from historical indexCache
-  if !Dir.exist?("/var/druid/historical/indexCache")
-    logit "Warning: Historical folder doesn't exist. No segments to remove"
-  else
-    logit "Removing files from druid historical indexCache"
-    removeFiles("/var/druid/historical/indexCache/#{datasource}/*", limitDate)
-  end
-  # Remove segments from localStorage
-  if !Dir.exist?("/var/druid/data")
-    logit "Warning: Druid localStorage folder doesn't exist. No segments to remove"
-  else
-    logit "Removing files from localStorage"
-    removeFiles("/var/druid/data/#{datasource}/*", limitDate)
-  end
-
-  remove_from_minio(bucket_name, s3_prefix, datasource, limitDate) if druid_deep_storage == "s3"
 end
 
-if !remove_only_indexCache
-  # Remove zk node and unlock
-  zk.delete ('/cleanDruidSegments')
-  zk.close!
+if __FILE__ == $PROGRAM_NAME
+  CleanDruidSegments.run
 end
-
-db.close if db
