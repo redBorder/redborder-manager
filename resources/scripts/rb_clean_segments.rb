@@ -179,7 +179,7 @@ rules.each do |rule|
       next
     end
   end
-
+    
   # Get default tier data and the period to mantain the data
   defaultTier = rules_set.select{|x| 
                             #x["tier"] == "_default_tier" if !x["tier"].nil?
@@ -297,7 +297,7 @@ rules.each do |rule|
     logit "Removing files from localStorage"
     removeFiles("/var/druid/data/#{datasource}/*", limitDate)
   end
-
+  
   remove_from_minio(bucket_name, s3_prefix, datasource, limitDate) if druid_deep_storage == "s3"
 end
 
