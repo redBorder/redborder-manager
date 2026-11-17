@@ -299,14 +299,21 @@ _RBEOF_
 }
 _RBEOF_
 
-  #hub tokens: unique per installation (cluster-wide auth token shared by the hubs
-  #and registration token used to enrol satellite keys)
+  #hub tokens: unique per installation. The auth token is shared by the hubs of the
+  #cluster and only readable by managers (passwords bag). The registration token is
+  #used by satellites to enrol their key, so proxies must be able to read it (rBglobal bag)
   HUB_AUTH_TOKEN="`< /dev/urandom tr -dc A-Za-z0-9 | head -c64 | sed 's/ //g'`"
-  HUB_REGISTRATION_TOKEN="`< /dev/urandom tr -dc A-Za-z0-9 | head -c64 | sed 's/ //g'`"
   cat > /var/chef/data/data_bag_encrypted/passwords/hub.json <<-_RBEOF_
 {
   "id": "hub",
-  "auth_token": "$HUB_AUTH_TOKEN",
+  "auth_token": "$HUB_AUTH_TOKEN"
+}
+_RBEOF_
+
+  HUB_REGISTRATION_TOKEN="`< /dev/urandom tr -dc A-Za-z0-9 | head -c64 | sed 's/ //g'`"
+  cat > /var/chef/data/data_bag/rBglobal/hub.json <<-_RBEOF_
+{
+  "id": "hub",
   "registration_token": "$HUB_REGISTRATION_TOKEN"
 }
 _RBEOF_
