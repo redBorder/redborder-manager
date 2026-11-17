@@ -299,6 +299,18 @@ _RBEOF_
 }
 _RBEOF_
 
+  #hub tokens: unique per installation (cluster-wide auth token shared by the hubs
+  #and registration token used to enrol satellite keys)
+  HUB_AUTH_TOKEN="`< /dev/urandom tr -dc A-Za-z0-9 | head -c64 | sed 's/ //g'`"
+  HUB_REGISTRATION_TOKEN="`< /dev/urandom tr -dc A-Za-z0-9 | head -c64 | sed 's/ //g'`"
+  cat > /var/chef/data/data_bag_encrypted/passwords/hub.json <<-_RBEOF_
+{
+  "id": "hub",
+  "auth_token": "$HUB_AUTH_TOKEN",
+  "registration_token": "$HUB_REGISTRATION_TOKEN"
+}
+_RBEOF_
+
   #drill password token
   DRILL_SECRET="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   cat > /var/chef/data/data_bag_encrypted/passwords/drill.json <<-_RBEOF_
