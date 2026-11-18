@@ -25,10 +25,10 @@ opt["c"] ? colorless = true : colorless = false
 opt["q"] ? quiet = true : quiet = false
 
 has_errors = false
-service = "netflow2kafka"
+service = "redborder-netflow2kafka"
 nodes = get_nodes_with_service(service)
 
-title_ok("Netflow (netflow2kafka)",colorless, quiet)
+title_ok("Netflow (redborder-netflow2kafka)",colorless, quiet)
 
 nodes.each do |node|
   subtitle("Service status", colorless, quiet)

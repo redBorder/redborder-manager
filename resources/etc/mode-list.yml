@@ -29,8 +29,8 @@
   name: 'http2k'
   description: 'Http2k node'
 -
-  name: 'netflow2kafka'
-  description: 'netflow2kafka flow collector node'
+  name: 'redborder-netflow2kafka'
+  description: 'redborder-netflow2kafka flow collector node'
 -
   name: 's3'
   description: 'S3 (riak) node'
