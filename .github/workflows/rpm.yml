@@ -43,11 +43,12 @@ jobs:
           docker exec builder bash -c "curl https://raw.githubusercontent.com/redBorder/repoinit/master/sdk9.cfg > /build/sdk9.cfg"
           docker exec builder bash -c "echo \"config_opts['use_host_resolv'] = True\" >> /build/sdk9.cfg"
           docker exec builder bash -c "ln -s /build/sdk9.cfg /etc/mock/default.cfg"
+          docker exec builder bash -c "useradd -m -G mock builder && chown -R builder /build"
 
       - name: Build RPM using mock
         run: |
-          docker exec builder bash -c "git config --global --add safe.directory /build"
-          docker exec builder bash -c "cd /build/ && VERSION=${{ env.TAG }} make rpm"
+          docker exec -u builder builder bash -c "git config --global --add safe.directory /build"
+          docker exec -u builder builder bash -c "cd /build/ && VERSION=${{ env.TAG }} make rpm"
 
       - name: Copy RPMS
         run: |

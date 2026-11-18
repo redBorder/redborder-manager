@@ -50,7 +50,7 @@ function upload_cookbook() {
 listCookbooks="rb-common rb-selinux cron rb-firewall zookeeper kafka druid http2k memcached chef-server consul
                 nginx geoip webui snmp rbmonitor rbscanner redis drill airflow
                 f2k logstash pmacct minio postgresql aerospike yara cape rbdswatcher rbevents-counter
-                rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rblogstatter rb-arubacentral rbcgroup rb-exporter 
+                rsyslog freeradius rbnmsp n2klocd rbale rbcep k2http rblogstatter rb-arubacentral rbcgroup rb-flow-agent 
                 rb-chrony rb-clamav rb-postfix keepalived snort barnyard2 rbaioutliers snort3 mem2incident secor 
                 rb-druid-indexer rb-agents rb-reputation rb-net-tools vsftpd rb-alarm-engine rb-hub-satellite grr rb-license
                 rb-proxy rb-ips rb-intrusion rb-mailgateway rb-manager" # The order matters! (please keep proxy ips and manager at the end)
