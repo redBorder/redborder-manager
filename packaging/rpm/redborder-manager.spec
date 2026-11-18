@@ -81,6 +81,11 @@ firewall-cmd --reload
 # adjust kernel printk settings for the console
 echo "kernel.printk = 1 4 1 7" > /usr/lib/sysctl.d/99-redborder-printk.conf
 /sbin/sysctl --system > /dev/null 2>&1
+# Create the per-cluster hub tokens on clusters installed before they existed.
+# On a new install rb_configure_leader.sh creates them, so only act on upgrades.
+if [ "$1" = 2 ] && systemctl is-active --quiet opscode-erchef; then
+    su - -s /bin/bash -c '/usr/lib/redborder/bin/rb_create_hub_secrets.sh' || true
+fi
 
 %posttrans
 update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "java"|head -n 1)
