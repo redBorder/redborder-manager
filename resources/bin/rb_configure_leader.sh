@@ -368,16 +368,16 @@ _RBEOF_
 _RBEOF_
 
   mkdir -p /var/chef/data/data_bag/rBglobal
-  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-f2k.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-redborder-netflow2kafka.json <<-_RBEOF_
 {
-  "id": "ipvirtual-external-f2k"
+  "id": "ipvirtual-external-redborder-netflow2kafka"
 }
 _RBEOF_
 
   mkdir -p /var/chef/data/data_bag/rBglobal
-  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-sfacctd.json <<-_RBEOF_
+  cat > /var/chef/data/data_bag/rBglobal/ipvirtual-external-redborder-sflow2kafka.json <<-_RBEOF_
 {
-  "id": "ipvirtual-external-sfacctd"
+  "id": "ipvirtual-external-redborder-sflow2kafka"
 }
 _RBEOF_
 
@@ -634,7 +634,7 @@ systemctl enable chef-client
 systemctl start chef-client
 
 e_title "Starting default services"
-for service in logstash webui rb-workers sfacctd f2k redborder-mem2incident; do
+for service in logstash webui rb-workers redborder-netflow2kafka redborder-sflow2kafka redborder-mem2incident; do
   [ "$(systemctl is-enabled $service 2>/dev/null)" = "enabled" ] && systemctl start $service &>/dev/null &
 done
 
