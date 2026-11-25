@@ -15,14 +15,14 @@
 # along with redBorder. If not, see <http://www.gnu.org/licenses/>.
 #######################################################################
 
-if [ -f /opt/opscode/bin/chef-server-ctl ]; then
-  # chef-server-ctl runs on the ruby embedded in chef-server: without the gems
+if [ -f /opt/cinc-project/bin/cinc-server-ctl ]; then
+  # cinc-server-ctl runs on the ruby embedded in cinc-server: without the gems
   # of the rvm ruby, which are not compatible with it
   unset GEM_HOME GEM_PATH GEM_ROOT RUBYOPT RUBYLIB BUNDLE_GEMFILE
 
-  echo "Calling chef-server-ctl graceful-kill.."
-  /opt/opscode/bin/chef-server-ctl graceful-kill
+  echo "Calling cinc-server-ctl graceful-kill.."
+  /opt/cinc-project/bin/cinc-server-ctl graceful-kill
   
-  echo "Calling chef-server-ctl stop.."
-  /opt/opscode/bin/chef-server-ctl stop
+  echo "Calling cinc-server-ctl stop.."
+  /opt/cinc-project/bin/cinc-server-ctl stop
 fi

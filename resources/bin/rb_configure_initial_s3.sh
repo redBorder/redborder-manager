@@ -21,7 +21,7 @@ echo "INFO: Restarting serf. Loading new handlers"
 systemctl restart serf
 
 #Accept chef-client license
-chef-client --chef-license accept &>/dev/null
+chef-client &>/dev/null
 
 #Configure s3 service using chef-solo
 echo "INFO: Configure Minio service using chef-solo"
