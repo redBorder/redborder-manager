@@ -93,17 +93,16 @@ function configure_dataBags(){
   [ "x$DATABAGKEY" == "x" ] && DATABAGKEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   echo $DATABAGKEY > /etc/chef/encrypted_data_bag_secret
 
-  # Chef middleware configurations
-  OCID_DBCFG="/opt/cinc-project/embedded/service/oc_id/config/database.yml"
-  OCBIFROST_DBCFG="/opt/cinc-project/embedded/service/oc_bifrost/sys.config"
-
   # Obtaining chef database current configuration
   OPSCODE_DBHOST="`grep {db_host $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   [ "x$OPSCODE_DBHOST" == "x127.0.0.1" ] && OPSCODE_DBHOST=$IPLEADER
   OPSCODE_DBPORT="`grep {db_port $ERCHEFCFG |sed 's/.*{db_port, //' | sed 's/},//'`"
-  OPSCODE_DBPASS="`grep {db_pass $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
-  OPSCODE_OCID_PASS="`grep password $OCID_DBCFG | sed 's/ password: //' | tr -d ' '`"
-  OPSCODE_OCBIFROST_PASS="`grep db_pass $OCBIFROST_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
+  # The database passwords are not in sys.config / database.yml: erchef, oc_bifrost and oc_id read
+  # them from the veil secrets (database.yml only has a placeholder and, in Cinc 15.10, a comment
+  # line with the word "password" that broke the JSON of the data bag). Read the real ones.
+  OPSCODE_DBPASS="$(cinc_server_ctl show-secret opscode_erchef sql_password 2>/dev/null)"
+  OPSCODE_OCID_PASS="$(cinc_server_ctl show-secret oc_id sql_password 2>/dev/null)"
+  OPSCODE_OCBIFROST_PASS="$(cinc_server_ctl show-secret oc_bifrost sql_password 2>/dev/null)"
 
   # Obtaining chef cookbook storage current configuration
   S3KEY="`grep -A 4 '^s3:' ${S3INITCONF} | grep access_key  | awk '{print $2}'`"
