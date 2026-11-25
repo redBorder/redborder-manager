@@ -53,7 +53,7 @@ if [ "x$?" == "x0" ] ; then
   [ $counter -gt 10 ] && echo "WARNING: Required key tag not found while leader is waiting" && exit 0
 
   #Accept chef-client license
-  chef-client --chef-license accept &>/dev/null
+  chef-client &>/dev/null
 
   echo "configure selinux $(date)"
   chef-solo -c /var/chef/solo/rb-selinux-solo.rb -j /var/chef/solo/rb-selinux-attributes.json

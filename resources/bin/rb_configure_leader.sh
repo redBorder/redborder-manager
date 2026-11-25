@@ -6,11 +6,11 @@ source /etc/profile
 source $RBLIB/rb_manager_functions.sh
 source $RBETC/rb_init_conf.conf
 
-# chef-server-ctl runs on the ruby embedded in chef-server (2.7). It must not
+# cinc-server-ctl runs on the ruby embedded in cinc-server (3.1). It must not
 # see the gems of the rvm ruby loaded by /etc/profile (ruby-3.4.11): their
 # native extensions are not compatible with it ("incompatible library version")
-function chef_server_ctl() {
-  env -u GEM_HOME -u GEM_PATH -u GEM_ROOT -u RUBYOPT -u RUBYLIB -u BUNDLE_GEMFILE /usr/bin/chef-server-ctl "$@"
+function cinc_server_ctl() {
+  env -u GEM_HOME -u GEM_PATH -u GEM_ROOT -u RUBYOPT -u RUBYLIB -u BUNDLE_GEMFILE /usr/bin/cinc-server-ctl "$@"
 }
 
 function configure_db(){
@@ -84,7 +84,7 @@ _RBEOF2_
 function configure_dataBags(){
 
   # Chef server configuration file
-  ERCHEFCFG="/opt/opscode/embedded/service/opscode-erchef/sys.config"
+  ERCHEFCFG="/opt/cinc-project/embedded/service/opscode-erchef/sys.config"
   #S3INITCONF="${RBETC}/s3_init_conf.yml"
   S3INITCONF=$(if [ -f "${RBETC}/s3_init_conf.yml" ]; then echo "${RBETC}/s3_init_conf.yml"; else echo "${RBETC}/rb_init_conf.yml"; fi)
   S3MALWAREINITCONF=$(if [ -f "${RBETC}/s3_malware_init_conf.yml" ]; then echo "${RBETC}/s3_malware_init_conf.yml"; else echo "${RBETC}/rb_malware_init_conf.yml"; fi)
@@ -93,17 +93,16 @@ function configure_dataBags(){
   [ "x$DATABAGKEY" == "x" ] && DATABAGKEY="`< /dev/urandom tr -dc A-Za-z0-9 | head -c128 | sed 's/ //g'`"
   echo $DATABAGKEY > /etc/chef/encrypted_data_bag_secret
 
-  # Chef middleware configurations
-  OCID_DBCFG="/opt/opscode/embedded/service/oc_id/config/database.yml"
-  OCBIFROST_DBCFG="/opt/opscode/embedded/service/oc_bifrost/sys.config"
-
   # Obtaining chef database current configuration
   OPSCODE_DBHOST="`grep {db_host $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
   [ "x$OPSCODE_DBHOST" == "x127.0.0.1" ] && OPSCODE_DBHOST=$IPLEADER
   OPSCODE_DBPORT="`grep {db_port $ERCHEFCFG |sed 's/.*{db_port, //' | sed 's/},//'`"
-  OPSCODE_DBPASS="`grep {db_pass $ERCHEFCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//'`"
-  OPSCODE_OCID_PASS="`grep password $OCID_DBCFG | sed 's/ password: //' | tr -d ' '`"
-  OPSCODE_OCBIFROST_PASS="`grep db_pass $OCBIFROST_DBCFG | sed 's/[^"]*"//' | sed 's/"},[ ]*$//' | sed 's/" },//'`"
+  # The database passwords are not in sys.config / database.yml: erchef, oc_bifrost and oc_id read
+  # them from the veil secrets (database.yml only has a placeholder and, in Cinc 15.10, a comment
+  # line with the word "password" that broke the JSON of the data bag). Read the real ones.
+  OPSCODE_DBPASS="$(cinc_server_ctl show-secret opscode_erchef sql_password 2>/dev/null)"
+  OPSCODE_OCID_PASS="$(cinc_server_ctl show-secret oc_id sql_password 2>/dev/null)"
+  OPSCODE_OCBIFROST_PASS="$(cinc_server_ctl show-secret oc_bifrost sql_password 2>/dev/null)"
 
   # Obtaining chef cookbook storage current configuration
   S3KEY="`grep -A 4 '^s3:' ${S3INITCONF} | grep access_key  | awk '{print $2}'`"
@@ -509,9 +508,9 @@ function configure_leader(){
 
   # Copy web certificates (use only chef-server certificate) #CHECK #??#
   mkdir -p /root/.chef/trusted_certs/
-  rsync /var/opt/opscode/nginx/ca/*.crt /root/.chef/trusted_certs/
+  rsync /var/opt/cinc-project/nginx/ca/*.crt /root/.chef/trusted_certs/
   mkdir -p /home/redborder/.chef/trusted_certs/
-  rsync /var/opt/opscode/nginx/ca/*.crt /home/redborder/.chef/trusted_certs/
+  rsync /var/opt/cinc-project/nginx/ca/*.crt /home/redborder/.chef/trusted_certs/
   chown -R redborder:redborder /home/redborder/.chef
 
   # Clean yum data (to install packages from chef)
@@ -527,14 +526,14 @@ function configure_leader(){
   chef-client | tee -a /root/.install-chef-client.log
 
   # Replace chef-server SV init scripts by systemd scripts
-  chef_server_ctl graceful-kill &>/dev/null
-  if [ "$(ls -A /opt/opscode/service)" ]; then
+  cinc_server_ctl graceful-kill &>/dev/null
+  if [ "$(ls -A /opt/cinc-project/service)" ]; then
     e_title "Stopping default private-chef-server services"
-    chef_server_ctl stop &>/dev/null
+    cinc_server_ctl stop &>/dev/null
     e_title "Starting systemd chef-server services"
-    for i in `ls /opt/opscode/service/ | sed 's/opscode-//g'`;do
+    for i in `ls /opt/cinc-project/service/ | sed 's/opscode-//g'`;do
       systemctl enable opscode-$i &>/dev/null && systemctl start opscode-$i &>/dev/null
-      rm -rf /opt/opscode/service/$i &>/dev/null
+      rm -rf /opt/cinc-project/service/$i &>/dev/null
     done
   fi
 
@@ -578,18 +577,19 @@ grep -q erchef.${cdomain} /etc/hosts
 set_external_service_names
 
 # Chef server Installation
-e_title "Installing Chef-Server from repository"
-yum install -y redborder-chef-server
+e_title "Installing Cinc-Server from repository"
+yum install -y redborder-cinc-server
 
 # Read S3 & Postgresql configuration
 rb_init_chef
 
-# Set chef-server.rb configuration file (S3)
-[ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/opscode/chef-server.rb #&& rm -f /etc/redborder/chef-server-s3.rb
+# Set cinc-server.rb configuration file (S3)
+mkdir -p /etc/cinc-project
+[ -f /etc/redborder/chef-server-s3.rb ] && cat /etc/redborder/chef-server-s3.rb >> /etc/cinc-project/cinc-server.rb #&& rm -f /etc/redborder/chef-server-s3.rb
 
 # Set chef-server.rb configuration file (postgresql) and obtain database credentials
 if [ -f /etc/redborder/chef-server-postgresql.rb ]; then
-  cat /etc/redborder/chef-server-postgresql.rb >> /etc/opscode/chef-server.rb
+  cat /etc/redborder/chef-server-postgresql.rb >> /etc/cinc-project/cinc-server.rb
   DB_ADMINUSER=$(cat /etc/redborder/chef-server-postgresql.rb | grep "db_superuser.]" | awk {'print $3'} | tr -d "\"")
   DB_ADMINPASS=$(cat /etc/redborder/chef-server-postgresql.rb | grep "db_superuser_password.]" | awk {'print $3'}| tr -d "\"")
   DB_HOST=$(cat /etc/redborder/chef-server-postgresql.rb | grep "vip.]" | awk {'print $3'}| tr -d "\"")
@@ -601,15 +601,15 @@ else
 fi
 
 # Set chef-server internal nginx port to 4443
-echo "nginx['ssl_port'] = 4443" >> /etc/opscode/chef-server.rb
-echo "nginx['non_ssl_port'] = 4480" >> /etc/opscode/chef-server.rb
+echo "nginx['ssl_port'] = 4443" >> /etc/cinc-project/cinc-server.rb
+echo "nginx['non_ssl_port'] = 4480" >> /etc/cinc-project/cinc-server.rb
 
 # Chef server initial configuration
-e_title "Configuring Chef-Server"
-chef_server_ctl reconfigure --chef-license=accept | tee -a /root/.install-chef-server.log
+e_title "Configuring Cinc-Server"
+cinc_server_ctl reconfigure | tee -a /root/.install-cinc-server.log
 
 # TODO: check if this is the way or file acls
-[ -f /etc/opscode/private-chef-secrets.json ] && chown opscode. /etc/opscode/private-chef-secrets.json
+[ -f /etc/cinc-project/private-cinc-secrets.json ] && chown cinc. /etc/cinc-project/private-cinc-secrets.json
 
 # TODO: Check why we need to sleep here
 echo "Sleeping for 30 seconds"
@@ -617,14 +617,14 @@ sleep 30
 
 # Chef user creation
 # $ chef-server-ctl user-create USER_NAME FIRST_NAME LAST_NAME EMAIL 'PASSWORD' --filename FILE_NAME
-chef_server_ctl user-create $CHEFUSER $CHEFUSER $CHEFUSER $CHEFUSER@$cdomain \'$CHEFPASS\' --filename /etc/opscode/$CHEFUSER.pem
+cinc_server_ctl user-create $CHEFUSER $CHEFUSER $CHEFUSER $CHEFUSER@$cdomain \'$CHEFPASS\' --filename /etc/cinc-project/$CHEFUSER.pem
 # Chef organization creation
 # $ chef-server-ctl org-create short_name 'full_organization_name' --association_user user_name --filename ORGANIZATION-validator.pem
-chef_server_ctl org-create $CHEFORG \'$CHEFORG\' --association_user $CHEFUSER --filename /etc/opscode/$CHEFORG-validator.pem
+cinc_server_ctl org-create $CHEFORG \'$CHEFORG\' --association_user $CHEFUSER --filename /etc/cinc-project/$CHEFORG-validator.pem
 
 # Copy and create certs
-[ ! -f /etc/chef/$CHEFUSER.pem ] && cp /etc/opscode/$CHEFUSER.pem /etc/chef
-[ ! -f /etc/chef/$CHEFORG-validator.pem ] && cp /etc/opscode/$CHEFORG-validator.pem /etc/chef/$CHEFORG-validator.pem
+[ ! -f /etc/chef/$CHEFUSER.pem ] && cp /etc/cinc-project/$CHEFUSER.pem /etc/chef
+[ ! -f /etc/chef/$CHEFORG-validator.pem ] && cp /etc/cinc-project/$CHEFORG-validator.pem /etc/chef/$CHEFORG-validator.pem
 
 # Knife configuration
 mkdir -p /root/.chef
@@ -645,7 +645,7 @@ sed -i "s/client\.pem/admin\.pem/g" /root/.chef/knife.rb
 # Configure LEADER
 configure_leader
 
-#rm -f /etc/opscode/chef-server.rb
+#rm -f /etc/cinc-project/cinc-server.rb
 rm -f /var/lock/leader-configuring.lock
 
 e_title "Enabling chef-client service"
