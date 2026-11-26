@@ -2,7 +2,7 @@
 # Script to execute rb_create_druid_metadata.rb script daily in cron
 source /etc/profile.d/rvm.sh
 
-service="minio"
+service="seaweedfs-filer"
 s3_config=/root/.s3cfg_initial
 
 if !systemctl status "$service" 2> /dev/null | grep -Fq "Active:"; then

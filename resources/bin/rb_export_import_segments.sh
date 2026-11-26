@@ -75,6 +75,25 @@ function print_system() {
 
 source /etc/profile
 
+S3CMD="s3cmd -c /root/.s3cfg_initial"
+
+# Keys (relative to the prefix s3://bucket/key/ in $1) of the objects modified between
+# $startdate and $stopdate (when they are set) that match the regex $filter
+function s3_find() {
+  local prefix="$1" from="" to=""
+  [ -n "$startdate" ] && from=$(date -u -d "$startdate" '+%Y-%m-%d %H:%M')
+  [ -n "$stopdate" ] && to=$(date -u -d "$stopdate" '+%Y-%m-%d %H:%M')
+  set -o pipefail
+  nice -n 19 ionice -c2 -n7 $S3CMD ls -r "$prefix" | awk -v from="$from" -v to="$to" -v prefix="$prefix" '
+    index($4, prefix) == 1 {
+      ts = $1 " " $2
+      if ((from == "" || ts >= from) && (to == "" || ts <= to)) print substr($4, length(prefix) + 1)
+    }' | { grep -E -- "$filter" || true; }
+  local ret=$?
+  set +o pipefail
+  return $ret
+}
+
 import=0
 enableallsegments=0
 filename=""
@@ -247,7 +266,7 @@ if [ $import -eq 1 ]; then
                 if [ $debug -eq 1 ]; then
                   echo -n "  sync $n to s3 : [${progress}%]"
                 fi
-                nice -n 19 ionice -c2 -n7 /usr/local/bin/mcli put $tmpdir/segments/$n ${hostname}/${s3currentbucket}/${s3basekey}/${n} &>/dev/null
+                nice -n 19 ionice -c2 -n7 $S3CMD put $tmpdir/segments/$n s3://${s3currentbucket}/${s3basekey}/${n} &>/dev/null
                 RET4=$?
                 if [ $debug -eq 1 ]; then
                   print_result $RET4
@@ -349,11 +368,10 @@ else # we are going to export the segments to a tar
 
       echo -n "- getting segments info from s3: "
       declare -A localfile
-      [[ -n "$startdate" ]] && datefilter+=("--newer-than" "${startdate}")
-      [[ -n "$stopdate" ]] && datefilter+=("--older-than" "${stopdate}")
-      
-      eval "miniofiles=($(nice -n 19 ionice -c2 -n7 /usr/local/bin/mcli find "${hostname}/${s3currentbucket}/${s3basekey}/" "${datefilter[@]}" --regex "$filter" | sed "s|${hostname}/${s3currentbucket}/${s3basekey}/||"))"
+      s3files=$(s3_find "s3://${s3currentbucket}/${s3basekey}/")
       print_result $?
+      miniofiles=()
+      [ -n "$s3files" ] && mapfile -t miniofiles <<< "$s3files"
 
       counter=0
       numberofsegments=0
@@ -370,11 +388,11 @@ else # we are going to export the segments to a tar
         fi
         if [ $debug -eq 1 ]; then
           echo -n "  copy $n: [$progress%] "
-          mkdir -p "./$(dirname "$n")"
-        else 
+        else
           printf "\r- copy segment data : %.0f%%" "$progress"
-        fi 
-        nice -n 19 ionice -c2 -n7 /usr/local/bin/mcli get "${hostname}/${s3currentbucket}/${s3basekey}/$n" "$n" &>/dev/null
+        fi
+        mkdir -p "./$(dirname "$n")"
+        nice -n 19 ionice -c2 -n7 $S3CMD get --force "s3://${s3currentbucket}/${s3basekey}/$n" "$n" &>/dev/null
         RET=$?
         if [ $debug -eq 1 ]; then
           print_result "$RET"
