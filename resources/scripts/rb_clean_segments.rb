@@ -25,7 +25,6 @@ require 'optparse'
 
 module CleanDruidSegments
   DRUID_RUNTIME_PROPS = '/etc/druid/_common/common.runtime.properties'
-  MINIO_DATA_DIR      = '/var/minio/data'
   DRUID_INDEX_CACHE   = '/var/druid/historical/indexCache'
   DRUID_LOCAL_DATA    = '/var/druid/data'
   ZK_HOST             = 'zookeeper.service:2181'
@@ -169,16 +168,6 @@ module CleanDruidSegments
     logit "#{removed} directories removed"
   end
 
-  def self.remove_from_minio(bucket_name, s3_prefix, datasource, limit_date)
-    minio_storage = [MINIO_DATA_DIR, bucket_name, s3_prefix, datasource]
-                      .reject { |x| x.nil? || x.empty? }
-                      .join('/')
-    if Dir.exist?(minio_storage)
-      logit 'Removing files from MinIO storage'
-      remove_files("#{minio_storage}/*", limit_date)
-    end
-  end
-
   def self.remove_from_pg(db, datasource, limit_date)
     # TODO: SQL Injection — usar query parametrizada:
     #   db.exec('SELECT * FROM druid_segments WHERE datasource = $1', datasource)
@@ -254,7 +243,7 @@ module CleanDruidSegments
   def self.run(args = ARGV)
     options = parse_args(args)
     if options[:help]
-      puts "Usage: #{File.basename($PROGRAM_NAME)} [-h]\n\nRemoves expired Druid segments (PG, S3, MinIO storage, and local caches) older than the retention period."
+      puts "Usage: #{File.basename($PROGRAM_NAME)} [-h]\n\nRemoves expired Druid segments (PG, S3 and local caches) older than the retention period."
       return
     end
 
@@ -318,7 +307,6 @@ module CleanDruidSegments
         end
 
         remove_local_caches(datasource, limit_date)
-        remove_from_minio(bucket_name, s3_prefix, datasource, limit_date) if druid_deep_storage == 's3'
       end
     ensure
       release_zk_lock(zk) unless remove_only_index_cache

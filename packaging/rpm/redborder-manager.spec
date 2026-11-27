@@ -18,7 +18,6 @@ Requires: synthetic-producer tcpdump
 Requires: alternatives java-1.8.0-openjdk java-1.8.0-openjdk-devel
 Requires: network-scripts network-scripts-teamd
 Requires: rb-logstatter redborder-pythonlibs
-Requires: mcli
 Requires: redborder-pythonpyenv
 Requires: ipmitool
 
@@ -109,6 +108,10 @@ update-alternatives --set java $(find /usr/lib/jvm/*java-1.8.0-openjdk* -name "j
 %doc
 
 %changelog
+* Thu Nov 26 2026 Miguel Negrón <manegron@redborder.com>
+- Replace MinIO with SeaweedFS: s3cmd instead of mcli, no Requires mcli, chef-solo seaweedfs::configure_solo
+- Add rb_seaweedfs_status.sh to show the status of the SeaweedFS cluster
+
 * Wed Nov 25 2026 Miguel Negrón <manegron@redborder.com>
 - Migrate from Chef to Cinc: require redborder-cinc-client instead of redborder-chef-client and chef-workstation
 
