@@ -221,6 +221,35 @@ fi
 total_volumes=$(echo "$VOLUMES" | grep -oE 'Topology .*hdd\(volume:[0-9]+' | grep -oE '[0-9]+$')
 info "Volumes (with replicas)" "${total_volumes:-0}"
 
+title "Garbage (deleted data not reclaimed yet)"
+# A deleted object only marks its bytes as deleted inside the volume: the masters compact (vacuum)
+# a volume when its deleted bytes go over garbageThreshold, every vacuumIntervalSeconds
+threshold=$(option_of seaweedfs-master garbageThreshold); threshold=${threshold:-0.3}
+interval=$(option_of seaweedfs-master vacuumIntervalSeconds); interval=${interval:-840}
+# Sum of all the copies: <deleted bytes> <total bytes> <copies over the threshold> <copies with garbage>
+read -r g_deleted g_size g_over g_some < <(echo "$VOLUMES" | grep -E 'volume Id:[0-9]+, ' |
+  sed -E 's/.* Size:([0-9]+),.*DeletedByteCount:([0-9]+),.*/\1 \2/' |
+  awk -v t="$threshold" '{s+=$1; d+=$2; if ($2 > 0) some++; if ($1 > 0 && $2 / $1 > t) over++}
+       END {printf "%d %d %d %d\n", d, s, over, some}')
+if [ -z "$VOLUMES" ]; then
+  warn "Garbage" "unknown (volume.list did not answer)"
+else
+  g_pct=$(awk -v d="${g_deleted:-0}" -v s="${g_size:-0}" 'BEGIN {printf "%.1f", (s > 0) ? d * 100 / s : 0}')
+  msg="$(human "${g_deleted:-0}") of $(human "${g_size:-0}") stored (${g_pct}%) in ${g_some:-0} volume copies"
+  if [ "${g_over:-0}" -gt 0 ]; then
+    # Not a warning: it is the normal state after deleting data until the next vacuum sweep
+    info "Garbage" "$msg"
+    info "Over the vacuum threshold" "${g_over} volume copies (> $(awk -v t="$threshold" 'BEGIN {print t * 100}')%), compacted automatically within $((interval / 60)) min"
+  else
+    ok "Garbage" "$msg"
+    info "Vacuum threshold" "$(awk -v t="$threshold" 'BEGIN {print t * 100}')% per volume, checked every $((interval / 60)) min"
+  fi
+  # volume.list shows the stats of the last heartbeat of each volume server: after a vacuum the
+  # numbers take about a minute to go down
+  [ "${g_deleted:-0}" -gt 0 ] &&
+    info "" "reclaim it now: printf 'lock\\nvolume.vacuum -garbageThreshold 0.01\\nunlock\\n' | weed shell -master=$MASTERS"
+fi
+
 title "Connectivity (cluster.check)"
 checks_ok=$(echo "$CHECK" | grep -c '\.\.\. ok')
 checks_failed=$(echo "$CHECK" | grep -E '^checking ' | grep -vc '\.\.\. ok')
