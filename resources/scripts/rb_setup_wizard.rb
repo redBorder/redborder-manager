@@ -484,7 +484,7 @@ progress = 0
 MILESTONES = {
   "Registering chef-client"           => 30,
   "/var/www/rb-rails/config/aws.yml"  => 50,
-  "/etc/logstash/pipelines"           => 75,
+  "/etc/redborder-vortex/pipelines"   => 75,
   "private-chef-server"               => 95,
   "Configuring cgroups"               => 99
 }
