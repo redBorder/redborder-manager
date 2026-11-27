@@ -50,8 +50,15 @@ if [ "x$OVR" == "xy" -o "x$OVR" == "xY" ]; then
   rm -f /var/chef/data/data_bag/passwords/nmspd-key-hashes.json
   mkdir -p /var/chef/cookbooks/rb-nmsp/files/default/
 
-  if command -v rb-nmsp &>/dev/null || [ -x /usr/bin/rb-nmsp ]; then
-    /usr/bin/rb-nmsp config-gen /var/chef/cookbooks/rb-nmsp/files/default/ /var/chef/data/data_bag/passwords/ "$NMSPMAC"
+  RB_BIN=""
+  if [ -x /usr/bin/rb-nmsp ]; then
+    RB_BIN="/usr/bin/rb-nmsp"
+  elif command -v rb-nmsp &>/dev/null; then
+    RB_BIN="$(command -v rb-nmsp)"
+  fi
+
+  if [ -n "$RB_BIN" ]; then
+    "$RB_BIN" config-gen /var/chef/cookbooks/rb-nmsp/files/default/ /var/chef/data/data_bag/passwords/ "$NMSPMAC"
     if [ $? -eq 0 ]; then
         UPLOAD=1
     fi
